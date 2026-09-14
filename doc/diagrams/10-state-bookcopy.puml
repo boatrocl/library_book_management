@@ -1,0 +1,35 @@
+@startuml 10-state-bookcopy
+title State Diagram — BookCopy (ตัวเล่มหนังสือ)
+
+skinparam defaultFontName "Tahoma"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam state {
+  BackgroundColor #E8F8F5
+  BorderColor #34495E
+  ArrowColor #2E4053
+}
+
+[*] --> AVAILABLE : ลงทะเบียนตัวเล่มเข้าคลัง
+
+AVAILABLE --> ON_LOAN : borrow() (BR-04)
+AVAILABLE --> RESERVED : กันตัวเล่มให้คิวจองลำดับแรก (BR-10)
+
+RESERVED --> ON_LOAN : สมาชิกมารับภายใน 48 ชม.
+RESERVED --> AVAILABLE : หมดเวลารับ\n/ Reservation -> EXPIRED
+
+ON_LOAN --> AVAILABLE : returnBook()\n[สภาพปกติ]
+ON_LOAN --> DAMAGED : returnBook()\n[ชำรุด]
+ON_LOAN --> LOST : แจ้งหาย / เกิน 60 วัน (BR-08)
+
+DAMAGED --> AVAILABLE : ซ่อมเสร็จ
+DAMAGED --> [*] : จำหน่ายออกจากคลัง
+LOST --> [*] : ตัดจำหน่าย
+
+note as N1
+  สถานะนี้ถูกใช้ใน CopyAvailabilityRule
+  ของ Chain of Responsibility
+  เพื่อตัดสินว่ายืมได้หรือไม่
+end note
+
+@enduml

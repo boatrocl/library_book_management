@@ -1,0 +1,86 @@
+@startuml 05-sequence-borrow
+title Sequence Diagram #1 — บันทึกการยืมหนังสือ (POST /api/v1/loans)
+
+skinparam defaultFontName "Tahoma"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #2E4053
+  LifeLineBorderColor #85929E
+  ParticipantBorderColor #34495E
+  ParticipantBackgroundColor #EAF2F8
+}
+autonumber
+
+actor "บรรณารักษ์" as LIB
+participant "LoanController" as C
+participant "LoanServiceImpl" as S
+participant "BookCopyRepository" as CR
+collections "BorrowRule chain\n(Chain of Responsibility)" as R
+participant "LoanRepository" as LR
+participant "LoanMapper" as M
+database "PostgreSQL" as DB
+
+LIB -> C : POST /api/v1/loans\n{memberId, barcodes[]}
+activate C
+C -> C : @Valid BorrowRequest\n(Bean Validation)
+C -> S : borrow(request)
+activate S
+
+S -> CR : findByBarcodeIn(barcodes)
+activate CR
+CR -> DB : SELECT ... FROM book_copies\nWHERE barcode IN (...) FOR UPDATE
+DB --> CR : rows
+CR --> S : List<BookCopy>
+deactivate CR
+
+S -> S : สร้าง BorrowContext(member, copies)
+
+group ตรวจสอบสิทธิ์ตามลำดับกฎ
+  S -> R : check(ctx)
+  activate R
+  R -> R : MemberStatusRule (BR-01)
+  R -> R : UnpaidFineRule (BR-02)
+  R -> R : LoanQuotaRule (BR-03)
+  R -> R : CopyAvailabilityRule (BR-04)
+end
+
+alt ไม่ผ่านกฎข้อใดข้อหนึ่ง
+  R --> S : throw BusinessException(errorCode)
+  deactivate R
+  S --> C : propagate exception
+  C -> C : @RestControllerAdvice จับ
+  C --> LIB : 409 Conflict + ErrorResponse
+else ผ่านทุกกฎ
+  R --> S : OK
+  S -> S : คำนวณ dueDate ตาม MemberTier (BR-05)
+  S -> S : สร้าง Loan + LoanItem ทั้งหมด
+  S -> LR : save(loan)
+  activate LR
+  LR -> DB : INSERT INTO loans\nINSERT INTO loan_items
+  DB --> LR : generated ids
+  LR --> S : Loan (persisted)
+  deactivate LR
+
+  S -> CR : updateStatus(copyIds, ON_LOAN)
+  activate CR
+  CR -> DB : UPDATE book_copies SET status='ON_LOAN'
+  deactivate CR
+
+  S -> M : toResponse(loan)
+  activate M
+  M --> S : LoanResponse
+  deactivate M
+
+  S --> C : LoanResponse
+  deactivate S
+  C --> LIB : 201 Created + Location header
+end
+deactivate C
+
+note over S
+  @Transactional ครอบทั้งเมธอด
+  หากขั้นตอนใดล้มเหลว rollback ทั้งหมด
+end note
+
+@enduml

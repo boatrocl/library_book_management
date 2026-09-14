@@ -1,0 +1,68 @@
+@startuml 12-component-diagram
+title Component Diagram — LibraFlow
+
+skinparam defaultFontName "Tahoma"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam component {
+  BackgroundColor #EAF2F8
+  BorderColor #34495E
+}
+skinparam package {
+  BackgroundColor #F7F9F9
+  BorderColor #85929E
+}
+
+package "Client Tier" {
+  [React SPA\n(Vite + Axios + Tailwind)] as UI
+}
+
+package "Application Tier — Spring Boot 4" {
+  [Security Filter Chain\n(JWT Authentication)] as SEC
+  [Presentation Layer\nRestController + Swagger] as CTRL
+  [DTO + Mapper] as DTO
+  [Service Layer\nBusiness Logic + @Transactional] as SVC
+  [Design Pattern Module\nStrategy / State / Chain / Observer / Template] as PAT
+  [Repository Layer\nSpring Data JPA] as REPO
+  [Global Exception Handler\n@RestControllerAdvice] as EXC
+}
+
+package "Data Tier" {
+  database "PostgreSQL 16" as DB
+}
+
+package "External Services" {
+  [SMTP Mail Service] as MAIL
+}
+
+interface "HTTPS / JSON" as API
+interface "JDBC" as JDBC
+interface "SMTP" as SMTPI
+
+UI -( API
+API - SEC
+SEC --> CTRL : authenticated request
+CTRL --> DTO : map request/response
+CTRL --> SVC : delegate
+CTRL ..> EXC : throws
+SVC --> PAT : ใช้กฎธุรกิจ
+SVC --> REPO : query / persist
+REPO -( JDBC
+JDBC - DB
+PAT -( SMTPI : Observer event
+SMTPI - MAIL
+
+note right of CTRL
+  ห้ามเรียก Repository ตรง
+  ทุก request ต้องผ่าน Service Layer
+end note
+
+note bottom of PAT
+  Strategy : คำนวณค่าปรับ
+  State : สถานะใบยืม
+  Chain : ตรวจสิทธิ์การยืม
+  Observer : แจ้งเตือนคิวจอง
+  Template Method : ออกรายงาน
+end note
+
+@enduml

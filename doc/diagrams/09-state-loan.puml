@@ -1,0 +1,58 @@
+@startuml 09-state-loan
+title State Diagram — Loan (ใบยืม)
+
+skinparam defaultFontName "Tahoma"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam state {
+  BackgroundColor #EAF2F8
+  BorderColor #34495E
+  ArrowColor #2E4053
+}
+
+[*] --> ACTIVE : สร้างรายการยืมสำเร็จ
+
+state ACTIVE {
+  ACTIVE : entry / กำหนด dueDate ตาม MemberTier (BR-05)
+  ACTIVE : do / ตรวจสอบวันครบกำหนดทุกเที่ยงคืน
+}
+
+state OVERDUE {
+  OVERDUE : entry / บันทึก overdueDays
+  OVERDUE : do / เพิ่มยอดค่าปรับสะสมรายวัน (BR-07)
+}
+
+state RETURNED {
+  RETURNED : entry / คืนตัวเล่มเข้าคลัง
+  RETURNED : entry / publish BookReturnedEvent (BR-10)
+}
+
+state LOST {
+  LOST : entry / เรียกเก็บค่าหนังสือเต็มราคา (BR-08)
+}
+
+ACTIVE --> ACTIVE : renew()\n[renewCount < 2\nและไม่มีคิวจอง] (BR-06)
+ACTIVE --> OVERDUE : scheduled job\n[today > dueDate]
+ACTIVE --> RETURNED : returnBook()\n[คืนตรงเวลา]
+
+OVERDUE --> RETURNED : returnBook()\n/ สร้าง Fine ด้วย Strategy
+OVERDUE --> LOST : scheduled job\n[overdueDays > 60] (BR-08)
+
+LOST --> RETURNED : returnBook()\n/ ชดใช้ค่าหนังสือแล้ว
+
+RETURNED --> [*]
+
+note right of ACTIVE
+  แต่ละสถานะ implement
+  interface LoanState
+  (State Pattern)
+end note
+
+note left of OVERDUE
+  การพยายามทำ action ที่ไม่อนุญาต
+  จะ throw BusinessException
+  ไม่ใช่ UnsupportedOperationException
+  (รักษา LSP)
+end note
+
+@enduml

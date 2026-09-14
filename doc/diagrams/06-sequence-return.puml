@@ -1,0 +1,89 @@
+@startuml 06-sequence-return
+title Sequence Diagram #2 — บันทึกการคืน + คิดค่าปรับ + แจ้งคิวจอง\n(PATCH /api/v1/loans/{id}/return)
+
+skinparam defaultFontName "Tahoma"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #2E4053
+  LifeLineBorderColor #85929E
+  ParticipantBorderColor #34495E
+  ParticipantBackgroundColor #EAF2F8
+}
+autonumber
+
+actor "บรรณารักษ์" as LIB
+participant "LoanController" as C
+participant "LoanServiceImpl" as S
+participant "LoanStateFactory" as SF
+participant "LoanState\n(State Pattern)" as ST
+participant "FineStrategyResolver" as FR
+participant "FineCalculationStrategy\n(Strategy Pattern)" as FS
+participant "FineRepository" as FRP
+participant "ApplicationEventPublisher" as PUB
+participant "ReservationNotificationListener\n(Observer)" as NL
+database "PostgreSQL" as DB
+
+LIB -> C : PATCH /api/v1/loans/{id}/return
+activate C
+C -> S : returnBook(loanId)
+activate S
+
+S -> DB : SELECT loan + loan_items (JOIN FETCH)
+DB --> S : Loan
+
+S -> SF : stateOf(loan)
+activate SF
+SF --> S : ActiveState หรือ OverdueState
+deactivate SF
+
+S -> ST : onReturn(loan, item)
+activate ST
+ST -> ST : ตรวจว่าเปลี่ยนสถานะได้
+ST --> S : สถานะ -> RETURNED
+deactivate ST
+
+alt คืนเกินกำหนด (returnedAt > dueDate)
+  S -> FR : resolve(member.memberTier)
+  activate FR
+  FR --> S : strategy ที่ supports(tier)
+  deactivate FR
+
+  S -> FS : calculate(loanItem, today)
+  activate FS
+  FS -> FS : overdueDays x rate\n(ใช้เพดานถ้ามี — BR-07)
+  FS --> S : BigDecimal amount
+  deactivate FS
+
+  S -> FRP : save(new Fine(item, amount, UNPAID))
+  FRP -> DB : INSERT INTO fines
+else คืนตรงเวลา
+  S -> S : ไม่สร้าง Fine
+end
+
+S -> DB : UPDATE book_copies SET status='AVAILABLE'
+S -> DB : UPDATE loans SET status='RETURNED'
+
+S -> PUB : publishEvent(BookReturnedEvent)
+activate PUB
+note right of PUB
+  @TransactionalEventListener
+  phase = AFTER_COMMIT
+  กันการส่งอีเมลแล้ว rollback
+end note
+PUB -> NL : onBookReturned(event)
+activate NL
+NL -> DB : SELECT reservation คิวแรก\nWHERE book_id = ? AND status='WAITING'\nORDER BY reserved_at LIMIT 1
+DB --> NL : Reservation
+NL -> DB : UPDATE reservations SET status='READY',\nexpires_at = now() + 48h
+NL -> NL : ส่งอีเมลแจ้งสมาชิก (BR-10)
+NL --> PUB : done
+deactivate NL
+deactivate PUB
+
+S --> C : LoanResponse
+deactivate S
+C --> LIB : 200 OK
+deactivate C
+
+@enduml

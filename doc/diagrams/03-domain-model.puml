@@ -1,0 +1,99 @@
+@startuml 03-domain-model
+title Domain Model / Conceptual Class Diagram — LibraFlow
+
+skinparam defaultFontName "Tahoma"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam class {
+  BackgroundColor #FDFDFD
+  BorderColor #34495E
+  ArrowColor #2E4053
+}
+hide methods
+
+class User {
+  username
+  email
+  role
+  status
+}
+
+class UserProfile {
+  fullName
+  phone
+  address
+  birthDate
+  memberTier
+}
+
+class Category {
+  name
+  description
+}
+
+class Publisher {
+  name
+  country
+}
+
+class Author {
+  fullName
+  nationality
+}
+
+class Book {
+  isbn
+  title
+  publishYear
+  price
+}
+
+class BookCopy {
+  barcode
+  status
+  shelfLocation
+}
+
+class Loan {
+  loanCode
+  loanDate
+  status
+}
+
+class LoanItem {
+  dueDate
+  returnedAt
+  renewCount
+}
+
+class Fine {
+  amount
+  overdueDays
+  status
+  paidAt
+}
+
+class Reservation {
+  reservedAt
+  expiresAt
+  status
+}
+
+User "1" -- "1" UserProfile : has >
+User "1" -- "0..*" Loan : borrows >
+User "1" -- "0..*" Reservation : places >
+Category "1" -- "0..*" Book : classifies >
+Publisher "1" -- "0..*" Book : publishes >
+Book "0..*" -- "1..*" Author : written by >
+Book "1" -- "0..*" BookCopy : has physical >
+Book "1" -- "0..*" Reservation : is reserved in >
+Loan "1" -- "1..*" LoanItem : contains >
+BookCopy "1" -- "0..*" LoanItem : is lent as >
+LoanItem "1" -- "0..1" Fine : incurs >
+
+note bottom of Book
+  Book = ระดับ Title (หนึ่ง ISBN)
+  BookCopy = ตัวเล่มจริงบนชั้น (หนึ่ง barcode)
+end note
+
+@enduml

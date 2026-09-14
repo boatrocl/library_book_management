@@ -1,0 +1,68 @@
+@startuml 13-deployment-diagram
+title Deployment Diagram — LibraFlow
+
+skinparam defaultFontName "Tahoma"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam node {
+  BackgroundColor #EAF2F8
+  BorderColor #34495E
+}
+skinparam cloud {
+  BackgroundColor #F7F9F9
+  BorderColor #85929E
+}
+
+node "เครื่องผู้ใช้" as CLIENT {
+  artifact "Web Browser\n(Chrome / Edge / Safari)" as BROWSER
+}
+
+cloud "Vercel" as VERCEL {
+  node "Static Hosting / CDN" as VNODE {
+    artifact "React Production Build\n(dist/)" as FE
+  }
+}
+
+cloud "Render" as RENDER {
+  node "Docker Container\n(Linux, 512MB)" as RNODE {
+    artifact "libraflow-api.jar" as API
+    artifact "JRE 17 (eclipse-temurin)" as JRE
+    note right of API
+      Port 8080
+      Spring Profile = prod
+      Flyway migrate on startup
+    end note
+  }
+}
+
+cloud "Neon (Serverless Postgres)" as NEON {
+  database "libraflow_db\nPostgreSQL 16" as DB
+}
+
+cloud "GitHub" as GITHUB {
+  node "GitHub Actions Runner" as CI {
+    artifact "ci-cd.yml\nBuild -> Test -> Docker -> Deploy" as PIPE
+  }
+  artifact "Git Repository\nmain / develop / ชื่อ_รหัส_section" as REPO
+}
+
+cloud "SMTP Provider" as SMTP {
+  artifact "Mail Relay" as MAIL
+}
+
+BROWSER --> FE : HTTPS 443\n(โหลดหน้าเว็บ)
+BROWSER --> API : HTTPS 443\nREST + JWT
+API --> DB : TLS 5432\nJDBC
+API --> MAIL : SMTP 587\n(Observer: แจ้งคิวจอง)
+
+REPO --> PIPE : push / pull request
+PIPE --> RNODE : deploy container image
+PIPE --> VNODE : deploy static build
+
+note bottom of RNODE
+  Dockerfile: multi-stage build
+  Stage 1 maven:3.9-eclipse-temurin-17 -> mvn package
+  Stage 2 eclipse-temurin:17-jre -> COPY *.jar
+end note
+
+@enduml

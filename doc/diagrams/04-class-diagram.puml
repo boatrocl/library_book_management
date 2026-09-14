@@ -1,0 +1,214 @@
+@startuml 04-class-diagram
+title Class Diagram (แสดงตำแหน่ง Design Pattern) — LibraFlow
+
+skinparam defaultFontName "Tahoma"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam linetype ortho
+skinparam class {
+  BackgroundColor #FDFDFD
+  BorderColor #34495E
+  ArrowColor #2E4053
+}
+skinparam package {
+  BackgroundColor #F7F9F9
+  BorderColor #85929E
+}
+
+package "controller.api  <<Presentation Layer / MVC>>" #EAF2F8 {
+  class LoanController {
+    - final LoanService loanService
+    + borrow(BorrowRequest) : ResponseEntity<LoanResponse>
+    + returnBook(Long) : ResponseEntity<LoanResponse>
+    + renew(Long) : ResponseEntity<LoanResponse>
+  }
+  class BookController {
+    - final BookQueryService queryService
+    - final BookCommandService commandService
+    + search(String, Pageable) : PageResponse<BookResponse>
+    + create(CreateBookRequest) : ResponseEntity<BookResponse>
+  }
+}
+
+package "service  <<Service Layer Pattern>>" #E8F8F5 {
+  interface LoanService <<interface>> {
+    + borrow(BorrowRequest) : LoanResponse
+    + returnBook(Long) : LoanResponse
+    + renew(Long) : LoanResponse
+  }
+  interface BookQueryService <<interface>> {
+    + search(String, Pageable) : Page<Book>
+    + findById(Long) : Book
+  }
+  interface BookCommandService <<interface>> {
+    + create(CreateBookRequest) : Book
+    + update(Long, UpdateBookRequest) : Book
+    + delete(Long) : void
+  }
+  class LoanServiceImpl {
+    - final LoanRepository loanRepository
+    - final BookCopyRepository copyRepository
+    - final List<BorrowRule> borrowRules
+    - final FineStrategyResolver strategyResolver
+    - final LoanStateFactory stateFactory
+    - final ApplicationEventPublisher publisher
+    - final LoanMapper mapper
+    + borrow(BorrowRequest) : LoanResponse
+    + returnBook(Long) : LoanResponse
+  }
+}
+
+package "repository  <<Repository Pattern>>" #FEF9E7 {
+  interface LoanRepository <<interface>> {
+    + findByUserId(Long, Pageable) : Page<Loan>
+    + countActiveByUserId(Long) : long
+  }
+  interface BookCopyRepository <<interface>> {
+    + findByBarcodeIn(List<String>) : List<BookCopy>
+    + findFirstAvailable(Long) : Optional<BookCopy>
+  }
+}
+
+package "pattern.chain  <<Chain of Responsibility>>" #FDEDEC {
+  interface BorrowRule <<interface>> {
+    + order() : int
+    + check(BorrowContext) : void
+  }
+  class MemberStatusRule
+  class UnpaidFineRule
+  class LoanQuotaRule
+  class CopyAvailabilityRule
+  class BorrowContext {
+    - User member
+    - List<BookCopy> copies
+  }
+}
+
+package "pattern.strategy  <<Strategy>>" #F4ECF7 {
+  interface FineCalculationStrategy <<interface>> {
+    + supports(MemberTier) : boolean
+    + calculate(LoanItem, LocalDate) : BigDecimal
+  }
+  class StudentFineStrategy
+  class StaffFineStrategy
+  class ExternalFineStrategy
+  class FineStrategyResolver {
+    - final List<FineCalculationStrategy> strategies
+    + resolve(MemberTier) : FineCalculationStrategy
+  }
+}
+
+package "pattern.state  <<State>>" #EBF5FB {
+  interface LoanState <<interface>> {
+    + status() : LoanStatus
+    + onReturn(Loan, LoanItem) : void
+    + onRenew(Loan) : void
+  }
+  class ActiveState
+  class OverdueState
+  class ReturnedState
+  class LostState
+  class LoanStateFactory {
+    + stateOf(Loan) : LoanState
+  }
+}
+
+package "pattern.observer  <<Observer>>" #E9F7EF {
+  class BookReturnedEvent {
+    - Long bookId
+    - Long copyId
+    - Long memberId
+  }
+  class ReservationNotificationListener {
+    + onBookReturned(BookReturnedEvent) : void
+  }
+  class AuditLogListener {
+    + onBookReturned(BookReturnedEvent) : void
+  }
+}
+
+package "pattern.template  <<Template Method>>" #FDF2E9 {
+  abstract class AbstractReportGenerator {
+    + {static} generate(ReportRequest) : byte[]
+    # fetchData(ReportRequest) : List<Loan>
+    # transform(List<Loan>) : List<ReportRow>
+    # {abstract} render(List<ReportRow>) : byte[]
+  }
+  class CsvReportGenerator
+  class PdfReportGenerator
+}
+
+package "mapper  <<DTO + Mapper Pattern>>" #F2F4F4 {
+  class LoanMapper {
+    + toResponse(Loan) : LoanResponse
+  }
+  class BookMapper {
+    + toResponse(Book) : BookResponse
+    + toEntity(CreateBookRequest) : Book
+  }
+}
+
+package "domain.entity" #FBFCFC {
+  class Loan
+  class LoanItem
+  class BookCopy
+  class Book
+  class Fine
+}
+
+' ---------- Relationships ----------
+LoanController ..> LoanService : <<DI>>
+BookController ..> BookQueryService : <<DI>>
+BookController ..> BookCommandService : <<DI>>
+
+LoanService <|.. LoanServiceImpl
+
+LoanServiceImpl ..> LoanRepository : <<DI>>
+LoanServiceImpl ..> BookCopyRepository : <<DI>>
+LoanServiceImpl ..> LoanMapper
+LoanServiceImpl --> "1..*" BorrowRule : <<Chain>>
+LoanServiceImpl --> FineStrategyResolver : <<Strategy>>
+LoanServiceImpl --> LoanStateFactory : <<State>>
+LoanServiceImpl ..> BookReturnedEvent : publishes
+
+BorrowRule <|.. MemberStatusRule
+BorrowRule <|.. UnpaidFineRule
+BorrowRule <|.. LoanQuotaRule
+BorrowRule <|.. CopyAvailabilityRule
+BorrowRule ..> BorrowContext
+
+FineCalculationStrategy <|.. StudentFineStrategy
+FineCalculationStrategy <|.. StaffFineStrategy
+FineCalculationStrategy <|.. ExternalFineStrategy
+FineStrategyResolver o--> "1..*" FineCalculationStrategy
+
+LoanState <|.. ActiveState
+LoanState <|.. OverdueState
+LoanState <|.. ReturnedState
+LoanState <|.. LostState
+LoanStateFactory ..> LoanState : creates
+
+BookReturnedEvent <.. ReservationNotificationListener : listens
+BookReturnedEvent <.. AuditLogListener : listens
+
+AbstractReportGenerator <|-- CsvReportGenerator
+AbstractReportGenerator <|-- PdfReportGenerator
+
+LoanRepository ..> Loan
+BookCopyRepository ..> BookCopy
+Loan "1" *--> "1..*" LoanItem
+LoanItem "1" --> "0..1" Fine
+LoanItem "*" --> "1" BookCopy
+BookCopy "*" --> "1" Book
+
+note as N1
+  <b>SOLID ที่แสดงในภาพนี้</b>
+  D : LoanServiceImpl ขึ้นกับ interface ทั้งหมด
+      + Constructor Injection เท่านั้น
+  O : เพิ่ม BorrowRule / FineCalculationStrategy ใหม่
+      ได้โดยไม่แก้คลาสเดิม
+  I : BookQueryService แยกจาก BookCommandService
+  S : LoanServiceImpl ทำ orchestration อย่างเดียว
+end note
+
+@enduml

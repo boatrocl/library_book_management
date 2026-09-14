@@ -1,0 +1,80 @@
+@startuml 08-activity-borrow
+title Activity Diagram — กระบวนการยืมหนังสือ
+
+skinparam defaultFontName "Tahoma"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam activity {
+  BackgroundColor #EAF2F8
+  BorderColor #34495E
+  DiamondBackgroundColor #FEF9E7
+  DiamondBorderColor #B7950B
+}
+
+|บรรณารักษ์|
+start
+:สแกนบัตรสมาชิก;
+
+|ระบบ|
+:ค้นหาข้อมูลสมาชิก;
+
+if (พบสมาชิก?) then (ไม่พบ)
+  :แสดงข้อความ 404 ไม่พบสมาชิก;
+  stop
+else (พบ)
+endif
+
+if (สถานะสมาชิก = ACTIVE? \n(BR-01)) then (ไม่)
+  :แจ้งเตือน MEMBER_SUSPENDED;
+  stop
+else (ใช่)
+endif
+
+if (ค่าปรับค้างชำระ > 100 บาท? \n(BR-02)) then (ใช่)
+  :แจ้งเตือน UNPAID_FINE_EXCEEDED;
+  |บรรณารักษ์|
+  :เสนอให้ชำระค่าปรับก่อน;
+  stop
+else (ไม่)
+endif
+
+|บรรณารักษ์|
+:สแกนบาร์โค้ดตัวเล่ม;
+
+|ระบบ|
+if (จำนวนที่ยืมอยู่ + ที่จะยืม \nเกินโควต้าของ Tier? (BR-03)) then (เกิน)
+  :แจ้งเตือน LOAN_QUOTA_EXCEEDED;
+  stop
+else (ไม่เกิน)
+endif
+
+if (ตัวเล่มสถานะ AVAILABLE? \n(BR-04)) then (ไม่)
+  :แจ้งเตือน COPY_NOT_AVAILABLE;
+  |บรรณารักษ์|
+  if (สมาชิกต้องการจองคิว?) then (ต้องการ)
+    |ระบบ|
+    :สร้าง Reservation สถานะ WAITING;
+    :แจ้งลำดับคิว;
+    stop
+  else (ไม่ต้องการ)
+    stop
+  endif
+else (ใช่)
+endif
+
+|ระบบ|
+fork
+  :สร้าง Loan (status = ACTIVE);
+fork again
+  :คำนวณ dueDate ตาม MemberTier (BR-05);
+end fork
+
+:สร้าง LoanItem ทุกตัวเล่ม;
+:บันทึกลงฐานข้อมูล (Transaction);
+:เปลี่ยนสถานะตัวเล่มเป็น ON_LOAN;
+
+|บรรณารักษ์|
+:แสดง/พิมพ์ใบยืม;
+stop
+
+@enduml

@@ -1,0 +1,166 @@
+@startuml 11-er-diagram
+title ER Diagram / Database Schema — LibraFlow (PostgreSQL)
+
+skinparam defaultFontName "Tahoma"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam linetype ortho
+skinparam class {
+  BackgroundColor #FDFDFD
+  BorderColor #34495E
+  ArrowColor #2E4053
+}
+hide circle
+hide methods
+
+entity "users" as users {
+  * id : BIGSERIAL <<PK>>
+  --
+  * username : VARCHAR(50) <<UK>>
+  * email : VARCHAR(120) <<UK>>
+  * password : VARCHAR(255)
+  * role : VARCHAR(20)
+  * status : VARCHAR(20)
+  * created_at : TIMESTAMP
+  updated_at : TIMESTAMP
+}
+
+entity "user_profiles" as user_profiles {
+  * id : BIGSERIAL <<PK>>
+  --
+  * user_id : BIGINT <<FK>> <<UK>>
+  * full_name : VARCHAR(120)
+  phone : VARCHAR(20)
+  address : VARCHAR(255)
+  birth_date : DATE
+  * member_tier : VARCHAR(20)
+  * joined_at : DATE
+}
+
+entity "categories" as categories {
+  * id : BIGSERIAL <<PK>>
+  --
+  * name : VARCHAR(80) <<UK>>
+  description : VARCHAR(255)
+}
+
+entity "publishers" as publishers {
+  * id : BIGSERIAL <<PK>>
+  --
+  * name : VARCHAR(120) <<UK>>
+  country : VARCHAR(60)
+}
+
+entity "authors" as authors {
+  * id : BIGSERIAL <<PK>>
+  --
+  * full_name : VARCHAR(120)
+  nationality : VARCHAR(60)
+  biography : TEXT
+}
+
+entity "books" as books {
+  * id : BIGSERIAL <<PK>>
+  --
+  * isbn : VARCHAR(20) <<UK>>
+  * title : VARCHAR(200)
+  publish_year : INT
+  price : NUMERIC(10,2)
+  * category_id : BIGINT <<FK>>
+  * publisher_id : BIGINT <<FK>>
+  * created_at : TIMESTAMP
+}
+
+entity "book_authors" as book_authors {
+  * book_id : BIGINT <<PK>> <<FK>>
+  * author_id : BIGINT <<PK>> <<FK>>
+}
+
+entity "book_copies" as book_copies {
+  * id : BIGSERIAL <<PK>>
+  --
+  * barcode : VARCHAR(30) <<UK>>
+  * book_id : BIGINT <<FK>>
+  * status : VARCHAR(20)
+  shelf_location : VARCHAR(30)
+  * acquired_at : DATE
+}
+
+entity "loans" as loans {
+  * id : BIGSERIAL <<PK>>
+  --
+  * loan_code : VARCHAR(20) <<UK>>
+  * user_id : BIGINT <<FK>>
+  librarian_id : BIGINT <<FK>>
+  * loan_date : TIMESTAMP
+  * status : VARCHAR(20)
+}
+
+entity "loan_items" as loan_items {
+  * id : BIGSERIAL <<PK>>
+  --
+  * loan_id : BIGINT <<FK>>
+  * book_copy_id : BIGINT <<FK>>
+  * due_date : DATE
+  returned_at : DATE
+  * renew_count : SMALLINT
+}
+
+entity "fines" as fines {
+  * id : BIGSERIAL <<PK>>
+  --
+  * loan_item_id : BIGINT <<FK>> <<UK>>
+  * amount : NUMERIC(10,2)
+  * overdue_days : INT
+  * status : VARCHAR(20)
+  * created_at : TIMESTAMP
+  paid_at : TIMESTAMP
+}
+
+entity "reservations" as reservations {
+  * id : BIGSERIAL <<PK>>
+  --
+  * user_id : BIGINT <<FK>>
+  * book_id : BIGINT <<FK>>
+  * reserved_at : TIMESTAMP
+  expires_at : TIMESTAMP
+  * status : VARCHAR(20)
+}
+
+' ---------- Relationships ----------
+users ||--|| user_profiles : "One-to-One"
+users ||--o{ loans : "One-to-Many"
+users ||--o{ reservations : "One-to-Many"
+categories ||--o{ books : "One-to-Many"
+publishers ||--o{ books : "One-to-Many"
+books ||--o{ book_copies : "One-to-Many"
+books ||--o{ reservations : "One-to-Many"
+books ||--o{ book_authors
+authors ||--o{ book_authors
+loans ||--o{ loan_items : "One-to-Many"
+book_copies ||--o{ loan_items
+loan_items ||--o| fines : "One-to-One"
+
+note bottom of book_authors
+  <b>Many-to-Many</b> (คะแนนพิเศษ)
+  books <-> authors
+  Composite PK (book_id, author_id)
+end note
+
+note bottom of fines
+  One-to-One บังคับด้วย
+  UNIQUE constraint บน loan_item_id
+end note
+
+note top of users
+  <b>Index:</b> idx_users_email, idx_users_role
+  <b>Cascade:</b> user -> user_profile = ALL + orphanRemoval
+end note
+
+note top of books
+  <b>Index:</b> idx_books_title, idx_books_category_id
+  <b>Fetch:</b> ManyToOne ทั้งหมดเป็น LAZY (กัน N+1)
+  <b>Cascade:</b> ไม่ cascade ไป category/publisher
+end note
+
+@enduml

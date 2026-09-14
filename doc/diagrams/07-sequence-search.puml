@@ -1,0 +1,60 @@
+@startuml 07-sequence-search
+title Sequence Diagram #3 — ค้นหาหนังสือพร้อม Pagination & Sorting\n(GET /api/v1/books)
+
+skinparam defaultFontName "Tahoma"
+skinparam defaultFontSize 12
+skinparam shadowing false
+skinparam sequence {
+  ArrowColor #2E4053
+  LifeLineBorderColor #85929E
+  ParticipantBorderColor #34495E
+  ParticipantBackgroundColor #EAF2F8
+}
+autonumber
+
+actor "สมาชิก" as M
+participant "React SPA" as UI
+participant "BookController" as C
+participant "BookQueryServiceImpl" as S
+participant "BookRepository" as R
+participant "BookMapper" as MP
+database "PostgreSQL" as DB
+
+M -> UI : พิมพ์คำค้น + เลือกหน้า/การเรียง
+activate UI
+UI -> C : GET /api/v1/books?keyword=java\n&page=0&size=10&sort=title,asc
+activate C
+
+C -> C : bind Pageable จาก query params
+C -> S : search(keyword, pageable)
+activate S
+
+S -> R : findByTitleContainingIgnoreCase(keyword, pageable)
+activate R
+R -> DB : SELECT ... FROM books\nWHERE LOWER(title) LIKE ?\nORDER BY title ASC LIMIT 10 OFFSET 0
+DB --> R : rows
+R -> DB : SELECT COUNT(*) ...
+DB --> R : totalElements
+R --> S : Page<Book>
+deactivate R
+
+loop สำหรับหนังสือแต่ละเล่ม
+  S -> MP : toResponse(book)
+  MP --> S : BookResponse
+end
+
+S -> S : ห่อเป็น PageResponse<BookResponse>\n(content, page, size, totalElements, totalPages)
+S --> C : PageResponse<BookResponse>
+deactivate S
+
+C --> UI : 200 OK + JSON
+deactivate C
+UI --> M : แสดงผลลัพธ์ + ตัวแบ่งหน้า
+deactivate UI
+
+alt ไม่พบผลลัพธ์
+  C --> UI : 200 OK (content = [], totalElements = 0)
+  note right : คืน 200 ไม่ใช่ 404\nเพราะ collection ว่างไม่ใช่ข้อผิดพลาด
+end
+
+@enduml

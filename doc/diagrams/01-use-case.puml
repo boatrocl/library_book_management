@@ -1,0 +1,105 @@
+@startuml 01-use-case
+title Use Case Diagram — LibraFlow (ระบบจัดการหนังสือในห้องสมุด)
+
+skinparam defaultFontName "Tahoma"
+skinparam defaultFontSize 13
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #FDFDFD
+  BorderColor #34495E
+}
+skinparam actor {
+  BackgroundColor #EAF2F8
+  BorderColor #2E4053
+}
+left to right direction
+
+actor "สมาชิก\n(MEMBER)" as MEMBER
+actor "บรรณารักษ์\n(LIBRARIAN)" as LIBRARIAN
+actor "ผู้ดูแลระบบ\n(ADMIN)" as ADMIN
+actor "ระบบอีเมล\n(SMTP Service)" as MAIL
+
+MEMBER <|-- LIBRARIAN
+LIBRARIAN <|-- ADMIN
+
+rectangle "LibraFlow" {
+
+  package "การใช้งานทั่วไป" {
+    usecase "UC01\nเข้าสู่ระบบ" as UC01
+    usecase "UC02\nค้นหาหนังสือ" as UC02
+    usecase "UC03\nดูรายละเอียดหนังสือ" as UC03
+  }
+
+  package "สมาชิก" {
+    usecase "UC04\nจองหนังสือ" as UC04
+    usecase "UC05\nยกเลิกการจอง" as UC05
+    usecase "UC06\nดูประวัติการยืม" as UC06
+    usecase "UC07\nดูค่าปรับค้างชำระ" as UC07
+  }
+
+  package "งานเคาน์เตอร์" {
+    usecase "UC08\nจัดการหนังสือ\n(เพิ่ม/แก้ไข/ลบ)" as UC08
+    usecase "UC09\nจัดการตัวเล่ม" as UC09
+    usecase "UC10\nบันทึกการยืม" as UC10
+    usecase "UC11\nบันทึกการคืน" as UC11
+    usecase "UC12\nต่ออายุการยืม" as UC12
+    usecase "UC13\nรับชำระค่าปรับ" as UC13
+    usecase "UC14\nออกรายงาน" as UC14
+  }
+
+  package "ผู้ดูแลระบบ" {
+    usecase "UC15\nจัดการผู้ใช้และสิทธิ์" as UC15
+    usecase "UC16\nตั้งค่านโยบายการยืม" as UC16
+  }
+
+  package "กระบวนการภายใน" {
+    usecase "UC17\nตรวจสอบสิทธิ์การยืม" as UC17
+    usecase "UC18\nคำนวณค่าปรับ" as UC18
+    usecase "UC19\nแจ้งเตือนคิวจอง" as UC19
+  }
+}
+
+MEMBER --> UC01
+MEMBER --> UC02
+MEMBER --> UC03
+MEMBER --> UC04
+MEMBER --> UC05
+MEMBER --> UC06
+MEMBER --> UC07
+
+LIBRARIAN --> UC08
+LIBRARIAN --> UC09
+LIBRARIAN --> UC10
+LIBRARIAN --> UC11
+LIBRARIAN --> UC12
+LIBRARIAN --> UC13
+LIBRARIAN --> UC14
+
+ADMIN --> UC15
+ADMIN --> UC16
+
+UC19 --> MAIL
+
+UC10 ..> UC17 : <<include>>
+UC11 ..> UC18 : <<include>>
+UC11 ..> UC19 : <<include>>
+UC12 ..> UC17 : <<include>>
+UC04 ..> UC02 : <<extend>>
+
+note right of UC17
+  ใช้ Chain of Responsibility
+  BR-01 → BR-02 → BR-03 → BR-04
+end note
+
+note right of UC18
+  ใช้ Strategy Pattern
+  คิดอัตราตาม MemberTier (BR-07)
+end note
+
+note right of UC19
+  ใช้ Observer Pattern
+  ApplicationEvent (BR-10)
+end note
+
+@enduml
