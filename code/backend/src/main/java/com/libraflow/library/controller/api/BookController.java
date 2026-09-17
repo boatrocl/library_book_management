@@ -8,6 +8,10 @@ import com.libraflow.library.dto.response.BookResponse;
 import com.libraflow.library.dto.response.PageResponse;
 import com.libraflow.library.service.BookCommandService;
 import com.libraflow.library.service.BookQueryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -37,6 +41,7 @@ import java.util.List;
  */
 @RestController
 @RequestMapping("/api/v1/books")
+@Tag(name = "Books", description = "จัดการหนังสือและตัวเล่ม")
 public class BookController {
 
     private final BookQueryService bookQueryService;
@@ -58,6 +63,8 @@ public class BookController {
      * เพราะ "ไม่มีผลลัพธ์" ไม่ใช่ข้อผิดพลาด — resource /books มีอยู่จริงเสมอ
      * (ระบุไว้ใน use case UC02 alternative flow 3a)
      */
+    @Operation(summary = "ค้นหาหนังสือ", description = "รองรับคำค้น หมวดหมู่ การแบ่งหน้า และการเรียงลำดับ")
+    @ApiResponse(responseCode = "200", description = "สำเร็จ (ไม่พบผลลัพธ์จะได้ content ว่าง ไม่ใช่ 404)")
     @GetMapping
     public ResponseEntity<PageResponse<BookResponse>> search(
             @RequestParam(required = false) String keyword,
@@ -68,6 +75,11 @@ public class BookController {
     }
 
     /** ดูรายละเอียดหนังสือรายเล่ม (UC03) — ไม่พบตอบ 404 ผ่าน GlobalExceptionHandler */
+    @Operation(summary = "ดูรายละเอียดหนังสือ")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "สำเร็จ"),
+            @ApiResponse(responseCode = "404", description = "ไม่พบหนังสือ")
+    })
     @GetMapping("/{id}")
     public ResponseEntity<BookResponse> findById(@PathVariable Long id) {
         return ResponseEntity.ok(bookQueryService.findById(id));
@@ -82,6 +94,12 @@ public class BookController {
      *
      * ISBN ซ้ำ -> 409 ISBN_ALREADY_EXISTS
      */
+    @Operation(summary = "เพิ่มหนังสือใหม่")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "สร้างสำเร็จ"),
+            @ApiResponse(responseCode = "400", description = "ข้อมูลไม่ผ่าน validation"),
+            @ApiResponse(responseCode = "409", description = "ISBN ซ้ำ")
+    })
     @PostMapping
     public ResponseEntity<BookResponse> create(@Valid @RequestBody CreateBookRequest request) {
         BookResponse created = bookCommandService.create(request);
@@ -93,6 +111,12 @@ public class BookController {
     }
 
     /** แก้ไขหนังสือทั้งก้อน — 200 OK พร้อมข้อมูลหลังแก้ */
+    @Operation(summary = "แก้ไขหนังสือ")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "สำเร็จ"),
+            @ApiResponse(responseCode = "404", description = "ไม่พบหนังสือ"),
+            @ApiResponse(responseCode = "409", description = "ISBN ชนกับเล่มอื่น")
+    })
     @PutMapping("/{id}")
     public ResponseEntity<BookResponse> update(@PathVariable Long id,
                                                @Valid @RequestBody UpdateBookRequest request) {
@@ -103,6 +127,12 @@ public class BookController {
      * ลบหนังสือ — 204 No Content เพราะลบสำเร็จแล้วไม่มีอะไรจะส่งกลับ
      * ถ้ายังมีตัวเล่มถูกยืมหรือถูกจอง จะได้ 409 BOOK_IN_USE ตาม BR-11
      */
+    @Operation(summary = "ลบหนังสือ", description = "ลบไม่ได้ถ้ายังมีตัวเล่มถูกยืมหรือถูกจอง (BR-11)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "ลบสำเร็จ"),
+            @ApiResponse(responseCode = "404", description = "ไม่พบหนังสือ"),
+            @ApiResponse(responseCode = "409", description = "ยังมีตัวเล่มถูกใช้งานอยู่")
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         bookCommandService.delete(id);
@@ -116,12 +146,14 @@ public class BookController {
      * ถ้าไม่มีหนังสือต้นสังกัด โครงสร้าง URL จึงควรสื่อความเป็นเจ้าของนี้ออกมาด้วย
      * (ใบงานข้อ 7 กำหนดให้ตั้งชื่อ endpoint แบบ resource-based)
      */
+    @Operation(summary = "ตัวเล่มทั้งหมดของหนังสือ")
     @GetMapping("/{id}/copies")
     public ResponseEntity<List<BookCopyResponse>> findCopies(@PathVariable Long id) {
         return ResponseEntity.ok(bookQueryService.findCopies(id));
     }
 
     /** เพิ่มตัวเล่มใหม่ — ถ้าไม่ส่ง barcode มา ระบบจะสร้างต่อจากเลขล่าสุดให้ */
+    @Operation(summary = "เพิ่มตัวเล่มใหม่", description = "เว้น barcode ไว้ให้ระบบสร้างต่อจากเลขล่าสุดได้")
     @PostMapping("/{id}/copies")
     public ResponseEntity<BookCopyResponse> addCopy(@PathVariable Long id,
                                                     @Valid @RequestBody CreateBookCopyRequest request) {
