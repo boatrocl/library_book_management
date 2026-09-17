@@ -1,17 +1,28 @@
 package com.libraflow.library.controller.api;
 
+import com.libraflow.library.dto.request.CreateBookRequest;
+import com.libraflow.library.dto.request.UpdateBookRequest;
 import com.libraflow.library.dto.response.BookResponse;
 import com.libraflow.library.dto.response.PageResponse;
+import com.libraflow.library.service.BookCommandService;
 import com.libraflow.library.service.BookQueryService;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
 
 /**
  * Presentation Layer ของ resource "books"
@@ -26,9 +37,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class BookController {
 
     private final BookQueryService bookQueryService;
+    private final BookCommandService bookCommandService;
 
-    public BookController(BookQueryService bookQueryService) {
+    public BookController(BookQueryService bookQueryService, BookCommandService bookCommandService) {
         this.bookQueryService = bookQueryService;
+        this.bookCommandService = bookCommandService;
     }
 
     /**
@@ -55,5 +68,41 @@ public class BookController {
     @GetMapping("/{id}")
     public ResponseEntity<BookResponse> findById(@PathVariable Long id) {
         return ResponseEntity.ok(bookQueryService.findById(id));
+    }
+
+    /**
+     * เพิ่มหนังสือใหม่ — 201 Created พร้อม Location header ชี้ไปยัง resource ที่เพิ่งสร้าง
+     * ตามมาตรฐาน HTTP (ใบงานข้อ 7 กำหนดให้ใช้ status code ถูกต้อง)
+     *
+     * Valid สั่งให้ Bean Validation ตรวจ request ก่อนเข้าเมธอด ถ้าไม่ผ่าน Spring จะโยน
+     * MethodArgumentNotValidException ซึ่ง GlobalExceptionHandler แปลงเป็น 400 พร้อม fieldErrors
+     *
+     * ISBN ซ้ำ -> 409 ISBN_ALREADY_EXISTS
+     */
+    @PostMapping
+    public ResponseEntity<BookResponse> create(@Valid @RequestBody CreateBookRequest request) {
+        BookResponse created = bookCommandService.create(request);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(created.id())
+                .toUri();
+        return ResponseEntity.created(location).body(created);
+    }
+
+    /** แก้ไขหนังสือทั้งก้อน — 200 OK พร้อมข้อมูลหลังแก้ */
+    @PutMapping("/{id}")
+    public ResponseEntity<BookResponse> update(@PathVariable Long id,
+                                               @Valid @RequestBody UpdateBookRequest request) {
+        return ResponseEntity.ok(bookCommandService.update(id, request));
+    }
+
+    /**
+     * ลบหนังสือ — 204 No Content เพราะลบสำเร็จแล้วไม่มีอะไรจะส่งกลับ
+     * ถ้ายังมีตัวเล่มถูกยืมหรือถูกจอง จะได้ 409 BOOK_IN_USE ตาม BR-11
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        bookCommandService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }
