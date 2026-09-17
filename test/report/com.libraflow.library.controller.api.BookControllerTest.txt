@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.libraflow.library.controller.api.BookControllerTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.178 s -- in com.libraflow.library.controller.api.BookControllerTest
