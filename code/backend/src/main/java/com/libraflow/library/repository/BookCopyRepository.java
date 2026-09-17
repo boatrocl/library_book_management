@@ -2,7 +2,10 @@ package com.libraflow.library.repository;
 
 import com.libraflow.library.domain.entity.BookCopy;
 import com.libraflow.library.domain.enums.BookCopyStatus;
+import com.libraflow.library.repository.projection.BookCopyCount;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.List;
@@ -36,4 +39,19 @@ public interface BookCopyRepository extends JpaRepository<BookCopy, Long> {
     boolean existsByBookIdAndStatusIn(Long bookId, Collection<BookCopyStatus> statuses);
 
     boolean existsByBarcode(String barcode);
+
+    /**
+     * นับตัวเล่มทั้งหมดและตัวเล่มที่ว่างของหนังสือหลายเล่มพร้อมกันใน query เดียว
+     * ใช้ตอนสร้าง BookResponse ของผลลัพธ์แบบแบ่งหน้า เพื่อเลี่ยง N+1
+     */
+    @Query("""
+            SELECT new com.libraflow.library.repository.projection.BookCopyCount(
+                       c.book.id,
+                       COUNT(c),
+                       SUM(CASE WHEN c.status = com.libraflow.library.domain.enums.BookCopyStatus.AVAILABLE THEN 1L ELSE 0L END))
+            FROM BookCopy c
+            WHERE c.book.id IN :bookIds
+            GROUP BY c.book.id
+            """)
+    List<BookCopyCount> countCopiesByBookIds(@Param("bookIds") Collection<Long> bookIds);
 }
