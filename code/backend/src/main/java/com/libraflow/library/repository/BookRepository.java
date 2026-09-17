@@ -3,6 +3,7 @@ package com.libraflow.library.repository;
 import com.libraflow.library.domain.entity.Book;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,6 +23,16 @@ public interface BookRepository extends JpaRepository<Book, Long> {
      * query ดึงข้อมูลพร้อม LIMIT/OFFSET และ countQuery นับจำนวนทั้งหมด
      * ตามที่เขียนไว้ใน doc/diagrams/07-sequence-search.puml
      */
+    /**
+     * EntityGraph สั่งให้โหลด category กับ publisher มาพร้อมกันด้วย LEFT JOIN ใน query เดียว
+     *
+     * ทำไมใส่แค่สองตัวนี้ ไม่ใส่ authors ด้วย:
+     * authors เป็น collection ถ้า JOIN FETCH collection พร้อมกับ Pageable
+     * Hibernate จะเลิกแบ่งหน้าที่ระดับ SQL แล้วดึงทุกแถวมาแบ่งหน้าในหน่วยความจำแทน
+     * (คำเตือน HHH000104 firstResult/maxResults specified with collection fetch)
+     * ซึ่งอันตรายมากเมื่อข้อมูลเยอะ — authors จึงแก้ด้วย BatchSize ที่ฝั่ง entity แทน
+     */
+    @EntityGraph(attributePaths = {"category", "publisher"})
     @Query("""
             SELECT b FROM Book b
             WHERE (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')))

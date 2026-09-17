@@ -13,6 +13,7 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.math.BigDecimal;
@@ -73,6 +74,12 @@ public class Book {
      * ใช้ Set ไม่ใช่ List เพราะ (1) composite PK ของตารางกลางห้ามซ้ำอยู่แล้ว
      * และ (2) @ManyToMany + List ทำให้ Hibernate ลบทุกแถวแล้ว insert ใหม่ทุกครั้งที่แก้
      */
+    /**
+     * BatchSize แก้ N+1 ของ collection: แทนที่จะยิง query ดึงผู้แต่งทีละเล่ม
+     * Hibernate จะรวบ id ของหนังสือในหน้านั้นแล้วยิงครั้งเดียวด้วย WHERE book_id IN (...)
+     * ต่างจาก JOIN FETCH ตรงที่ไม่ทำลายการแบ่งหน้าที่ระดับ SQL
+     */
+    @BatchSize(size = 50)
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "book_authors",
