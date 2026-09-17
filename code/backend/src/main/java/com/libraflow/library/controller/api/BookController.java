@@ -1,7 +1,9 @@
 package com.libraflow.library.controller.api;
 
+import com.libraflow.library.dto.request.CreateBookCopyRequest;
 import com.libraflow.library.dto.request.CreateBookRequest;
 import com.libraflow.library.dto.request.UpdateBookRequest;
+import com.libraflow.library.dto.response.BookCopyResponse;
 import com.libraflow.library.dto.response.BookResponse;
 import com.libraflow.library.dto.response.PageResponse;
 import com.libraflow.library.service.BookCommandService;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import java.net.URI;
+import java.util.List;
 
 /**
  * Presentation Layer ของ resource "books"
@@ -104,5 +107,29 @@ public class BookController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         bookCommandService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * ตัวเล่มทั้งหมดของหนังสือเล่มหนึ่ง
+     *
+     * ใช้ URL ซ้อนแบบ /books/{id}/copies แทน /copies?bookId= เพราะตัวเล่มไม่มีความหมาย
+     * ถ้าไม่มีหนังสือต้นสังกัด โครงสร้าง URL จึงควรสื่อความเป็นเจ้าของนี้ออกมาด้วย
+     * (ใบงานข้อ 7 กำหนดให้ตั้งชื่อ endpoint แบบ resource-based)
+     */
+    @GetMapping("/{id}/copies")
+    public ResponseEntity<List<BookCopyResponse>> findCopies(@PathVariable Long id) {
+        return ResponseEntity.ok(bookQueryService.findCopies(id));
+    }
+
+    /** เพิ่มตัวเล่มใหม่ — ถ้าไม่ส่ง barcode มา ระบบจะสร้างต่อจากเลขล่าสุดให้ */
+    @PostMapping("/{id}/copies")
+    public ResponseEntity<BookCopyResponse> addCopy(@PathVariable Long id,
+                                                    @Valid @RequestBody CreateBookCopyRequest request) {
+        BookCopyResponse created = bookCommandService.addCopy(id, request);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{copyId}")
+                .buildAndExpand(created.id())
+                .toUri();
+        return ResponseEntity.created(location).body(created);
     }
 }
