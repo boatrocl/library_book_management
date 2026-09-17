@@ -22,7 +22,7 @@ import java.util.List;
 public record UpdateBookRequest(
 
         @NotBlank(message = "ISBN ต้องไม่เป็นค่าว่าง")
-        @Pattern(regexp = "\d{10}|\d{13}", message = "ISBN ต้องเป็นตัวเลข 10 หรือ 13 หลัก")
+        @Pattern(regexp = "[0-9]{10}|[0-9]{13}", message = "ISBN ต้องเป็นตัวเลข 10 หรือ 13 หลัก")
         String isbn,
 
         @NotBlank(message = "ชื่อหนังสือต้องไม่เป็นค่าว่าง")
