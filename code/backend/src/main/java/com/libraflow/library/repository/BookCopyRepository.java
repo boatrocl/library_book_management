@@ -40,6 +40,10 @@ public interface BookCopyRepository extends JpaRepository<BookCopy, Long> {
 
     boolean existsByBarcode(String barcode);
 
+    /** บาร์โค้ดล่าสุดในระบบ ใช้ให้ BarcodeGenerator สร้างเลขถัดไป (เรียงแบบสตริงได้เพราะเลขเติมศูนย์หน้า) */
+    @Query("SELECT MAX(c.barcode) FROM BookCopy c WHERE c.barcode LIKE CONCAT(:prefix, '%')")
+    Optional<String> findMaxBarcode(@Param("prefix") String prefix);
+
     /**
      * นับตัวเล่มทั้งหมดและตัวเล่มที่ว่างของหนังสือหลายเล่มพร้อมกันใน query เดียว
      * ใช้ตอนสร้าง BookResponse ของผลลัพธ์แบบแบ่งหน้า เพื่อเลี่ยง N+1
