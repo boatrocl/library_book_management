@@ -110,6 +110,7 @@ Authentication: `Authorization: Bearer <JWT>`
       "isbn": "9780132350884",
       "title": "Clean Code",
       "publishYear": 2008,
+      "price": 1650.00,
       "categoryName": "Software Engineering",
       "publisherName": "Prentice Hall",
       "authors": ["Robert C. Martin"],
@@ -170,6 +171,7 @@ Authentication: `Authorization: Bearer <JWT>`
 | `VALIDATION_FAILED` | 400 | ข้อมูล request ไม่ผ่าน Bean Validation | |
 | `RESOURCE_NOT_FOUND` | 404 | ไม่พบข้อมูลที่ระบุ | |
 | `ISBN_ALREADY_EXISTS` | 409 | ISBN ซ้ำในระบบ | |
+| `BARCODE_ALREADY_EXISTS` | 409 | บาร์โค้ดตัวเล่มซ้ำในระบบ | |
 | `MEMBER_SUSPENDED` | 409 | บัญชีสมาชิกถูกระงับ | BR-01 |
 | `UNPAID_FINE_EXCEEDED` | 409 | ค่าปรับค้างชำระเกินเกณฑ์ | BR-02 |
 | `LOAN_QUOTA_EXCEEDED` | 409 | ยืมครบโควต้าแล้ว | BR-03 |
@@ -188,17 +190,24 @@ Authentication: `Authorization: Bearer <JWT>`
 ```java
 public record CreateBookRequest(
     @NotBlank(message = "ISBN ต้องไม่เป็นค่าว่าง")
-    @Pattern(regexp = "\\d{10}|\\d{13}", message = "ISBN ต้องเป็นตัวเลข 10 หรือ 13 หลัก")
+    @Pattern(regexp = "[0-9]{10}|[0-9]{13}", message = "ISBN ต้องเป็นตัวเลข 10 หรือ 13 หลัก")
     String isbn,
 
-    @NotBlank @Size(max = 200)
+    @NotBlank(message = "ชื่อหนังสือต้องไม่เป็นค่าว่าง")
+    @Size(max = 200, message = "ชื่อหนังสือต้องยาวไม่เกิน 200 ตัวอักษร")
     String title,
 
     @Min(1000) @Max(2100)
     Integer publishYear,
+
+    @PositiveOrZero(message = "ราคาต้องไม่ติดลบ")
+    BigDecimal price,
 
     @NotNull Long categoryId,
     @NotNull Long publisherId,
     @NotEmpty List<Long> authorIds
 ) {}
 ```
+
+> ใช้ `[0-9]` แทน `\d` เพราะอ่านง่ายกว่าและไม่ต้อง escape สองชั้นในสตริง Java
+> — ผลลัพธ์เหมือนกันทุกประการ
