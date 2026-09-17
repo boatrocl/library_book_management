@@ -8,8 +8,10 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -79,6 +81,17 @@ public class Book {
     )
     private Set<Author> authors = new LinkedHashSet<>();
 
+    /**
+     * ตัวเล่มทั้งหมดของหนังสือเล่มนี้ mappedBy = "book" แปลว่าฝั่ง BookCopy เป็น owner
+     * (เป็นฝ่ายที่ถือคอลัมน์ book_id)
+     *
+     * cascade มีแค่ PERSIST กับ MERGE — จงใจไม่ใส่ REMOVE เพราะ BR-11 ห้ามลบหนังสือ
+     * ที่ยังมีตัวเล่มสถานะ ON_LOAN หรือ RESERVED ถ้าใส่ REMOVE ไว้ การลบหนังสือจะกวาด
+     * ตัวเล่มที่ถูกยืมอยู่ทิ้งไปด้วย แล้วประวัติการยืมจะขาด
+     */
+    @OneToMany(mappedBy = "book", cascade = {CascadeType.PERSIST, CascadeType.MERGE}, fetch = FetchType.LAZY)
+    private Set<BookCopy> copies = new LinkedHashSet<>();
+
     protected Book() {
         // no-arg constructor สำหรับ JPA เท่านั้น
     }
@@ -147,6 +160,17 @@ public class Book {
 
     public void setPublisher(Publisher publisher) {
         this.publisher = publisher;
+    }
+
+    /** คืน view ที่แก้ไม่ได้ กันโค้ดชั้นบนไปแก้ collection ข้าม entity */
+    public Set<BookCopy> getCopies() {
+        return Collections.unmodifiableSet(copies);
+    }
+
+    /** ผูกตัวเล่มเข้ากับหนังสือโดยตั้งค่าทั้งสองฝั่งให้ตรงกัน กัน object ใน memory หลุดจาก DB */
+    public void addCopy(BookCopy copy) {
+        this.copies.add(copy);
+        copy.setBook(this);
     }
 
     /** คืน view ที่แก้ไม่ได้ กันโค้ดชั้นบนไปแก้ collection ข้าม entity */
