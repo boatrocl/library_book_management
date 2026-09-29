@@ -1,44 +1,75 @@
 services:
+
   db:
     image: postgres:16
+
     container_name: libraflow-db
+
     environment:
-      POSTGRES_DB: libraflow
-      POSTGRES_USER: libraflow
-      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: ${DB_NAME:-libraflow}
+      POSTGRES_USER: ${DB_USERNAME:-libraflow}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+
     ports:
       - "5432:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U libraflow -d libraflow"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"
+        ]
+
       interval: 10s
       timeout: 5s
       retries: 5
 
+
   backend:
+
     build:
       context: ./code/backend
       dockerfile: Dockerfile
+
     container_name: libraflow-backend
+
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/libraflow
-      SPRING_DATASOURCE_USERNAME: libraflow
-      SPRING_DATASOURCE_PASSWORD: changeme
+
+      DB_URL: "jdbc:postgresql://db:5432/${DB_NAME:-libraflow}"
+
+      DB_USERNAME: ${DB_USERNAME:-libraflow}
+
+      DB_PASSWORD: ${DB_PASSWORD:-changeme}
+
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required. Put it in .env}
+
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-86400000}
+
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+
     ports:
       - "8080:8080"
+
     depends_on:
       db:
         condition: service_healthy
+
 
   # frontend:
   #   build:
   #     context: ./code/frontend
   #     dockerfile: Dockerfile
+  #
   #   ports:
   #     - "5173:5173"
+  #
   #   depends_on:
   #     - backend
 
+
 volumes:
+
   postgres_data:
