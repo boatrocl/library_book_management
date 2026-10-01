@@ -44,13 +44,13 @@
 
 ## System Architecture
 
-```
+```text
 [ React SPA ]
       | HTTPS / JSON
       v
 [ Security Filter (JWT) ]
       v
-[ Presentation Layer ]  Controller / RestController  +  DTO + Mapper
+[ Presentation Layer ]  Controller / RestController + DTO + Mapper
       v
 [ Service Layer ]       Business Logic + @Transactional + Design Patterns
       v
@@ -89,6 +89,7 @@
 | `V1__init_catalog.sql` | categories, publishers, authors, books, book_authors, book_copies | คนที่ 1 |
 | `V2__seed_catalog.sql` | ข้อมูลตัวอย่างของตารางชุด catalog | คนที่ 1 |
 | `V3__init_users.sql` | users, user_profiles | คนที่ 5 |
+| `V3_1__add_role_and_auth_seed.sql` | เพิ่ม role, role constraint และ BCrypt authentication seed สำหรับ ADMIN / LIBRARIAN / MEMBER | คนที่ 5 |
 | `V4__init_loan.sql` | loans, loan_items | คนที่ 2 |
 | `V5__init_fine_reservation.sql` | fines, reservations | คนที่ 3 |
 | `V6__seed_data.sql` | ข้อมูลตัวอย่างส่วนที่เหลือ | ทีม |
@@ -100,6 +101,7 @@
 ## Installation & Setup
 
 ### ความต้องการของระบบ
+
 - JDK 17 หรือสูงกว่า
 - Node.js 20+
 - Docker Desktop / Docker Engine + Docker Compose
@@ -121,7 +123,16 @@ DB_USERNAME=libraflow
 DB_PASSWORD=changeme
 JWT_SECRET=<random-256-bit-secret>
 JWT_EXPIRATION=86400000
+FRONTEND_ORIGIN=http://localhost:5173
 ```
+
+สร้าง JWT Secret สำหรับ development ได้ด้วย:
+
+```bash
+openssl rand -base64 32
+```
+
+> ห้าม commit `.env`, database password หรือ JWT secret จริงลง Git repository
 
 ---
 
@@ -170,12 +181,66 @@ npm run dev
 
 ---
 
+## Security / JWT Authentication
+
+ระบบใช้ Spring Security และ JWT สำหรับ Authentication และ Authorization
+
+Login endpoint:
+
+```text
+POST /api/v1/auth/login
+```
+
+เมื่อ login สำเร็จ ระบบจะส่ง JWT กลับมา:
+
+```json
+{
+  "token": "<JWT>",
+  "tokenType": "Bearer",
+  "expiresInSeconds": 86400,
+  "username": "admin",
+  "role": "ADMIN"
+}
+```
+
+เมื่อต้องการเรียก Protected Endpoint ให้ส่ง Header:
+
+```text
+Authorization: Bearer <JWT>
+```
+
+Role ที่รองรับ:
+
+| Role | สิทธิ์หลัก |
+|---|---|
+| `ADMIN` | จัดการข้อมูลระบบและหนังสือ |
+| `LIBRARIAN` | จัดการข้อมูลที่เกี่ยวข้องกับงานห้องสมุด |
+| `MEMBER` | ใช้งาน Endpoint ตามสิทธิ์ของสมาชิก |
+
+ตัวอย่าง Security Rule:
+
+- `GET /api/v1/books/**` เป็น Public Endpoint
+- `POST /api/v1/books/**` ต้องเป็น `ADMIN` หรือ `LIBRARIAN`
+- `PUT /api/v1/books/**` ต้องเป็น `ADMIN` หรือ `LIBRARIAN`
+- `PATCH /api/v1/books/**` ต้องเป็น `ADMIN` หรือ `LIBRARIAN`
+- `DELETE /api/v1/books/**` ต้องเป็น `ADMIN` หรือ `LIBRARIAN`
+
+รายละเอียดเพิ่มเติม:
+
+- [`doc/security-ci-deployment.md`](doc/security-ci-deployment.md)
+
+---
+
 ## API Documentation
 
 - Swagger UI (local): http://localhost:8080/swagger-ui.html
-- Swagger UI (production): _(รอ deploy)_
+- Swagger UI (production): https://library-book-management-ybt2.onrender.com/swagger-ui.html
 - OpenAPI Spec (JSON): `/v3/api-docs`
 - รายละเอียด Endpoint ทั้งหมด: [`doc/api-spec.md`](doc/api-spec.md)
+
+Swagger รองรับ Bearer JWT Authentication
+โดยสามารถ Login ผ่าน `/api/v1/auth/login`
+แล้วนำ Token ไปใช้ผ่านปุ่ม **Authorize**
 
 ---
 
@@ -184,13 +249,155 @@ npm run dev
 ```bash
 cd code/backend
 
-./mvnw test          # Unit Test (JUnit 5 + Mockito)
-./mvnw verify        # Unit + Integration Test (Testcontainers + PostgreSQL)
+./mvnw test          # Unit Test
+./mvnw verify        # Unit + Integration Test
+```
+
+ระบบทดสอบด้วย:
+
+- JUnit 5
+- Mockito
+- Spring Boot Test
+- Spring Security Test
+- Testcontainers
+- PostgreSQL 16
+
+Security Unit Tests:
+
+```text
+JwtServiceTest
+JwtAuthenticationFilterTest
+AuthServiceImplTest
+```
+
+Integration Test:
+
+```text
+AuthSecurityIntegrationTest
+```
+
+Integration Test ใช้ PostgreSQL 16 จริงผ่าน Testcontainers
+และทดสอบ Flyway migration, authentication, JWT และ role authorization
+
+ผลการทดสอบล่าสุด:
+
+```text
+Tests run: 40
+Failures: 0
+Errors: 0
+Skipped: 0
+
+BUILD SUCCESS
 ```
 
 รายงานผลการทดสอบ:
-- `code/backend/target/surefire-reports/`
-- สำเนา Test Report: `test/report/`
+
+- Maven Surefire Report: `code/backend/target/surefire-reports/`
+- Security / Deployment Test Report: [`test/report/member5-security-test-report.md`](test/report/member5-security-test-report.md)
+
+---
+
+## CI/CD
+
+Backend ใช้ GitHub Actions สำหรับ Continuous Integration
+
+Workflow:
+
+```text
+.github/workflows/backend-ci.yml
+```
+
+เมื่อ Workflow ทำงาน ระบบจะ:
+
+```text
+Checkout Repository
+      |
+      v
+Setup Java 17
+      |
+      v
+Check Docker
+      |
+      v
+Maven Clean Verify
+      |
+      v
+Unit Test + Integration Test
+```
+
+คำสั่งหลักของ CI:
+
+```bash
+./mvnw --batch-mode --no-transfer-progress clean verify
+```
+
+Integration Test สามารถสร้าง PostgreSQL ชั่วคราวผ่าน Testcontainers
+บน GitHub Actions runner ได้
+
+---
+
+## Production Deployment
+
+### PostgreSQL
+
+Production Database ใช้ Neon PostgreSQL
+
+Database:
+
+```text
+libraflow
+```
+
+การเชื่อมต่อ Production ใช้ SSL และเก็บ credential ผ่าน Environment Variables
+
+รูปแบบ JDBC URL:
+
+```text
+jdbc:postgresql://<NEON_HOST>:5432/libraflow?sslmode=require
+```
+
+### Backend
+
+Backend deploy ด้วย Docker บน Render จาก branch:
+
+```text
+develop
+```
+
+Render configuration:
+
+```text
+Root Directory: code/backend
+Dockerfile Path: ./Dockerfile
+Docker Build Context Directory: .
+```
+
+Environment Variables ที่ Backend ใช้:
+
+```text
+DB_URL
+DB_USERNAME
+DB_PASSWORD
+JWT_SECRET
+JWT_EXPIRATION
+FRONTEND_ORIGIN
+SERVER_PORT
+```
+
+Production Backend:
+
+```text
+https://library-book-management-ybt2.onrender.com
+```
+
+Production Swagger:
+
+```text
+https://library-book-management-ybt2.onrender.com/swagger-ui.html
+```
+
+> Production secret เช่น `DB_PASSWORD` และ `JWT_SECRET`
+> ต้องเก็บใน Environment Variables ของ deployment platform เท่านั้น
 
 ---
 
@@ -199,45 +406,72 @@ cd code/backend
 | ส่วน | URL |
 |---|---|
 | Frontend | _(รอ deploy)_ |
-| Backend API | _(รอ deploy)_ |
-| Swagger UI | _(รอ deploy)_ |
+| Backend API | https://library-book-management-ybt2.onrender.com |
+| Swagger UI | https://library-book-management-ybt2.onrender.com/swagger-ui.html |
+| PostgreSQL | Neon PostgreSQL |
 
 ---
 
 ## Project Structure
 
-```
+```text
 library_book_management/
+├── .github/
+│   └── workflows/
+│       └── backend-ci.yml
 ├── code/
 │   ├── backend/                 # Spring Boot
+│   │   ├── Dockerfile
 │   │   ├── pom.xml
 │   │   ├── mvnw / mvnw.cmd
-│   │   └── src/main/java/com/libraflow/library/
-│   │       ├── config/
-│   │       ├── controller/api/
-│   │       ├── service/impl/
-│   │       ├── repository/
-│   │       ├── domain/entity/
-│   │       ├── domain/enums/
-│   │       ├── dto/request/
-│   │       ├── dto/response/
-│   │       ├── mapper/
-│   │       ├── pattern/         # strategy / state / chain / observer / template
-│   │       ├── exception/
-│   │       └── common/
+│   │   └── src/
+│   │       ├── main/
+│   │       │   ├── java/com/libraflow/library/
+│   │       │   │   ├── config/
+│   │       │   │   ├── controller/api/
+│   │       │   │   ├── service/impl/
+│   │       │   │   ├── repository/
+│   │       │   │   ├── security/        # JWT / Spring Security
+│   │       │   │   ├── domain/entity/
+│   │       │   │   ├── domain/enums/
+│   │       │   │   ├── dto/request/
+│   │       │   │   ├── dto/response/
+│   │       │   │   ├── mapper/
+│   │       │   │   ├── pattern/
+│   │       │   │   ├── exception/
+│   │       │   │   └── common/
+│   │       │   └── resources/
+│   │       │       └── db/migration/
+│   │       │           ├── V1__init_catalog.sql
+│   │       │           ├── V2__seed_catalog.sql
+│   │       │           ├── V3__init_users.sql
+│   │       │           └── V3_1__add_role_and_auth_seed.sql
+│   │       └── test/java/com/libraflow/library/
+│   │           ├── controller/api/
+│   │           ├── integration/
+│   │           │   └── AuthSecurityIntegrationTest.java
+│   │           ├── security/
+│   │           │   ├── JwtAuthenticationFilterTest.java
+│   │           │   └── JwtServiceTest.java
+│   │           └── service/impl/
+│   │               └── AuthServiceImplTest.java
 │   └── frontend/                # React + Vite
 ├── test/
 │   ├── unit/
 │   ├── integration/
 │   └── report/
+│       └── member5-security-test-report.md
 ├── doc/
 │   ├── project-overview.md
 │   ├── solid-analysis.md
 │   ├── design-patterns.md
 │   ├── data-dictionary.md
 │   ├── api-spec.md
+│   ├── security-ci-deployment.md
 │   ├── diagrams/                # ไฟล์ .puml ทั้งหมด + ภาพ export
 │   └── slide/
+├── docker-compose.yml
+├── .env.example
 └── img/
 ```
 
@@ -261,7 +495,7 @@ git checkout -b somchai_66123456_01
 
 **Commit Message Convention:** `<type>: <สิ่งที่ทำ>`
 
-```
+```text
 feat: add customer registration API
 fix: correct fine calculation for overdue loan
 refactor: extract discount strategy interface
@@ -269,4 +503,5 @@ test: add unit test for LoanService
 docs: update API specification
 ```
 
-การรวมงานทุกครั้งต้องเปิด Pull Request เข้า `develop` และมี reviewer ในทีมอย่างน้อย 1 คน
+การรวมงานทุกครั้งต้องเปิด Pull Request เข้า `develop`
+และมี reviewer ในทีมอย่างน้อย 1 คน
