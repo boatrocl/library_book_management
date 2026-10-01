@@ -25,6 +25,10 @@
 
     <dependencies>
 
+        <!-- ========================= -->
+        <!-- Application Dependencies -->
+        <!-- ========================= -->
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -61,6 +65,10 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- ========================= -->
+        <!-- JWT -->
+        <!-- ========================= -->
+
         <dependency>
             <groupId>io.jsonwebtoken</groupId>
             <artifactId>jjwt-api</artifactId>
@@ -81,35 +89,9 @@
             <scope>runtime</scope>
         </dependency>
 
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-jpa-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-flyway-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-validation-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-webmvc-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
-            <scope>test</scope>
-        </dependency>
+        <!-- ========================= -->
+        <!-- Swagger / OpenAPI -->
+        <!-- ========================= -->
 
         <dependency>
             <groupId>org.springdoc</groupId>
@@ -117,15 +99,60 @@
             <version>3.1.1</version>
         </dependency>
 
+        <!-- ========================= -->
+        <!-- Testing -->
+        <!-- ========================= -->
+
+        <!--
+            Spring Boot 4 แยก test support ตาม module
+            dependency นี้จำเป็นสำหรับ @WebMvcTest / MockMvc
+            และ test ของ Controller ที่โปรเจกต์มีอยู่เดิม
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- JPA test support สำหรับ repository/database tests -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Flyway test support -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Validation test support -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Spring Security MockMvc / Security testing -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
     </dependencies>
 
     <build>
 
         <plugins>
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+
         </plugins>
 
         <finalName>libraflow-api</finalName>
