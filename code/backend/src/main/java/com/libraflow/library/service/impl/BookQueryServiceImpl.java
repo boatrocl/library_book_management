@@ -39,64 +39,160 @@ public class BookQueryServiceImpl implements BookQueryService {
     private final BookCopyRepository bookCopyRepository;
     private final BookMapper bookMapper;
 
-    public BookQueryServiceImpl(BookRepository bookRepository,
-                                BookCopyRepository bookCopyRepository,
-                                BookMapper bookMapper) {
+    public BookQueryServiceImpl(
+            BookRepository bookRepository,
+            BookCopyRepository bookCopyRepository,
+            BookMapper bookMapper
+    ) {
         this.bookRepository = bookRepository;
         this.bookCopyRepository = bookCopyRepository;
         this.bookMapper = bookMapper;
     }
 
     @Override
-    public PageResponse<BookResponse> search(String keyword, Long categoryId, Pageable pageable) {
-        // ทำให้คำค้นที่เป็นช่องว่างล้วนมีความหมายเท่ากับไม่ได้ส่งมา
-        String normalizedKeyword = (keyword == null || keyword.isBlank()) ? null : keyword.trim();
+    public PageResponse<BookResponse> search(
+            String keyword,
+            Long categoryId,
+            Pageable pageable
+    ) {
+        /*
+         * ถ้าไม่ได้ส่ง keyword หรือส่งเป็นช่องว่าง
+         * ให้ใช้ empty string แทน null
+         *
+         * เหตุผล:
+         * PostgreSQL + Hibernate บางเวอร์ชันอาจ bind null parameter
+         * ใน LOWER(CONCAT(...)) เป็นชนิด bytea ทำให้เกิด
+         * "function lower(bytea) does not exist"
+         *
+         * empty string จะทำให้เงื่อนไข LIKE กลายเป็น LIKE '%%'
+         * ซึ่งมีความหมายเท่ากับไม่กรองชื่อหนังสือ
+         */
+        String normalizedKeyword =
+                (keyword == null || keyword.isBlank())
+                        ? ""
+                        : keyword.trim();
 
-        Page<Book> page = bookRepository.search(normalizedKeyword, categoryId, pageable);
+        Page<Book> page =
+                bookRepository.search(
+                        normalizedKeyword,
+                        categoryId,
+                        pageable
+                );
 
-        // นับตัวเล่มของหนังสือทุกเล่มในหน้านี้ด้วย query เดียว แทนการนับทีละเล่ม
-        Map<Long, BookCopyCount> countsByBookId = loadCopyCounts(page.getContent());
+        // นับตัวเล่มของหนังสือทุกเล่มในหน้านี้ด้วย query เดียว
+        // แทนการนับทีละเล่ม
+        Map<Long, BookCopyCount> countsByBookId =
+                loadCopyCounts(page.getContent());
 
-        return PageResponse.from(page, book -> toResponseWithCounts(book, countsByBookId));
+        return PageResponse.from(
+                page,
+                book -> toResponseWithCounts(
+                        book,
+                        countsByBookId
+                )
+        );
     }
 
     @Override
     public BookResponse findById(Long id) {
-        Book book = bookRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("หนังสือ", id));
 
-        long total = bookCopyRepository.countByBookId(id);
-        long available = bookCopyRepository.countByBookIdAndStatus(
-                id, com.libraflow.library.domain.enums.BookCopyStatus.AVAILABLE);
+        Book book =
+                bookRepository.findById(id)
+                        .orElseThrow(
+                                () ->
+                                        new ResourceNotFoundException(
+                                                "หนังสือ",
+                                                id
+                                        )
+                        );
 
-        return bookMapper.toResponse(book, available, total);
+        long total =
+                bookCopyRepository.countByBookId(id);
+
+        long available =
+                bookCopyRepository
+                        .countByBookIdAndStatus(
+                                id,
+                                com.libraflow.library.domain.enums.BookCopyStatus.AVAILABLE
+                        );
+
+        return bookMapper.toResponse(
+                book,
+                available,
+                total
+        );
     }
 
     @Override
     public List<BookCopyResponse> findCopies(Long bookId) {
-        // ตรวจก่อนว่าหนังสือมีจริง เพื่อแยก 404 (ไม่มีหนังสือ) ออกจาก 200 + list ว่าง (มีหนังสือแต่ยังไม่มีตัวเล่ม)
+
+        // ตรวจก่อนว่าหนังสือมีจริง
+        // เพื่อแยก 404 ออกจาก 200 + list ว่าง
         if (!bookRepository.existsById(bookId)) {
-            throw new ResourceNotFoundException("หนังสือ", bookId);
+            throw new ResourceNotFoundException(
+                    "หนังสือ",
+                    bookId
+            );
         }
 
-        List<BookCopy> copies = bookCopyRepository.findByBookIdOrderByBarcodeAsc(bookId);
-        return bookMapper.toCopyResponses(copies);
+        List<BookCopy> copies =
+                bookCopyRepository
+                        .findByBookIdOrderByBarcodeAsc(
+                                bookId
+                        );
+
+        return bookMapper.toCopyResponses(
+                copies
+        );
     }
 
-    private Map<Long, BookCopyCount> loadCopyCounts(List<Book> books) {
-        List<Long> bookIds = books.stream().map(Book::getId).toList();
+    private Map<Long, BookCopyCount> loadCopyCounts(
+            List<Book> books
+    ) {
+
+        List<Long> bookIds =
+                books.stream()
+                        .map(Book::getId)
+                        .toList();
+
         if (bookIds.isEmpty()) {
-            // เลี่ยงการยิง query ที่มี IN () ว่าง ซึ่งเป็น SQL ที่ไม่ถูกต้อง
+            // เลี่ยง query ที่มี IN () ว่าง
             return Map.of();
         }
-        return bookCopyRepository.countCopiesByBookIds(bookIds).stream()
-                .collect(java.util.stream.Collectors.toMap(BookCopyCount::bookId, Function.identity()));
+
+        return bookCopyRepository
+                .countCopiesByBookIds(bookIds)
+                .stream()
+                .collect(
+                        java.util.stream.Collectors.toMap(
+                                BookCopyCount::bookId,
+                                Function.identity()
+                        )
+                );
     }
 
-    private BookResponse toResponseWithCounts(Book book, Map<Long, BookCopyCount> counts) {
-        BookCopyCount count = counts.get(book.getId());
-        long total = count == null ? 0L : count.totalCopies();
-        long available = count == null ? 0L : count.availableCopies();
-        return bookMapper.toResponse(book, available, total);
+    private BookResponse toResponseWithCounts(
+            Book book,
+            Map<Long, BookCopyCount> counts
+    ) {
+
+        BookCopyCount count =
+                counts.get(book.getId());
+
+        long total =
+                count == null
+                        ? 0L
+                        : count.totalCopies();
+
+        long available =
+                count == null
+                        ? 0L
+                        : count.availableCopies();
+
+        return bookMapper.toResponse(
+                book,
+                available,
+                total
+        );
     }
 }
