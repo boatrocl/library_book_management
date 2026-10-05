@@ -4,10 +4,10 @@ import com.libraflow.library.domain.entity.BookCopy;
 import com.libraflow.library.domain.entity.Loan;
 import com.libraflow.library.domain.entity.LoanItem;
 import com.libraflow.library.domain.entity.User;
+import com.libraflow.library.common.LoanPolicyUtil;
 import com.libraflow.library.domain.enums.BookCopyStatus;
 import com.libraflow.library.domain.enums.LoanStatus;
 import com.libraflow.library.domain.enums.MemberTier;
-import com.libraflow.library.domain.enums.UserRole;
 import com.libraflow.library.dto.request.BorrowRequest;
 import com.libraflow.library.dto.response.LoanResponse;
 import com.libraflow.library.dto.response.PageResponse;
@@ -87,7 +87,7 @@ public class LoanServiceImpl implements LoanService {
             throw new ResourceNotFoundException("ไม่พบบาร์โค้ดหนังสือในระบบ: " + String.join(", ", missing));
         }
 
-        MemberTier tier = resolveMemberTier(member);
+        MemberTier tier = LoanPolicyUtil.resolveMemberTier(member);
         long activeLoanCount = loanRepository.countActiveLoanItemsByUserId(member.getId());
 
         BorrowContext ctx = new BorrowContext(member, tier, copies, activeLoanCount, BigDecimal.ZERO);
@@ -97,8 +97,8 @@ public class LoanServiceImpl implements LoanService {
                 .sorted(Comparator.comparingInt(BorrowRule::order))
                 .forEach(rule -> rule.check(ctx));
 
-        // คำนวณวันกำหนดคืนตามประเภทสมาชิก (BR-05)
-        LocalDate dueDate = LocalDate.now().plusDays(tier.getLoanDurationDays());
+        // คำนวณวันกำหนดคืนตามประเภทสมาชิก (BR-05) ผ่าน LoanPolicyUtil
+        LocalDate dueDate = LoanPolicyUtil.calculateDueDate(tier);
 
         String loanCode = generateLoanCode();
         Loan loan = new Loan(loanCode, member, null, LocalDateTime.now(), LoanStatus.ACTIVE);
@@ -184,12 +184,6 @@ public class LoanServiceImpl implements LoanService {
         loanRepository.delete(loan);
     }
 
-    private MemberTier resolveMemberTier(User member) {
-        if (member.getRole() == UserRole.ADMIN || member.getRole() == UserRole.LIBRARIAN) {
-            return MemberTier.STAFF;
-        }
-        return MemberTier.STUDENT;
-    }
 
     private String generateLoanCode() {
         String datePrefix = "LN-" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")) + "-";
