@@ -92,3 +92,18 @@
 ทั้ง 5 ตัวแล้ว inject ผ่าน constructor ได้ทันที ทดสอบกฎ BR-11 จบใน 0.5 วินาที
 โดยไม่ต้องยก Spring Context หรือฐานข้อมูลขึ้นมาเลย — ถ้าเคยเขียน `new BookRepositoryImpl()`
 ไว้ในคลาส จะ mock ไม่ได้และต้องใช้ฐานข้อมูลจริงทดสอบ
+
+---
+## ส่วนของคนที่ 3 (ระบบค่าปรับ, การจอง, ออกรายงาน)
+
+### S — Single Responsibility Principle
+- **ไฟล์:** `FineReportGenerator.java` และ `ReservationReportGenerator.java`
+- **เหตุผล:** คลาสเหล่านี้ทำหน้าที่เดียวคือ "ออกรายงาน" ตามประเภทของตัวเอง โดยแยกออกจาก Business Logic หลักของการคำนวณค่าปรับและการจอง เพื่อไม่ให้คลาสปะปนกัน
+
+### O — Open/Closed Principle
+- **ไฟล์:** `FineCalculationStrategy.java`, `StandardMemberFineStrategy.java`, `FacultyMemberFineStrategy.java`
+- **เหตุผล:** ระบบค่าปรับเปิดรับการขยาย (Open for extension) ผ่านอินเทอร์เฟซ `FineCalculationStrategy` หากในอนาคตมีประเภทสมาชิกใหม่ (เช่น นักศึกษา ป.โท) ก็แค่สร้างคลาสใหม่มา Implements โดยไม่ต้องแก้ไข (Closed for modification) โค้ดเดิมของ `FineServiceImpl`
+
+### D — Dependency Inversion Principle
+- **ไฟล์:** `FineServiceImpl.java` (บรรทัดที่รับ Constructor) และ `ReservationNotificationListener.java`
+- **เหตุผล:** `FineServiceImpl` ไม่ได้ผูกมัดกับคลาสคำนวณค่าปรับแบบเจาะจง (Concrete) แต่ผูกมัดกับ `FineCalculationStrategy` (Interface) แทน และใช้วิธี **Constructor Injection** ในการรับออบเจกต์เข้ามา ทำให้โค้ดลดความเกี่ยวพันกัน (Loose Coupling)
