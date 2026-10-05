@@ -1,6 +1,7 @@
 package com.libraflow.library.domain.entity;
 
 import com.libraflow.library.domain.enums.UserRole;
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -12,8 +13,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrimaryKeyJoinColumn;
 import jakarta.persistence.Table;
-
-import jakarta.persistence.CascadeType;
 
 import java.time.LocalDateTime;
 
@@ -62,7 +61,11 @@ public class User {
     @Column(name = "member_tier", length = 20)
     private String memberTier = "STUDENT";
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(
+            mappedBy = "user",
+            cascade = CascadeType.ALL,
+            fetch = FetchType.LAZY
+    )
     @PrimaryKeyJoinColumn
     private UserProfile profile;
 
@@ -99,6 +102,14 @@ public class User {
 
     public boolean isActive() {
         return active;
+    }
+
+    public String getMemberTier() {
+        return memberTier;
+    }
+
+    public UserProfile getProfile() {
+        return profile;
     }
 
     public LocalDateTime getCreatedAt() {

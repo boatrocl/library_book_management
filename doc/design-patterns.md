@@ -116,3 +116,12 @@ public abstract class AbstractReportGenerator {
 | **Abstract Factory** | ระบบมีตระกูลผลิตภัณฑ์เพียงตระกูลเดียว การเพิ่ม Abstract Factory จะเป็น over-engineering |
 | **Composite** | โครงสร้างข้อมูลในระบบไม่มีลำดับชั้นแบบ tree ที่ต้องปฏิบัติกับ node เดี่ยวและกลุ่มเหมือนกัน |
 | **Command** | ไม่มีความต้องการ undo/redo หรือ queue คำสั่ง — REST endpoint ทำหน้าที่นี้อยู่แล้ว |
+
+---
+## ส่วนของคนที่ 3 (Behavioral Patterns)
+
+| Pattern | ปัญหาที่แก้ | ไฟล์/คลาสที่ใช้ |
+|---|---|---|
+| **Strategy** | การคำนวณค่าปรับมีหลายเรทราคาขึ้นอยู่กับประเภทผู้ใช้ หากใช้ if-else จะทำให้โค้ดยาวและแก้ไขยากเมื่อมีเงื่อนไขใหม่ | `FineCalculationStrategy` (Interface)<br>`StandardMemberFineStrategy` (Concrete)<br>`FacultyMemberFineStrategy` (Concrete)<br>`FineServiceImpl` (Context) |
+| **Observer** | ระบบต้องแจ้งเตือนคนที่จองคิวไว้ทันทีเมื่อมีหนังสือถูกคืนเข้าสู่ระบบ โดยไม่ให้ระบบคืนหนังสือต้องมารอระบบแจ้งเตือน (Decoupling) | `BookReturnedEvent` (Event/Subject)<br>`ReservationNotificationListener` (Observer) |
+| **Template Method** | การสร้างรายงานแต่ละประเภทมีลำดับขั้นตอนตายตัว (ดึงข้อมูล -> จัดรูปแบบ -> เซฟไฟล์) แต่รายละเอียดแต่ละขั้นต่างกัน | `ReportGenerator` (Abstract Class)<br>`FineReportGenerator` (Concrete)<br>`ReservationReportGenerator` (Concrete) |
