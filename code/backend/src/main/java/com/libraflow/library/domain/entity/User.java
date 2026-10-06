@@ -116,16 +116,8 @@ public class User {
         return createdAt;
     }
 
-    public String getMemberTier() {
-        return memberTier;
-    }
-
     public void setMemberTier(String memberTier) {
         this.memberTier = memberTier;
-    }
-
-    public UserProfile getProfile() {
-        return profile;
     }
 
     public void setProfile(UserProfile profile) {
