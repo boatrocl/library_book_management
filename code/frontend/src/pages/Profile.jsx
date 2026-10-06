@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
+import { jwtDecode } from 'jwt-decode';
 import api from '../api';
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
-  
+  const [userId, setUserId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // เพิ่มส่วนนี้กลับเข้าไปครับ
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -13,13 +17,38 @@ export default function Profile() {
     address: ''
   });
 
-  //เนื่องจากระบบ Auth ยังไม่เสร็จ เลยใช้ const userId = 1; ไปก่อนนะจ๊ะ
-  //เมื่อเสร็จเราค่อยดึง ID จาก Token (jwt-decode) มาแทนที่ตรงนี้
-  const userId = 1; 
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        console.log("📌 ข้อมูลใน Token:", decoded); // 2. พิมพ์ค่าออกมาเช็ก
+        
+        // ลองดึงค่า ID (ถ้าไม่มีจะใช้ sub แทนซึ่งอาจเป็นตัวหนังสือและทำให้เกิด Error)
+        const currentUserId = decoded.id || decoded.userId || decoded.sub;
+        setUserId(currentUserId);
+        
+        if (!currentUserId) setIsLoading(false);
+      } catch (error) {
+        console.error("Token ไม่ถูกต้อง:", error);
+        setMessage({ type: 'error', text: 'เซสชันไม่ถูกต้อง กรุณาล็อกอินใหม่' });
+        setIsLoading(false);
+      }
+    } else {
+      setMessage({ type: 'error', text: 'กรุณาเข้าสู่ระบบ' });
+      setIsLoading(false);
+    }
+  }, []);
 
-  const fetchProfile = async () => {
+  useEffect(() => {
+    if (userId) {
+      fetchProfile(userId);
+    }
+  }, [userId]);
+
+  const fetchProfile = async (id) => {
     try {
-      const response = await api.get(`/api/v1/members/${userId}`);
+      const response = await api.get(`/api/v1/members/${id}`);
       setProfile(response.data);
       setFormData({
         firstName: response.data.firstName || '',
@@ -28,14 +57,12 @@ export default function Profile() {
         address: response.data.address || ''
       });
     } catch (error) {
-      console.error("ดึงข้อมูลโปรไฟล์ล้มเหลว", error);
-      setMessage({ type: 'error', text: 'ไม่สามารถดึงข้อมูลได้' });
+      console.error("ดึงข้อมูลล้มเหลว:", error);
+      setMessage({ type: 'error', text: `ไม่สามารถดึงข้อมูลโปรไฟล์ได้ (ID: ${id})` });
+    } finally {
+      setIsLoading(false); // 3. ไม่ว่าจะสำเร็จหรือพัง ต้องปิดหน้าโหลดเสมอ
     }
   };
-
-  useEffect(() => {
-    fetchProfile();
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,7 +70,7 @@ export default function Profile() {
     
     try {
       const response = await api.put(`/api/v1/members/${userId}`, formData);
-      setProfile(response.data); //อัปเดตข้อมูลบนหน้าจอด้วยข้อมูลที่ส่งกลับมาจาก Backend
+      setProfile(response.data); 
       setIsEditing(false);
       setMessage({ type: 'success', text: 'บันทึกข้อมูลเรียบร้อยแล้ว!' });
     } catch (error) {
@@ -52,13 +79,21 @@ export default function Profile() {
     }
   };
 
-  if (!profile) return <div className="p-10 text-center">กำลังโหลดข้อมูล...</div>;
+  // 4. เปลี่ยนวิธีแสดงผลหน้าโหลดและหน้า Error
+  if (isLoading) return <div className="p-10 text-center font-bold text-gray-600">กำลังโหลดข้อมูล...</div>;
+
+  if (!profile) return (
+    <div className="min-h-screen p-8 bg-gray-50 flex justify-center">
+      <div className="w-full max-w-3xl p-4 mt-10 text-red-800 bg-red-100 border border-red-200 rounded-md shadow-sm h-fit">
+        {message.text}
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen p-8 bg-gray-50">
       <div className="max-w-3xl mx-auto bg-white border rounded-xl shadow-sm overflow-hidden">
         
-        {/*ส่วนหัวโปรไฟล์*/}
         <div className="p-6 text-white bg-blue-700">
           <div className="flex items-center justify-between">
             <div>
@@ -74,7 +109,6 @@ export default function Profile() {
           </div>
         </div>
 
-        {/*ส่วนฟอร์มข้อมูล*/}
         <div className="p-8">
           {message.text && (
             <div className={`p-4 mb-6 text-sm rounded-md ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -150,7 +184,7 @@ export default function Profile() {
                         lastName: profile.lastName || '',
                         phoneNumber: profile.phoneNumber || '',
                         address: profile.address || ''
-                      }); //รีเซ็ตค่ากลับไปเป็นของเดิม
+                      });
                     }}
                     className="px-6 py-2 font-bold text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 transition"
                   >
