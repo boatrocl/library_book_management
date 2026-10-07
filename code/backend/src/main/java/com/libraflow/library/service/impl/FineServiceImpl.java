@@ -48,4 +48,20 @@ public class FineServiceImpl implements FineService {
         fine.markAsPaid();
         return fineRepository.save(fine);
     }
+
+    @Override
+    public java.util.List<com.libraflow.library.dto.response.FineResponse> getFinesByMemberId(Long memberId) {
+        java.util.List<Fine> fines = fineRepository.findByUserId(memberId);
+        return fines.stream()
+                .map(f -> new com.libraflow.library.dto.response.FineResponse(
+                        f.getId(),
+                        f.getLoanItem() != null ? f.getLoanItem().getId() : null,
+                        f.getAmount(),
+                        f.getOverdueDays(),
+                        f.getStatus().name(),
+                        f.getCreatedAt(),
+                        f.getPaidAt()
+                ))
+                .collect(java.util.stream.Collectors.toList());
+    }
 }
