@@ -5,6 +5,12 @@ import Login from './pages/Login';
 import Catalog from './pages/Catalog';
 import Navbar from './components/Navbar';
 import Profile from './pages/Profile';
+import BookManagement from './pages/BookManagement';
+import LoanManagement from './pages/LoanManagement';
+import BookCopyManagement from './pages/BookCopyManagement';
+import FineManagement from './pages/FineManagement';
+import ReportManagement from './pages/ReportManagement';
+import UserManagement from './pages/UserManagement';
 
 // อัปเกรด Guard ให้รับพารามิเตอร์ allowedRoles เพื่อเช็กสิทธิ์
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -53,7 +59,7 @@ function AppContent() {
           path="/admin/books" 
           element={
             <ProtectedRoute allowedRoles={['LIBRARIAN', 'ADMIN']}>
-              <div className="p-10 text-center font-bold">กำลังสร้างหน้าจัดการหนังสือ...</div>
+              <BookManagement />
             </ProtectedRoute>
           } 
         />
@@ -61,7 +67,40 @@ function AppContent() {
           path="/admin/loans" 
           element={
             <ProtectedRoute allowedRoles={['LIBRARIAN', 'ADMIN']}>
-              <div className="p-10 text-center font-bold">กำลังสร้างหน้าจัดการใบยืม...</div>
+              <LoanManagement />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/books/:id/copies" 
+          element={
+            <ProtectedRoute allowedRoles={['LIBRARIAN', 'ADMIN']}>
+              <BookCopyManagement />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/fines" 
+          element={
+            <ProtectedRoute allowedRoles={['LIBRARIAN', 'ADMIN']}>
+              <FineManagement />
+            </ProtectedRoute>
+          } 
+        />
+        <Route 
+          path="/admin/reports" 
+          element={
+            <ProtectedRoute allowedRoles={['LIBRARIAN', 'ADMIN']}>
+              <ReportManagement />
+            </ProtectedRoute>
+          } 
+        />
+
+        <Route 
+          path="/admin/users" 
+          element={
+            <ProtectedRoute allowedRoles={['ADMIN']}>
+              <UserManagement />
             </ProtectedRoute>
           } 
         />

@@ -24,13 +24,13 @@ export default function Navbar() {
             </Link>
             <div className="flex space-x-4">
               <Link to="/" className="px-3 py-2 text-sm font-medium text-white rounded-md hover:bg-blue-600 transition">
-                📚 แคตตาล็อก
+                แคตตาล็อก
               </Link>
               
               {/* แสดงปุ่มนี้เฉพาะเมื่อล็อกอินแล้วเท่านั้น */}
               {user && (
                 <Link to="/profile" className="px-3 py-2 text-sm font-medium text-white rounded-md hover:bg-blue-600 transition">
-                  👤 โปรไฟล์ส่วนตัว
+                  โปรไฟล์ส่วนตัว
                 </Link>
               )}
 
@@ -38,12 +38,24 @@ export default function Navbar() {
               {user && (user.role === 'LIBRARIAN' || user.role === 'ADMIN') && (
                 <>
                   <Link to="/admin/books" className="px-3 py-2 text-sm font-medium text-yellow-300 rounded-md hover:bg-blue-600 transition">
-                    ⚙️ จัดการหนังสือ
+                    จัดการหนังสือ
                   </Link>
                   <Link to="/admin/loans" className="px-3 py-2 text-sm font-medium text-yellow-300 rounded-md hover:bg-blue-600 transition">
-                    📋 จัดการใบยืม
+                    จัดการใบยืม
+                  </Link>
+                  <Link to="/admin/fines" className="px-3 py-2 text-sm font-medium text-yellow-300 rounded-md hover:bg-blue-600 transition">
+                    จัดการค่าปรับ
+                  </Link>
+                  <Link to="/admin/reports" className="px-3 py-2 text-sm font-medium text-yellow-300 rounded-md hover:bg-blue-600 transition">
+                    ออกรายงาน
                   </Link>
                 </>
+              )}
+
+              {user?.role === 'ADMIN' && (
+                <Link to="/admin/users" className="px-3 py-2 text-sm font-medium text-yellow-300 rounded-md hover:bg-blue-600 transition">
+                  จัดการผู้ใช้งาน
+                </Link>
               )}
             </div>
           </div>
