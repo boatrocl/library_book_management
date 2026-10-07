@@ -221,7 +221,7 @@ export default function Profile() {
         {/* กล่อง 2: แจ้งเตือนค่าปรับ (โผล่มาเฉพาะตอนมีค่าปรับค้างชำระ) */}
         {fines.length > 0 && (
           <div className="p-6 bg-white border border-red-200 shadow-sm rounded-xl">
-            <h2 className="mb-4 text-xl font-bold text-red-700">⚠️ ค่าปรับค้างชำระ (รวม: {totalFines} บาท)</h2>
+            <h2 className="mb-4 text-xl font-bold text-red-700">ค่าปรับค้างชำระ (รวม: {totalFines} บาท)</h2>
             <ul className="space-y-2">
               {fines.map(fine => (
                 <li key={fine.id} className="flex justify-between p-3 rounded-md bg-red-50">
@@ -236,7 +236,7 @@ export default function Profile() {
 
         {/* กล่อง 3: ประวัติการยืม */}
         <div className="p-6 bg-white border shadow-sm rounded-xl">
-          <h2 className="mb-4 text-xl font-bold text-gray-800">📖 ประวัติการยืมหนังสือ</h2>
+          <h2 className="mb-4 text-xl font-bold text-gray-800">ประวัติการยืมหนังสือ</h2>
           {loans.length === 0 ? (
             <p className="py-4 text-center text-gray-500">ยังไม่มีประวัติการยืมหนังสือ</p>
           ) : (

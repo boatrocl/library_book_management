@@ -50,7 +50,7 @@ export default function Catalog() {
         
         {/* ส่วนหัวและระบบค้นหา */}
         <div className="flex flex-col items-center justify-between mb-8 md:flex-row">
-          <h1 className="mb-4 text-3xl font-bold text-gray-800 md:mb-0">📚 แคตตาล็อกหนังสือ</h1>
+          <h1 className="mb-4 text-3xl font-bold text-gray-800 md:mb-0">แคตตาล็อกหนังสือ</h1>
           
           <form onSubmit={handleSearch} className="flex w-full md:w-auto">
             <input
