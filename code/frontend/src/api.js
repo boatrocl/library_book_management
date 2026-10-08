@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+const API_BASE_URL =
+    import.meta.env.VITE_API_URL || 'http://localhost:8080';
+
 const api = axios.create({
-    baseURL: 'http://localhost:8080',
+    baseURL: API_BASE_URL,
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -14,31 +17,37 @@ const api = axios.create({
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
+
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
+
         return config;
     },
     (error) => Promise.reject(error)
 );
 
-// 3. Interceptor สำหรับ Response
+// Interceptor สำหรับ Response
 // ตรวจสอบข้อมูลที่ Backend ตอบกลับมา
 api.interceptors.response.use(
     (response) => response,
     (error) => {
         const { response, config } = error;
-        
+
         if (response) {
-            // ดักจับ Error 401 (ไม่มีสิทธิ์) หรือ 403 (ห้ามเข้า) 
-            // ยกเว้นกรณีที่กำลังกด Login อยู่ (ป้องกันการรีเฟรชหน้าวนลูป)
-            if ((response.status === 401 || response.status === 403) && config.url !== '/api/v1/auth/login') {
-                console.warn("เซสชันหมดอายุ หรือไม่มีสิทธิ์เข้าถึง");
-                localStorage.removeItem('token'); // ลบกุญแจทิ้ง
-                window.location.href = '/login'; // เตะกลับไปหน้า Login
+            // ดักจับ Error 401 (ไม่มีสิทธิ์) หรือ 403 (ห้ามเข้า)
+            // ยกเว้นกรณีที่กำลังกด Login อยู่
+            if (
+                (response.status === 401 || response.status === 403) &&
+                config.url !== '/api/v1/auth/login'
+            ) {
+                console.warn('เซสชันหมดอายุ หรือไม่มีสิทธิ์เข้าถึง');
+
+                localStorage.removeItem('token');
+                window.location.href = '/login';
             }
         }
-        
+
         return Promise.reject(error);
     }
 );
