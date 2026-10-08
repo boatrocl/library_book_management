@@ -115,4 +115,12 @@ public class User {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
+
+    public void setMemberTier(String memberTier) {
+        this.memberTier = memberTier;
+    }
+
+    public void setProfile(UserProfile profile) {
+        this.profile = profile;
+    }
 }

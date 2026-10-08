@@ -20,4 +20,11 @@ public interface FineService {
      * @return ค่าปรับที่อัปเดตสถานะแล้ว
      */
     Fine payFine(Long fineId);
+
+    /**
+     * ดึงรายการค่าปรับทั้งหมดของสมาชิก
+     * @param memberId รหัสสมาชิก
+     * @return รายการค่าปรับ (Response DTO)
+     */
+    java.util.List<com.libraflow.library.dto.response.FineResponse> getFinesByMemberId(Long memberId);
 }

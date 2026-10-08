@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { AuthContext } from '../context/AuthContext';
 import api from '../api';
 
 export default function Login() {
@@ -7,22 +8,26 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
+  
+  // ดึงฟังก์ชัน login จาก Context เพื่อกระจายสถานะไปทั้งแอปพลิเคชัน
+  const { login } = useContext(AuthContext);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     
     try {
-      // ยิง API ไปที่ Backend
       const response = await api.post('/api/v1/auth/login', { username, password });
       
-      // ถ้าสำเร็จ เก็บ Token ลง localStorage
-      localStorage.setItem('token', response.data.token);
+      // เรียกใช้ฟังก์ชัน login จาก Context (ระบบจะบันทึก Token และอัปเดตสถานะทันที)
+      login(response.data.token);
       
-      // เปลี่ยนหน้าไปที่หน้าหลัก
       navigate('/');
     } catch (error) {
-      if (error.response && error.response.status === 401) {
+      // ดึง Error Message มาตรฐานของ Backend มาแสดงผล ถ้ามี
+      if (error.response && error.response.data && error.response.data.message) {
+        setErrorMsg(error.response.data.message);
+      } else if (error.response && error.response.status === 401) {
         setErrorMsg('ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
       } else {
         setErrorMsg('เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์');
