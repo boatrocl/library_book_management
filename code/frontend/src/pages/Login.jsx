@@ -8,20 +8,20 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
-  
+
   // ดึงฟังก์ชัน login จาก Context เพื่อกระจายสถานะไปทั้งแอปพลิเคชัน
   const { login } = useContext(AuthContext);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrorMsg('');
-    
+
     try {
       const response = await api.post('/api/v1/auth/login', { username, password });
-      
+
       // เรียกใช้ฟังก์ชัน login จาก Context (ระบบจะบันทึก Token และอัปเดตสถานะทันที)
       login(response.data.token);
-      
+
       navigate('/');
     } catch (error) {
       // ดึง Error Message มาตรฐานของ Backend มาแสดงผล ถ้ามี
@@ -39,7 +39,7 @@ export default function Login() {
     <div className="flex items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-md">
         <h2 className="text-2xl font-bold text-center text-gray-800">เข้าสู่ระบบ LibraFlow</h2>
-        
+
         {errorMsg && (
           <div className="p-3 text-sm text-red-700 bg-red-100 rounded-md">
             {errorMsg}
@@ -49,30 +49,40 @@ export default function Login() {
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block mb-1 text-sm font-medium text-gray-700">ชื่อผู้ใช้</label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required 
+              required
             />
           </div>
           <div>
             <label className="block mb-1 text-sm font-medium text-gray-700">รหัสผ่าน</label>
-            <input 
-              type="password" 
+            <input
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required 
+              required
             />
           </div>
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             className="w-full py-2 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition"
           >
             เข้าสู่ระบบ
           </button>
+          <div className="text-sm text-center text-gray-600 mt-4">
+            ยังไม่มีบัญชีใช่หรือไม่?{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/register')}
+              className="text-blue-600 hover:underline"
+            >
+              สมัครสมาชิก
+            </button>
+          </div>
         </form>
       </div>
     </div>

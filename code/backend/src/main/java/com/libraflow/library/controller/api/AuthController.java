@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.libraflow.library.dto.request.RegisterRequest;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -68,5 +69,11 @@ public class AuthController {
                         request
                 )
         );
+    }
+
+    @Operation(summary = "สมัครสมาชิกใหม่", description = "สร้างบัญชีผู้ใช้ใหม่พร้อมโปรไฟล์")
+    @PostMapping("/register")
+    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.ok(authService.register(request));
     }
 }
