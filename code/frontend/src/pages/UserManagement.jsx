@@ -1,10 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
+import { AuthContext } from '../context/AuthContext';
 import api from '../api';
+
 
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
+
+  const { user: currentUser } = useContext(AuthContext);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -106,6 +110,7 @@ export default function UserManagement() {
                       <td className="p-4 text-sm text-right space-x-2 flex justify-end items-center">
                         <select
                           value={u.role}
+                          disabled={u.username === currentUser.username} //ถ้าเป็นตัวเองจะถูกล็อกทันที
                           onChange={(e) => handleRoleChange(u.id, e.target.value)}
                           className="px-2 py-1 text-sm border rounded-md focus:ring-blue-500 bg-gray-50"
                         >

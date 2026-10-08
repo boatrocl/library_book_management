@@ -80,6 +80,19 @@ public class User {
         // JPA only
     }
 
+    // ==========================================
+    // เพิ่ม Constructor สำหรับใช้ตอนสมัครสมาชิก
+    // ==========================================
+    public User(String username, String passwordHash, String email, UserRole role, boolean active, String memberTier) {
+        this.username = username;
+        this.passwordHash = passwordHash;
+        this.email = email;
+        this.role = role;
+        this.active = active;
+        this.memberTier = memberTier;
+    }
+
+    // Getters เดิม
     public Long getId() {
         return id;
     }
@@ -116,6 +129,7 @@ public class User {
         return createdAt;
     }
 
+    // Setters เดิม
     public void setMemberTier(String memberTier) {
         this.memberTier = memberTier;
     }
@@ -124,6 +138,9 @@ public class User {
         this.profile = profile;
     }
 
+    // ==========================================
+    // เพิ่ม Setters เฉพาะที่จำเป็นให้แอดมินใช้งาน
+    // ==========================================
     public void setRole(UserRole role) {
         this.role = role;
     }
