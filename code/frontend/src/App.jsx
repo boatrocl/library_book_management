@@ -11,6 +11,7 @@ import BookCopyManagement from './pages/BookCopyManagement';
 import FineManagement from './pages/FineManagement';
 import ReportManagement from './pages/ReportManagement';
 import UserManagement from './pages/UserManagement';
+import Register from './pages/Register';
 
 // อัปเกรด Guard ให้รับพารามิเตอร์ allowedRoles เพื่อเช็กสิทธิ์
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -31,14 +32,18 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
 
 function AppContent() {
   const location = useLocation();
-  const isLoginPage = location.pathname === '/login';
+  // ซ่อน Navbar ทั้งหน้า Login และหน้า Register เพื่อให้ฟอร์มดูสะอาดตา
+  const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {!isLoginPage && <Navbar />}
+      {!isAuthPage && <Navbar />}
       
       <Routes>
         <Route path="/login" element={<Login />} />
+        {/* เพิ่ม Route สำหรับหน้าสมัครสมาชิกที่นี่ */}
+        <Route path="/register" element={<Register />} />
+        
         <Route path="/" element={<Catalog />} />
         
         {/* หน้า Profile เข้าได้ทุกคนที่ล็อกอินแล้ว (ส่งแค่ ProtectedRoute เปล่าๆ) */}
@@ -52,7 +57,7 @@ function AppContent() {
         />
 
         {/* 
-          เตรียมโครงสร้าง Route สำหรับเฟส 3: 
+          โครงสร้าง Route สำหรับเฟส 3: 
           หน้า Admin/Librarian บังคับว่าต้องมี Role ตรงตามที่กำหนดเท่านั้นถึงจะเข้าได้ 
         */}
         <Route 
