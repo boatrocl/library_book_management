@@ -123,4 +123,12 @@ public class User {
     public void setProfile(UserProfile profile) {
         this.profile = profile;
     }
+
+    public void setRole(UserRole role) {
+        this.role = role;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
 }
