@@ -2,6 +2,7 @@ package com.libraflow.library.controller.api;
 
 import com.libraflow.library.domain.enums.LoanStatus;
 import com.libraflow.library.dto.request.BorrowRequest;
+import com.libraflow.library.dto.request.MemberBorrowRequest;
 import com.libraflow.library.dto.response.LoanResponse;
 import com.libraflow.library.dto.response.PageResponse;
 import com.libraflow.library.service.LoanService;
@@ -15,6 +16,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -52,16 +54,34 @@ public class LoanController {
         this.loanService = loanService;
     }
 
-    /**
-     * บันทึกการยืมหนังสือใหม่ (POST /api/v1/loans)
-     * ผ่านการตรวจสอบตามกฎ BR-01..BR-04 (Chain of Responsibility) และคำนวณ dueDate ตาม BR-05
-     */
-    @Operation(summary = "บันทึกการยืมหนังสือ", description = "สร้างใบยืมใหม่ ตรวจสอบสิทธิ์ผ่าน BorrowRule chain (BR-01..BR-04) และคำนวณวันคืนตาม MemberTier (BR-05)")
+    /** Member borrows one available copy without sending a member id or barcode. */
+    @Operation(summary = "สมาชิกยืมหนังสือด้วยตนเอง", description = "ระบุตัวสมาชิกจาก JWT และเลือกตัวเล่มว่างให้โดยอัตโนมัติ จากนั้นตรวจสอบกฎ BR-01..BR-04 และกำหนดวันคืนตาม MemberTier")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "สร้างรายการยืมสำเร็จ"),
+            @ApiResponse(responseCode = "400", description = "bookId ไม่ถูกต้อง"),
+            @ApiResponse(responseCode = "404", description = "ไม่พบสมาชิกหรือหนังสือ"),
+            @ApiResponse(responseCode = "409", description = "สมาชิกติดเงื่อนไข หรือไม่มีตัวเล่มว่าง")
+    })
+    @PostMapping("/self")
+    @PreAuthorize("hasRole('MEMBER')")
+    public ResponseEntity<LoanResponse> borrowForMember(
+            @Valid @RequestBody MemberBorrowRequest request,
+            Authentication authentication) {
+        LoanResponse response = loanService.borrowForMember(authentication.getName(), request);
+        URI location = ServletUriComponentsBuilder.fromCurrentContextPath()
+                .path("/api/v1/loans/{id}")
+                .buildAndExpand(response.id())
+                .toUri();
+        return ResponseEntity.created(location).body(response);
+    }
+
+    /** Staff creates a loan for a member by scanning their id and copy barcodes. */
+    @Operation(summary = "บันทึกการยืมที่เคาน์เตอร์", description = "บรรณารักษ์ระบุสมาชิกและบาร์โค้ดตัวเล่ม ระบบตรวจ BorrowRule chain และกำหนดวันคืนตาม MemberTier")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "บันทึกการยืมสำเร็จ"),
-            @ApiResponse(responseCode = "400", description = "ข้อมูลไม่ผ่าน validation หรือโควต้าเต็ม"),
+            @ApiResponse(responseCode = "400", description = "ข้อมูลไม่ผ่าน validation"),
             @ApiResponse(responseCode = "404", description = "ไม่พบสมาชิกหรือบาร์โค้ดหนังสือ"),
-            @ApiResponse(responseCode = "409", description = "สมาชิกติดเงื่อนไข เช่น ติดค่าปรับ หรือหนังสือไม่ว่าง")
+            @ApiResponse(responseCode = "409", description = "สมาชิกติดเงื่อนไข หรือหนังสือไม่ว่าง")
     })
     @PostMapping
     @PreAuthorize("hasAnyRole('LIBRARIAN', 'ADMIN')")

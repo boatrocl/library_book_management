@@ -42,6 +42,8 @@ export default function Profile() {
   // State ใหม่สำหรับเก็บข้อมูลการยืมและค่าปรับ
   const [loans, setLoans] = useState([]);
   const [fines, setFines] = useState([]);
+  const [reservations, setReservations] = useState([]);
+  const [reservationAction, setReservationAction] = useState({ id: null, message: '' });
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -62,11 +64,12 @@ export default function Profile() {
 
   const fetchProfileData = useCallback(async (id, signal) => {
     try {
-      // ดึงข้อมูล 3 ส่วนพร้อมกันด้วย Promise.all เพื่อความรวดเร็ว
-      const [profileRes, loansRes, finesRes] = await Promise.all([
+      // ดึงข้อมูลโปรไฟล์ ประวัติยืม จอง และค่าปรับพร้อมกัน
+      const [profileRes, loansRes, finesRes, reservationsRes] = await Promise.all([
         api.get(`/api/v1/members/${id}`, { signal }),
         api.get(`/api/v1/members/${id}/loans`, { signal }),
-        api.get(`/api/v1/members/${id}/fines?status=UNPAID`, { signal })
+        api.get(`/api/v1/members/${id}/fines?status=UNPAID`, { signal }),
+        api.get('/api/v1/reservations/self?page=0&size=50&sort=reservedAt,desc', { signal })
       ]);
       if (signal?.aborted) return;
 
@@ -81,6 +84,7 @@ export default function Profile() {
       // รองรับกรณีที่ API ส่งกลับมาเป็นอาร์เรย์โดยตรง หรืออยู่ในรูปแบบ PageResponse (.content)
       setLoans(loansRes.data.content || loansRes.data || []);
       setFines(finesRes.data.content || finesRes.data || []);
+      setReservations(reservationsRes.data.content || []);
     } catch (error) {
       if (signal?.aborted) return;
       console.error("ดึงข้อมูลล้มเหลว:", error);
@@ -112,6 +116,20 @@ export default function Profile() {
     } catch (error) {
       console.error("อัปเดตข้อมูลล้มเหลว", error);
       setMessage({ type: 'error', th: 'กรุณาตรวจสอบข้อมูลอีกครั้ง', en: 'Please check the information and try again.' });
+    }
+  };
+
+  const handleCancelReservation = async (reservation) => {
+    setReservationAction({ id: reservation.id, message: '' });
+    try {
+      await api.delete(`/api/v1/reservations/${reservation.id}`);
+      setReservations((current) => current.map((item) => item.id === reservation.id
+        ? { ...item, status: 'CANCELLED' }
+        : item));
+      setReservationAction({ id: null, message: t('ยกเลิกรายการจองแล้ว', 'Reservation cancelled.') });
+    } catch (error) {
+      console.error('ยกเลิกรายการจองไม่สำเร็จ', error);
+      setReservationAction({ id: null, message: t('ยกเลิกรายการจองไม่สำเร็จ กรุณาลองอีกครั้ง', 'Could not cancel the reservation. Please try again.') });
     }
   };
 
@@ -298,6 +316,58 @@ export default function Profile() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+        </div>
+
+        <div className="p-6 bg-white border shadow-xs rounded-xl">
+          <h2 className="mb-4 text-xl font-bold text-gray-800">{t('รายการจองหนังสือ', 'My reservations')}</h2>
+          {reservationAction.message && (
+            <p className="mb-4 text-sm text-teal-800" role="status">{reservationAction.message}</p>
+          )}
+          {reservations.length === 0 ? (
+            <p className="py-4 text-center text-gray-500">{t('ยังไม่มีรายการจองหนังสือ', 'No reservations yet.')}</p>
+          ) : (
+            <div className="space-y-3">
+              {reservations.map((reservation) => {
+                const canCancel = reservation.status === 'WAITING' || reservation.status === 'READY';
+                const reservedDate = reservation.reservedAt
+                  ? new Date(reservation.reservedAt).toLocaleString(language === 'th' ? 'th-TH' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
+                  : '-';
+                const expiresDate = reservation.expiresAt
+                  ? new Date(reservation.expiresAt).toLocaleString(language === 'th' ? 'th-TH' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
+                  : null;
+                return (
+                  <article key={reservation.id} className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-gray-200 p-4">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-gray-900">{reservation.bookTitle}</h3>
+                      <p className="mt-1 text-sm text-gray-600">
+                        {t('จองเมื่อ', 'Reserved')}: {reservedDate}
+                        {reservation.status === 'WAITING' && reservation.queuePosition && (
+                          <> · {t('ลำดับคิว', 'Queue position')}: {reservation.queuePosition}</>
+                        )}
+                        {expiresDate && <> · {t('รับหนังสือก่อน', 'Pick up by')}: {expiresDate}</>}
+                      </p>
+                      {reservation.reservedBarcode && (
+                        <p className="mt-1 text-sm text-gray-600">{t('บาร์โค้ด', 'Barcode')}: {reservation.reservedBarcode}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="rounded-full bg-teal-50 px-3 py-1 text-sm font-medium text-teal-800">{enumLabel(reservation.status)}</span>
+                      {canCancel && (
+                        <button
+                          type="button"
+                          className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60"
+                          onClick={() => handleCancelReservation(reservation)}
+                          disabled={reservationAction.id === reservation.id}
+                        >
+                          {reservationAction.id === reservation.id ? t('กำลังยกเลิก…', 'Cancelling…') : t('ยกเลิก', 'Cancel')}
+                        </button>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
         </div>

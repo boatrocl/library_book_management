@@ -31,6 +31,10 @@ public interface BookCopyRepository extends JpaRepository<BookCopy, Long> {
     /** หาตัวเล่มว่างเล่มแรกของหนังสือ ใช้ index idx_copies_book_status (book_id, status) */
     Optional<BookCopy> findFirstByBookIdAndStatus(Long bookId, BookCopyStatus status);
 
+    /** เลือกและล็อกตัวเล่มว่างเล่มแรกเพื่อป้องกันการยืมซ้ำพร้อมกันจากสมาชิกหลายคน */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<BookCopy> findFirstByBookIdAndStatusOrderByBarcodeAsc(Long bookId, BookCopyStatus status);
+
     /** ใช้เติมค่า availableCopies / totalCopies ใน BookResponse */
     long countByBookId(Long bookId);
 

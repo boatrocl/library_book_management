@@ -24,7 +24,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Service
 public class ReservationServiceImpl implements ReservationService {
@@ -70,8 +73,29 @@ public class ReservationServiceImpl implements ReservationService {
                     ErrorCode.DUPLICATE_RESERVATION.getDefaultMessage());
         }
 
+        if (bookCopyRepository.countByBookIdAndStatus(bookId, BookCopyStatus.AVAILABLE) > 0) {
+            throw new BusinessException(ErrorCode.BOOK_COPIES_AVAILABLE,
+                    ErrorCode.BOOK_COPIES_AVAILABLE.getDefaultMessage());
+        }
+
         Reservation reservation = reservationRepository.save(new Reservation(user, book));
-        return ReservationResponse.from(reservation);
+        return ReservationResponse.from(reservation, queuePosition(reservation));
+    }
+
+    @Override
+    @Transactional
+    public ReservationResponse createReservationForMember(String username, Long bookId) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("ไม่พบสมาชิก: " + username));
+        return createReservation(user.getId(), bookId, username, false);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<ReservationResponse> getMemberReservations(String username, Pageable pageable) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("ไม่พบสมาชิก: " + username));
+        return toPageResponse(reservationRepository.findAllByUserId(user.getId(), pageable));
     }
 
     @Override
@@ -80,7 +104,35 @@ public class ReservationServiceImpl implements ReservationService {
         Page<Reservation> reservations = status == null
                 ? reservationRepository.findAll(pageable)
                 : reservationRepository.findAllByStatus(status, pageable);
-        return PageResponse.from(reservations, ReservationResponse::from);
+        return toPageResponse(reservations);
+    }
+
+    private PageResponse<ReservationResponse> toPageResponse(Page<Reservation> reservations) {
+        Map<Long, Integer> queuePositions = new HashMap<>();
+        reservations.getContent().stream()
+                .filter(reservation -> reservation.getStatus() == ReservationStatus.WAITING)
+                .map(reservation -> reservation.getBook().getId())
+                .distinct()
+                .forEach(bookId -> {
+                    List<Reservation> queue = reservationRepository
+                            .findAllByBookIdAndStatusOrderByReservedAtAscIdAsc(bookId, ReservationStatus.WAITING);
+                    for (int index = 0; index < queue.size(); index++) {
+                        queuePositions.put(queue.get(index).getId(), index + 1);
+                    }
+                });
+        return PageResponse.from(reservations,
+                reservation -> ReservationResponse.from(reservation, queuePositions.get(reservation.getId())));
+    }
+
+    private int queuePosition(Reservation reservation) {
+        List<Reservation> queue = reservationRepository.findAllByBookIdAndStatusOrderByReservedAtAscIdAsc(
+                reservation.getBook().getId(), ReservationStatus.WAITING);
+        for (int index = 0; index < queue.size(); index++) {
+            if (Objects.equals(queue.get(index).getId(), reservation.getId())) {
+                return index + 1;
+            }
+        }
+        return queue.size();
     }
 
     @Override

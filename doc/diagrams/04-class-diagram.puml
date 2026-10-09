@@ -16,6 +16,7 @@ left to right direction
 package "Loan orchestration" {
   class LoanServiceImpl {
     + borrow(BorrowRequest) : LoanResponse
+    + borrowForMember(String, MemberBorrowRequest) : LoanResponse
     + returnBook(Long) : LoanResponse
     + renewLoan(Long) : LoanResponse
   }

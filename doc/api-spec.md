@@ -34,25 +34,40 @@ Authentication: `Authorization: Bearer <JWT>`
 ### Loans (Resource หลักที่ 2 — CRUD ครบ)
 | Method | Endpoint | Success | Error | สิทธิ์ | คำอธิบาย |
 |---|---|---|---|---|---|
-| GET | `/api/v1/loans?status=&page=&size=` | 200 | | LIBRARIAN | รายการใบยืมทั้งหมด |
-| GET | `/api/v1/loans/{id}` | 200 | 404 | LIBRARIAN, เจ้าของ | ดูใบยืม |
-| POST | `/api/v1/loans` | 201 | 400, 404, 409 | LIBRARIAN | บันทึกการยืม (ผ่าน BorrowRule chain) |
-| PATCH | `/api/v1/loans/{id}/return` | 200 | 404, 409 | LIBRARIAN | บันทึกการคืน |
-| PATCH | `/api/v1/loans/{id}/renew` | 200 | 404, 409 | LIBRARIAN | ต่ออายุ (BR-06) |
+| GET | `/api/v1/loans?status=&page=&size=` | 200 | | LIBRARIAN, ADMIN | รายการใบยืมทั้งหมด |
+| GET | `/api/v1/loans/{id}` | 200 | 404 | LIBRARIAN, ADMIN, ผู้ใช้ที่เข้าสู่ระบบ | ดูใบยืม |
+| POST | `/api/v1/loans/self` | 201 | 400, 404, 409 | MEMBER | สมาชิกยืมหนังสือที่ว่างหนึ่งเล่ม; member จาก JWT และตัวเล่มเลือกอัตโนมัติพร้อม row lock |
+| POST | `/api/v1/loans` | 201 | 400, 404, 409 | LIBRARIAN, ADMIN | บันทึกการยืม (ผ่าน BorrowRule chain) |
+| PATCH | `/api/v1/loans/{id}/return` | 200 | 404, 409 | LIBRARIAN, ADMIN | บันทึกการคืน |
+| PATCH | `/api/v1/loans/{id}/renew` | 200 | 404, 409 | LIBRARIAN, ADMIN | ต่ออายุ (BR-06) |
 | DELETE | `/api/v1/loans/{id}` | 204 | 404, 409 | ADMIN | ยกเลิกใบยืมที่บันทึกผิด |
 | GET | `/api/v1/members/{id}/loans` | 200 | 404 | LIBRARIAN, เจ้าของ | ประวัติการยืมของสมาชิก |
 
 ### Reservations
 | Method | Endpoint | Success | Error | สิทธิ์ |
 |---|---|---|---|---|
-| GET | `/api/v1/reservations?status=&page=&size=` | 200 | | LIBRARIAN |
+| GET | `/api/v1/reservations?status=&page=&size=` | 200 | | LIBRARIAN, ADMIN |
+| GET | `/api/v1/reservations/self?page=&size=&sort=reservedAt,desc` | 200 | 404 | MEMBER |
+| POST | `/api/v1/reservations/self` | 201 | 400, 404, 409 | MEMBER |
 | POST | `/api/v1/reservations` | 201 | 400, 403, 409 | MEMBER (ตนเอง), LIBRARIAN, ADMIN |
 | DELETE | `/api/v1/reservations/{id}` | 204 | 403, 404, 409 | MEMBER (เจ้าของ), LIBRARIAN, ADMIN |
 
 `GET` returns a paginated `PageResponse<ReservationResponse>` and may filter by `status`.
+The `/self` endpoints derive the member from the JWT. Members may join a queue only when no copy is available; responses include `queuePosition` for `WAITING` entries. Members can review their reservation history in their profile and cancel entries in `WAITING` or `READY` status.
 When status is `READY`, the response includes `reservedCopyId`, `reservedBarcode`, and `expiresAt`.
 Only the reservation owner may borrow that `RESERVED` copy before `expiresAt`; cancellation or
 automatic expiry releases the copy and advances the queue. Email/SMS delivery is not wired yet.
+
+### POST /api/v1/reservations/self — สมาชิกเข้าคิวจองหนังสือที่ไม่ว่าง
+
+**Request**
+```json
+{
+  "bookId": 18
+}
+```
+
+Response เป็น `201 Created` พร้อมรายการจองสถานะ `WAITING`; หากมีตัวเล่มว่างหรือมีรายการจองที่ยัง active อยู่จะตอบ `409 Conflict`.
 
 ### Fines
 | Method | Endpoint | Success | Error | สิทธิ์ |
@@ -71,7 +86,20 @@ automatic expiry releases the copy and advances the queue. Email/SMS delivery is
 
 ## 2. ตัวอย่าง Request / Response
 
-### POST /api/v1/loans — บันทึกการยืม
+### POST /api/v1/loans/self — สมาชิกยืมหนังสือจากแคตตาล็อก
+
+สมาชิกส่งเฉพาะรหัสหนังสือ ระบบอ่าน username จาก JWT, เลือกตัวเล่ม `AVAILABLE` โดยล็อกแถวไว้ระหว่าง transaction และตรวจ BR-01..BR-04 เหมือนการยืมที่เคาน์เตอร์
+
+**Request**
+```json
+{
+  "bookId": 18
+}
+```
+
+Response เป็น `201 Created` พร้อม LoanResponse และ `Location: /api/v1/loans/{id}`. หากไม่มีตัวเล่มว่างหรือสมาชิกติดกฎทางธุรกิจ จะตอบ `409 Conflict`.
+
+### POST /api/v1/loans — บรรณารักษ์บันทึกการยืมที่เคาน์เตอร์
 
 **Request**
 ```json

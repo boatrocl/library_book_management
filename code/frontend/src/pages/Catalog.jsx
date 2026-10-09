@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import BookCard from '../components/BookCard';
 import BookDetailsDialog from '../components/BookDetailsDialog';
+import { AuthContext } from '../context/AuthContextValue';
 import { useLanguage } from '../context/LanguageContext';
 
 const PAGE_SIZE = 8;
 
 const COPY = {
   th: {
+    locale: 'th-TH',
     heroTitle: 'ค้นพบหนังสือที่ใช่สำหรับคุณ',
     searchPlaceholder: 'ค้นหาชื่อหนังสือ ผู้แต่ง หรือ ISBN',
     searchSubmit: 'ค้นหา',
@@ -39,7 +41,6 @@ const COPY = {
     details: 'ดูรายละเอียด',
     authorUnknown: 'ไม่ระบุผู้แต่ง',
     general: 'หนังสือทั่วไป',
-    footer: 'เรื่องราวดี ๆ เริ่มต้นที่หน้าถัดไป',
     previous: 'ก่อนหน้า',
     next: 'ถัดไป',
     page: 'หน้า',
@@ -62,8 +63,39 @@ const COPY = {
     copiesCount: (amount) => `${amount.toLocaleString('th-TH')} เล่ม`,
     readingRoom: 'มุมอ่านหนังสือ',
     library: 'ห้องสมุด LibraFlow',
+    borrow: 'ยืมหนังสือเล่มนี้',
+    borrowing: 'กำลังบันทึกการยืม…',
+    borrowed: 'ยืมหนังสือสำเร็จ',
+    reserve: 'จองคิวหนังสือ',
+    reserving: 'กำลังจองคิว…',
+    reserved: 'จองคิวสำเร็จ',
+    reservationNumber: 'หมายเลขรายการจอง',
+    queuePosition: 'ลำดับคิว',
+    reservationError: 'จองคิวไม่สำเร็จ กรุณาลองอีกครั้ง',
+    reservationErrors: {
+      DUPLICATE_RESERVATION: 'คุณมีรายการจองหนังสือเล่มนี้อยู่แล้ว',
+      BOOK_COPIES_AVAILABLE: 'ยังมีหนังสือพร้อมให้ยืม กรุณายืมผ่านปุ่มด้านบน',
+    },
+    borrowError: 'ยืมหนังสือไม่สำเร็จ กรุณาลองอีกครั้ง',
+    borrowErrors: {
+      MEMBER_SUSPENDED: 'บัญชีสมาชิกถูกระงับ ไม่สามารถยืมหนังสือได้',
+      UNPAID_FINE_EXCEEDED: 'มีค่าปรับค้างชำระเกินกำหนด กรุณาติดต่อบรรณารักษ์',
+      LOAN_QUOTA_EXCEEDED: 'คุณยืมหนังสือครบโควต้าแล้ว',
+      COPY_NOT_AVAILABLE: 'หนังสือเล่มนี้เพิ่งถูกยืมไป กรุณาเลือกเล่มอื่น',
+    },
+    signInToBorrow: 'เข้าสู่ระบบเพื่อยืม',
+    signInToReserve: 'เข้าสู่ระบบเพื่อจองคิว',
+    memberOnly: 'เข้าสู่ระบบด้วยบัญชีสมาชิกเพื่อยืมหรือจองคิวหนังสือ',
+    staffBorrowHint: 'บรรณารักษ์สามารถบันทึกการยืมได้ที่หน้าจัดการรายการยืม',
+    openCirculation: 'ไปหน้าจัดการรายการยืม',
+    viewLoans: 'ดูรายการยืมของฉัน',
+    viewReservations: 'ดูรายการจองของฉัน',
+    noCopiesToBorrow: 'ขณะนี้ไม่มีตัวเล่มที่พร้อมให้ยืม',
+    loanCode: 'เลขที่ใบยืม',
+    dueDate: 'กำหนดคืน',
   },
   en: {
+    locale: 'en-US',
     heroTitle: 'Find the book that feels right for you',
     searchPlaceholder: 'Search by title, author, or ISBN',
     searchSubmit: 'Search',
@@ -94,7 +126,6 @@ const COPY = {
     details: 'View details',
     authorUnknown: 'Author not listed',
     general: 'General',
-    footer: 'A good story begins on the next page',
     previous: 'Previous',
     next: 'Next',
     page: 'Page',
@@ -117,6 +148,36 @@ const COPY = {
     copiesCount: (amount) => `${amount.toLocaleString('en-US')} copies`,
     readingRoom: 'Reading Room',
     library: 'LibraFlow Library',
+    borrow: 'Borrow this book',
+    borrowing: 'Processing your loan…',
+    borrowed: 'Book borrowed successfully',
+    reserve: 'Join the reservation queue',
+    reserving: 'Joining the queue…',
+    reserved: 'Reservation created',
+    reservationNumber: 'Reservation number',
+    queuePosition: 'Queue position',
+    reservationError: 'Could not reserve this book. Please try again.',
+    reservationErrors: {
+      DUPLICATE_RESERVATION: 'You already have an active reservation for this book.',
+      BOOK_COPIES_AVAILABLE: 'A copy is available. Please borrow it instead.',
+    },
+    borrowError: 'Could not borrow this book. Please try again.',
+    borrowErrors: {
+      MEMBER_SUSPENDED: 'Your membership is suspended. You cannot borrow books.',
+      UNPAID_FINE_EXCEEDED: 'Your unpaid fines exceed the borrowing limit. Contact a librarian.',
+      LOAN_QUOTA_EXCEEDED: 'You have reached your borrowing limit.',
+      COPY_NOT_AVAILABLE: 'This book was just borrowed. Please choose another book.',
+    },
+    signInToBorrow: 'Sign in to borrow',
+    signInToReserve: 'Sign in to reserve',
+    memberOnly: 'Sign in with a member account to borrow a book or join its queue.',
+    staffBorrowHint: 'Librarians can create loans from the loan management page.',
+    openCirculation: 'Open loan management',
+    viewLoans: 'View my loans',
+    viewReservations: 'View my reservations',
+    noCopiesToBorrow: 'There are no available copies to borrow right now.',
+    loanCode: 'Loan ID',
+    dueDate: 'Due date',
   },
 };
 
@@ -147,8 +208,13 @@ function BookOpenIcon({ className = '' }) {
 
 export default function Catalog() {
   const { language, categoryName, t } = useLanguage();
+  const { user } = useContext(AuthContext);
   const [searchParams, setSearchParams] = useSearchParams();
-  const text = { ...(COPY[language] || COPY.th), categoryName };
+  const text = {
+    ...(COPY[language] || COPY.th),
+    categoryName,
+    footer: t('เรื่องราวดี ๆ เริ่มต้นที่หน้าถัดไป', 'A good story begins on the next page'),
+  };
   const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [page, setPage] = useState(0);
@@ -163,6 +229,10 @@ export default function Catalog() {
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [selectedBook, setSelectedBook] = useState(null);
+  const [borrowState, setBorrowState] = useState({ status: 'idle' });
+  const [reservationState, setReservationState] = useState({ status: 'idle' });
+  const [categoriesExpanded, setCategoriesExpanded] = useState(true);
+  const [availabilityExpanded, setAvailabilityExpanded] = useState(true);
 
   const requestKey = `${page}:${keyword}:${categoryId}:${availability}:${sort}:${retryCount}`;
   const loading = loadedRequest !== requestKey;
@@ -246,6 +316,47 @@ export default function Catalog() {
     setPage(0);
   }
 
+  function openBookDetails(book) {
+    setSelectedBook(book);
+    setBorrowState({ status: 'idle' });
+    setReservationState({ status: 'idle' });
+  }
+
+  async function borrowBook(book) {
+    setBorrowState({ status: 'loading' });
+    try {
+      const response = await api.post('/api/v1/loans/self', { bookId: book.id });
+      const nextAvailableCopies = Math.max(Number(book.availableCopies || 0) - 1, 0);
+      setBooks((current) => current.map((item) => item.id === book.id
+        ? { ...item, availableCopies: nextAvailableCopies }
+        : item));
+      setSelectedBook((current) => current?.id === book.id
+        ? { ...current, availableCopies: nextAvailableCopies }
+        : current);
+      setBorrowState({ status: 'success', loan: response.data });
+    } catch (error) {
+      const code = error?.response?.data?.errorCode;
+      setBorrowState({
+        status: 'error',
+        message: text.borrowErrors[code] || text.borrowError,
+      });
+    }
+  }
+
+  async function reserveBook(book) {
+    setReservationState({ status: 'loading' });
+    try {
+      const response = await api.post('/api/v1/reservations/self', { bookId: book.id });
+      setReservationState({ status: 'success', reservation: response.data });
+    } catch (error) {
+      const code = error?.response?.data?.errorCode;
+      setReservationState({
+        status: 'error',
+        message: text.reservationErrors[code] || text.reservationError,
+      });
+    }
+  }
+
   return (
     <main className="catalog-page">
       <section className="catalog-hero" aria-labelledby="catalog-heading">
@@ -284,12 +395,25 @@ export default function Catalog() {
       <section className="catalog-layout" aria-label={text.recommended}>
         <aside className="category-sidebar" id="categories">
           <div className="filter-group">
-            <div className="filter-group__heading">
-              <FilterIcon className="filter-group__icon" />
-              <h2>{text.categories}</h2>
-              <span className="filter-group__chevron" aria-hidden="true">⌃</span>
-            </div>
-            <div className="category-list" aria-label={text.categories}>
+            <h2 className="filter-group__heading">
+              <button
+                className="filter-group__toggle"
+                type="button"
+                aria-expanded={categoriesExpanded}
+                aria-controls="catalog-category-filters"
+                onClick={() => setCategoriesExpanded((expanded) => !expanded)}
+              >
+                <FilterIcon className="filter-group__icon" />
+                <span className="filter-group__title">{text.categories}</span>
+                <span className="filter-group__chevron" aria-hidden="true">{categoriesExpanded ? '⌃' : '⌄'}</span>
+              </button>
+            </h2>
+            <div
+              className="category-list filter-group__content"
+              id="catalog-category-filters"
+              aria-label={text.categories}
+              hidden={!categoriesExpanded}
+            >
               <button
                 type="button"
                 className={`category-option ${categoryId === '' ? 'is-active' : ''}`}
@@ -308,7 +432,7 @@ export default function Catalog() {
                   onClick={() => chooseCategory(String(category.id))}
                 >
                   <span className="category-checkbox" aria-hidden="true">{categoryId === String(category.id) ? '✓' : ''}</span>
-                <span>{categoryName(category.name)}</span>
+                  <span>{categoryName(category.name)}</span>
                 </button>
               ))}
               {categories.length === 0 && <p className="category-empty">{text.allCategories}</p>}
@@ -316,12 +440,25 @@ export default function Catalog() {
           </div>
 
           <div className="filter-group filter-group--status">
-            <div className="filter-group__heading">
-              <BookOpenIcon className="filter-group__icon" />
-              <h2>{text.status}</h2>
-              <span className="filter-group__chevron" aria-hidden="true">⌃</span>
-            </div>
-            <div className="status-filter-list" aria-label={text.status}>
+            <h2 className="filter-group__heading">
+              <button
+                className="filter-group__toggle"
+                type="button"
+                aria-expanded={availabilityExpanded}
+                aria-controls="catalog-availability-filters"
+                onClick={() => setAvailabilityExpanded((expanded) => !expanded)}
+              >
+                <BookOpenIcon className="filter-group__icon" />
+                <span className="filter-group__title">{text.status}</span>
+                <span className="filter-group__chevron" aria-hidden="true">{availabilityExpanded ? '⌃' : '⌄'}</span>
+              </button>
+            </h2>
+            <div
+              className="status-filter-list filter-group__content"
+              id="catalog-availability-filters"
+              aria-label={text.status}
+              hidden={!availabilityExpanded}
+            >
               <button
                 type="button"
                 className={`status-filter-option ${availability === 'ALL' ? 'is-active' : ''}`}
@@ -403,7 +540,7 @@ export default function Catalog() {
             <>
               <div className="book-grid">
                 {books.map((book, index) => (
-                  <BookCard key={book.id} book={book} index={index} labels={text} onDetails={setSelectedBook} />
+                  <BookCard key={book.id} book={book} index={index} labels={text} onDetails={openBookDetails} />
                 ))}
               </div>
               {totalPages > 1 && (
@@ -447,7 +584,19 @@ export default function Catalog() {
         <Link to="/about">{t('เกี่ยวกับ LibraFlow', 'About LibraFlow')}</Link>
       </footer>
 
-      {selectedBook && <BookDetailsDialog book={selectedBook} labels={text} categoryName={categoryName} onClose={() => setSelectedBook(null)} />}
+      {selectedBook && (
+        <BookDetailsDialog
+          book={selectedBook}
+          labels={text}
+          categoryName={categoryName}
+          user={user}
+          borrowState={borrowState}
+          reservationState={reservationState}
+          onBorrow={() => borrowBook(selectedBook)}
+          onReserve={() => reserveBook(selectedBook)}
+          onClose={() => setSelectedBook(null)}
+        />
+      )}
     </main>
   );
 }

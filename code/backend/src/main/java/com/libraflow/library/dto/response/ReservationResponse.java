@@ -15,10 +15,11 @@ public class ReservationResponse {
     private LocalDateTime reservedAt;
     private LocalDateTime expiresAt;
     private String status;
+    private Integer queuePosition;
 
     public ReservationResponse(Long id, Long userId, String username, Long bookId, String bookTitle,
                                Long reservedCopyId, String reservedBarcode, LocalDateTime reservedAt,
-                               LocalDateTime expiresAt, String status) {
+                               LocalDateTime expiresAt, String status, Integer queuePosition) {
         this.id = id;
         this.userId = userId;
         this.username = username;
@@ -29,6 +30,7 @@ public class ReservationResponse {
         this.reservedAt = reservedAt;
         this.expiresAt = expiresAt;
         this.status = status;
+        this.queuePosition = queuePosition;
     }
 
     public Long getId() { return id; }
@@ -41,8 +43,13 @@ public class ReservationResponse {
     public LocalDateTime getReservedAt() { return reservedAt; }
     public LocalDateTime getExpiresAt() { return expiresAt; }
     public String getStatus() { return status; }
+    public Integer getQueuePosition() { return queuePosition; }
 
     public static ReservationResponse from(Reservation reservation) {
+        return from(reservation, null);
+    }
+
+    public static ReservationResponse from(Reservation reservation, Integer queuePosition) {
         return new ReservationResponse(
                 reservation.getId(),
                 reservation.getUser() != null ? reservation.getUser().getId() : null,
@@ -53,6 +60,7 @@ public class ReservationResponse {
                 reservation.getReservedCopy() != null ? reservation.getReservedCopy().getBarcode() : null,
                 reservation.getReservedAt(),
                 reservation.getExpiresAt(),
-                reservation.getStatus().name());
+                reservation.getStatus().name(),
+                queuePosition);
     }
 }

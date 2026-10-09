@@ -14,6 +14,10 @@ public interface ReservationService {
      */
     ReservationResponse createReservation(Long userId, Long bookId, String requesterUsername, boolean allowCreatingForOthers);
 
+    ReservationResponse createReservationForMember(String username, Long bookId);
+
+    PageResponse<ReservationResponse> getMemberReservations(String username, Pageable pageable);
+
     PageResponse<ReservationResponse> getReservations(ReservationStatus status, Pageable pageable);
 
     /**
