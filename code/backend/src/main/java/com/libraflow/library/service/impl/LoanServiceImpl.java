@@ -206,6 +206,15 @@ public class LoanServiceImpl implements LoanService {
         Loan loan = loanRepository.findByIdWithDetails(loanId)
                 .orElseThrow(() -> new ResourceNotFoundException("ไม่พบใบยืม id: " + loanId));
 
+        boolean hasWaitingReservation = loan.getItems().stream()
+                .filter(item -> !item.isReturned())
+                .map(item -> item.getBookCopy().getBook().getId())
+                .anyMatch(bookId -> reservationRepository.existsByBookIdAndStatusIn(
+                        bookId, List.of(ReservationStatus.WAITING)));
+        if (hasWaitingReservation) {
+            throw new BusinessException(ErrorCode.RENEW_BLOCKED_BY_RESERVATION);
+        }
+
         LoanState state = stateFactory.stateOf(loan);
         state.onRenew(loan);
 

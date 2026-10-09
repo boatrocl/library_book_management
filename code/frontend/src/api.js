@@ -35,13 +35,9 @@ api.interceptors.response.use(
         const { response, config } = error;
 
         if (response) {
-            // ดักจับ Error 401 (ไม่มีสิทธิ์) หรือ 403 (ห้ามเข้า)
-            // ยกเว้นกรณีที่กำลังกด Login อยู่
-            if (
-                (response.status === 401 || response.status === 403) &&
-                config.url !== '/api/v1/auth/login'
-            ) {
-                console.warn('เซสชันหมดอายุ หรือไม่มีสิทธิ์เข้าถึง');
+            // A 403 means the user is authenticated but lacks permission; keep the session intact.
+            if (response.status === 401 && config?.url !== '/api/v1/auth/login') {
+                console.warn('เซสชันหมดอายุหรือไม่ถูกต้อง');
 
                 localStorage.removeItem('token');
                 window.location.href = '/login';

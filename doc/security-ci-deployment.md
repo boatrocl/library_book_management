@@ -10,8 +10,8 @@
 - Password ใช้ `BCryptPasswordEncoder`; JWT ใช้ HMAC key จาก Base64 `JWT_SECRET` ซึ่งต้อง decode ได้อย่างน้อย 32 bytes.
 - API เป็น stateless; JWT ตรวจ issuer, signature และ expiration. Expiration มาจาก `JWT_EXPIRATION` หน่วย milliseconds.
 - `GET /api/v1/books/**`, auth endpoints, Swagger และ CORS preflight เปิดให้เรียกได้โดยไม่ยืนยันตัวตน.
-- `POST /api/v1/loans/self` จำกัดเฉพาะ `MEMBER`; backend ระบุ username จาก JWT และไม่รับ member ID จาก browser.
-- `GET/POST /api/v1/reservations/self` จำกัดเฉพาะ `MEMBER`; backend ใช้ username จาก JWT สำหรับดูประวัติและสร้างคิวจอง.
+- `POST /api/v1/loans/self` จำกัดเฉพาะ `MEMBER`; backend ระบุ username จาก JWT, ไม่รับ member ID จาก browser และตรวจ `termsAccepted: true`.
+- `GET/POST /api/v1/reservations/self` จำกัดเฉพาะ `MEMBER`; backend ใช้ username จาก JWT สำหรับดูประวัติและสร้างคิวจอง พร้อมตรวจ `termsAccepted: true` ในคำขอสร้างคิว.
 - Endpoint ยืมที่เคาน์เตอร์ `POST /api/v1/loans` จำกัด `LIBRARIAN` หรือ `ADMIN`.
 - การเขียน/แก้/ลบหนังสือจำกัด `ADMIN` หรือ `LIBRARIAN`; endpoint อื่นต้องยืนยันตัวตนและอาจมี method-level role เพิ่ม.
 - CORS อนุญาต origin เดียวจาก `FRONTEND_ORIGIN`; production ต้องตั้งเป็น URL ของ frontend จริง.

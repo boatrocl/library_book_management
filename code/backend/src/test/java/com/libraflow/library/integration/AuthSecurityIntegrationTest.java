@@ -369,7 +369,7 @@ class AuthSecurityIntegrationTest {
                         post("/api/v1/loans/self")
                                 .header("Authorization", "Bearer " + token)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"bookId\": " + bookId + "}")
+                                .content("{\"bookId\": " + bookId + ", \"termsAccepted\": true}")
                 )
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").isNumber())
@@ -393,9 +393,26 @@ class AuthSecurityIntegrationTest {
                         post("/api/v1/loans/self")
                                 .header("Authorization", "Bearer " + token)
                                 .contentType(MediaType.APPLICATION_JSON)
-                                .content("{\"bookId\": 1}")
+                                .content("{\"bookId\": 1, \"termsAccepted\": true}")
                 )
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void memberSelfServiceActionsRequireTermsAcceptance() throws Exception {
+        String token = loginAndGetToken("member01", "Mem@123");
+
+        mockMvc.perform(post("/api/v1/loans/self")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bookId\": 1, \"termsAccepted\": false}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/v1/reservations/self")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bookId\": 1, \"termsAccepted\": false}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -420,7 +437,7 @@ class AuthSecurityIntegrationTest {
                             post("/api/v1/reservations/self")
                                     .header("Authorization", "Bearer " + token)
                                     .contentType(MediaType.APPLICATION_JSON)
-                                    .content("{\"bookId\": " + bookId + "}"))
+                                    .content("{\"bookId\": " + bookId + ", \"termsAccepted\": true}"))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.status").value("WAITING"))
                     .andExpect(jsonPath("$.queuePosition").value(1))

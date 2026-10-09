@@ -1,9 +1,34 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import LibraryRules from './LibraryRules';
 
 export default function BookDetailsDialog({ book, labels, categoryName, user, borrowState, reservationState, onBorrow, onReserve, onClose }) {
   const dialogRef = useRef(null);
+  const [activeTab, setActiveTab] = useState('details');
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const handleTabKeyDown = (event) => {
+    const tabs = ['details', 'rules'];
+    let nextTab;
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+      nextTab = tabs[(tabs.indexOf(activeTab) + 1) % tabs.length];
+    } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+      nextTab = tabs[(tabs.indexOf(activeTab) - 1 + tabs.length) % tabs.length];
+    } else if (event.key === 'Home') {
+      nextTab = tabs[0];
+    } else if (event.key === 'End') {
+      nextTab = tabs[tabs.length - 1];
+    } else {
+      return;
+    }
+
+    event.preventDefault();
+    setActiveTab(nextTab);
+    document.getElementById(`book-${nextTab}-tab`)?.focus();
+  };
   const availableCopies = Number(book.availableCopies || 0);
+  const memberActionPending = user?.role === 'MEMBER'
+    && borrowState.status !== 'success'
+    && reservationState.status !== 'success';
   const dueDate = borrowState.loan?.items?.[0]?.dueDate;
   const formattedDueDate = dueDate
     ? new Intl.DateTimeFormat(labels.locale, { dateStyle: 'medium' })
@@ -32,14 +57,44 @@ export default function BookDetailsDialog({ book, labels, categoryName, user, bo
         <span className="section-kicker">{labels.detailsHeading}</span>
         <h2 id="book-dialog-title">{book.title}</h2>
         <p className="book-dialog__authors">{book.authors?.length ? book.authors.join(', ') : labels.authorUnknown}</p>
-        <dl className="book-dialog__facts">
-          <div><dt>{labels.category}</dt><dd>{categoryName(book.categoryName) || labels.unknown}</dd></div>
-          <div><dt>{labels.publisher}</dt><dd>{book.publisherName || labels.unknown}</dd></div>
-          <div><dt>{labels.year}</dt><dd>{book.publishYear || labels.unknown}</dd></div>
-          <div><dt>{labels.isbn}</dt><dd>{book.isbn || labels.unknown}</dd></div>
-          <div><dt>{labels.totalCopies}</dt><dd>{labels.copiesCount(book.totalCopies ?? 0)}</dd></div>
-          <div><dt>{labels.availableCopies}</dt><dd>{labels.copiesCount(book.availableCopies ?? 0)}</dd></div>
-        </dl>
+        <div className="book-dialog__tabs" role="tablist" aria-label={labels.bookInfoTabs} onKeyDown={handleTabKeyDown}>
+          <button
+            id="book-details-tab"
+            className={`book-dialog__tab${activeTab === 'details' ? ' is-active' : ''}`}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'details'}
+            aria-controls="book-details-panel"
+            tabIndex={activeTab === 'details' ? 0 : -1}
+            onClick={() => setActiveTab('details')}
+          >
+            {labels.detailsTab}
+          </button>
+          <button
+            id="book-rules-tab"
+            className={`book-dialog__tab${activeTab === 'rules' ? ' is-active' : ''}`}
+            type="button"
+            role="tab"
+            aria-selected={activeTab === 'rules'}
+            aria-controls="book-details-panel"
+            tabIndex={activeTab === 'rules' ? 0 : -1}
+            onClick={() => setActiveTab('rules')}
+          >
+            {labels.rulesTab}
+          </button>
+        </div>
+        <div id="book-details-panel" className="book-dialog__tab-panel" role="tabpanel" tabIndex={0} aria-labelledby={`book-${activeTab}-tab`}>
+          {activeTab === 'details' ? (
+            <dl className="book-dialog__facts">
+              <div><dt>{labels.category}</dt><dd>{categoryName(book.categoryName) || labels.unknown}</dd></div>
+              <div><dt>{labels.publisher}</dt><dd>{book.publisherName || labels.unknown}</dd></div>
+              <div><dt>{labels.year}</dt><dd>{book.publishYear || labels.unknown}</dd></div>
+              <div><dt>{labels.isbn}</dt><dd>{book.isbn || labels.unknown}</dd></div>
+              <div><dt>{labels.totalCopies}</dt><dd>{labels.copiesCount(book.totalCopies ?? 0)}</dd></div>
+              <div><dt>{labels.availableCopies}</dt><dd>{labels.copiesCount(book.availableCopies ?? 0)}</dd></div>
+            </dl>
+          ) : <LibraryRules compact />}
+        </div>
         {borrowState.status === 'success' && (
           <div className="book-dialog__notice book-dialog__notice--success" role="status">
             <strong>{labels.borrowed}</strong>
@@ -62,12 +117,28 @@ export default function BookDetailsDialog({ book, labels, categoryName, user, bo
         {reservationState.status === 'error' && (
           <div className="book-dialog__notice book-dialog__notice--error" role="alert">{reservationState.message}</div>
         )}
+        {memberActionPending && (
+          <div className="book-dialog__agreement">
+            <label htmlFor="accept-library-rules" className="book-dialog__agreement-label">
+              <input
+                id="accept-library-rules"
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(event) => setTermsAccepted(event.target.checked)}
+              />
+              <span>{labels.acceptRules}</span>
+            </label>
+            <button className="book-dialog__read-rules" type="button" onClick={() => setActiveTab('rules')}>
+              {labels.readRules}
+            </button>
+          </div>
+        )}
         {user?.role === 'MEMBER' && availableCopies > 0 && borrowState.status !== 'success' && (
           <button
             className="button button--primary book-dialog__borrow"
             type="button"
             onClick={onBorrow}
-            disabled={borrowState.status === 'loading'}
+            disabled={borrowState.status === 'loading' || !termsAccepted}
             aria-busy={borrowState.status === 'loading'}
           >
             {borrowState.status === 'loading' ? labels.borrowing : labels.borrow}
@@ -78,7 +149,7 @@ export default function BookDetailsDialog({ book, labels, categoryName, user, bo
             className="button button--primary book-dialog__borrow"
             type="button"
             onClick={onReserve}
-            disabled={reservationState.status === 'loading'}
+            disabled={reservationState.status === 'loading' || !termsAccepted}
             aria-busy={reservationState.status === 'loading'}
           >
             {reservationState.status === 'loading' ? labels.reserving : labels.reserve}

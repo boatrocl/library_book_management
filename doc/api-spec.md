@@ -36,7 +36,7 @@ Authentication: `Authorization: Bearer <JWT>`
 |---|---|---|---|---|---|
 | GET | `/api/v1/loans?status=&page=&size=` | 200 | | LIBRARIAN, ADMIN | รายการใบยืมทั้งหมด |
 | GET | `/api/v1/loans/{id}` | 200 | 404 | LIBRARIAN, ADMIN, ผู้ใช้ที่เข้าสู่ระบบ | ดูใบยืม |
-| POST | `/api/v1/loans/self` | 201 | 400, 404, 409 | MEMBER | สมาชิกยืมหนังสือที่ว่างหนึ่งเล่ม; member จาก JWT และตัวเล่มเลือกอัตโนมัติพร้อม row lock |
+| POST | `/api/v1/loans/self` | 201 | 400, 404, 409 | MEMBER | สมาชิกยืมหนังสือที่ว่างหนึ่งเล่ม; member จาก JWT, ตัวเล่มเลือกอัตโนมัติพร้อม row lock และต้องยอมรับกฎก่อน |
 | POST | `/api/v1/loans` | 201 | 400, 404, 409 | LIBRARIAN, ADMIN | บันทึกการยืม (ผ่าน BorrowRule chain) |
 | PATCH | `/api/v1/loans/{id}/return` | 200 | 404, 409 | LIBRARIAN, ADMIN | บันทึกการคืน |
 | PATCH | `/api/v1/loans/{id}/renew` | 200 | 404, 409 | LIBRARIAN, ADMIN | ต่ออายุ (BR-06) |
@@ -48,7 +48,7 @@ Authentication: `Authorization: Bearer <JWT>`
 |---|---|---|---|---|
 | GET | `/api/v1/reservations?status=&page=&size=` | 200 | | LIBRARIAN, ADMIN |
 | GET | `/api/v1/reservations/self?page=&size=&sort=reservedAt,desc` | 200 | 404 | MEMBER |
-| POST | `/api/v1/reservations/self` | 201 | 400, 404, 409 | MEMBER |
+| POST | `/api/v1/reservations/self` | 201 | 400, 404, 409 | MEMBER; ต้องยอมรับกฎก่อน |
 | POST | `/api/v1/reservations` | 201 | 400, 403, 409 | MEMBER (ตนเอง), LIBRARIAN, ADMIN |
 | DELETE | `/api/v1/reservations/{id}` | 204 | 403, 404, 409 | MEMBER (เจ้าของ), LIBRARIAN, ADMIN |
 
@@ -63,11 +63,12 @@ automatic expiry releases the copy and advances the queue. Email/SMS delivery is
 **Request**
 ```json
 {
-  "bookId": 18
+  "bookId": 18,
+  "termsAccepted": true
 }
 ```
 
-Response เป็น `201 Created` พร้อมรายการจองสถานะ `WAITING`; หากมีตัวเล่มว่างหรือมีรายการจองที่ยัง active อยู่จะตอบ `409 Conflict`.
+Response เป็น `201 Created` พร้อมรายการจองสถานะ `WAITING`; หากไม่ยอมรับกฎ request จะตอบ `400`, หากมีตัวเล่มว่างหรือมีรายการจองที่ยัง active อยู่จะตอบ `409 Conflict`.
 
 ### Fines
 | Method | Endpoint | Success | Error | สิทธิ์ |
@@ -93,11 +94,12 @@ Response เป็น `201 Created` พร้อมรายการจอง�
 **Request**
 ```json
 {
-  "bookId": 18
+  "bookId": 18,
+  "termsAccepted": true
 }
 ```
 
-Response เป็น `201 Created` พร้อม LoanResponse และ `Location: /api/v1/loans/{id}`. หากไม่มีตัวเล่มว่างหรือสมาชิกติดกฎทางธุรกิจ จะตอบ `409 Conflict`.
+คำขอต้องส่ง `termsAccepted: true`; หากไม่ยอมรับกฎจะตอบ `400 Bad Request`. Response เป็น `201 Created` พร้อม LoanResponse และ `Location: /api/v1/loans/{id}`. หากไม่มีตัวเล่มว่างหรือสมาชิกติดกฎทางธุรกิจ จะตอบ `409 Conflict`.
 
 ### POST /api/v1/loans — บรรณารักษ์บันทึกการยืมที่เคาน์เตอร์
 
