@@ -62,6 +62,16 @@ public interface LoanRepository extends JpaRepository<Loan, Long> {
             """)
     long countActiveLoanItemsByUserId(@Param("userId") Long userId);
 
+    /** ตรวจสอบว่าสมาชิกมีตัวเล่มของชื่อหนังสือนี้ที่ยังไม่ได้คืนหรือไม่ */
+    @Query("""
+            SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END FROM LoanItem i
+            WHERE i.loan.user.id = :userId
+              AND i.bookCopy.book.id = :bookId
+              AND i.loan.status IN (com.libraflow.library.domain.enums.LoanStatus.ACTIVE, com.libraflow.library.domain.enums.LoanStatus.OVERDUE)
+              AND i.returnedAt IS NULL
+            """)
+    boolean existsActiveLoanByUserIdAndBookId(@Param("userId") Long userId, @Param("bookId") Long bookId);
+
     /**
      * ค้นหาใบยืมที่ยังเป็น ACTIVE แต่มีรายการที่เลยกำหนดคืนแล้ว (สำหรับ Scheduled Job ตรวจสอบทุกเที่ยงคืน)
      */

@@ -78,6 +78,11 @@ public enum ErrorCode {
             "ตัวเล่มไม่พร้อมให้ยืม"
     ),
 
+    BOOK_ALREADY_ON_LOAN(
+            HttpStatus.CONFLICT,
+            "คุณกำลังยืมหนังสือชื่อนี้อยู่และยังไม่ได้คืน"
+    ),
+
     BOOK_COPIES_AVAILABLE(
             HttpStatus.CONFLICT,
             "ยังมีตัวเล่มพร้อมให้ยืม กรุณายืมหนังสือก่อน"

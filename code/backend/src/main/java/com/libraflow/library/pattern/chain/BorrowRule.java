@@ -13,7 +13,8 @@ public interface BorrowRule {
      * 1 = MemberStatusRule (BR-01)
      * 2 = UnpaidFineRule (BR-02)
      * 3 = LoanQuotaRule (BR-03)
-     * 4 = CopyAvailabilityRule (BR-04)
+     * 4 = NoDuplicateTitleLoanRule (BR-09)
+     * 5 = CopyAvailabilityRule (BR-04)
      */
     int order();
 
