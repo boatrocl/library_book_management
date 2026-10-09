@@ -78,6 +78,11 @@ public enum ErrorCode {
             "ตัวเล่มไม่พร้อมให้ยืม"
     ),
 
+    BOOK_COPIES_AVAILABLE(
+            HttpStatus.CONFLICT,
+            "ยังมีตัวเล่มพร้อมให้ยืม กรุณายืมหนังสือก่อน"
+    ),
+
     RENEW_LIMIT_REACHED(
             HttpStatus.CONFLICT,
             "ต่ออายุครบจำนวนครั้งแล้ว"

@@ -2,11 +2,13 @@ package com.libraflow.library.controller.api;
 
 import com.libraflow.library.domain.enums.ReservationStatus;
 import com.libraflow.library.dto.request.CreateReservationRequest;
+import com.libraflow.library.dto.request.MemberReservationRequest;
 import com.libraflow.library.dto.response.PageResponse;
 import com.libraflow.library.dto.response.ReservationResponse;
 import com.libraflow.library.service.ReservationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -36,6 +38,27 @@ public class ReservationController {
             @RequestParam(required = false) ReservationStatus status,
             @PageableDefault(sort = "id", direction = Sort.Direction.DESC) Pageable pageable) {
         return ResponseEntity.ok(reservationService.getReservations(status, pageable));
+    }
+
+    @GetMapping("/self")
+    @Operation(summary = "List my reservations", description = "List the authenticated member's reservation history")
+    @PreAuthorize("hasRole('MEMBER')")
+    public ResponseEntity<PageResponse<ReservationResponse>> getMemberReservations(
+            @PageableDefault(sort = "reservedAt", direction = Sort.Direction.DESC) Pageable pageable,
+            Authentication authentication) {
+        return ResponseEntity.ok(reservationService.getMemberReservations(authentication.getName(), pageable));
+    }
+
+    @PostMapping("/self")
+    @Operation(summary = "Join a book reservation queue", description = "Reserves an unavailable title for the authenticated member")
+    @ApiResponse(responseCode = "409", description = "An available copy exists, or the member already has an active reservation")
+    @PreAuthorize("hasRole('MEMBER')")
+    public ResponseEntity<ReservationResponse> createMemberReservation(
+            @Valid @RequestBody MemberReservationRequest request,
+            Authentication authentication) {
+        ReservationResponse reservation = reservationService.createReservationForMember(
+                authentication.getName(), request.bookId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(reservation);
     }
 
     @PostMapping
