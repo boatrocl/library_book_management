@@ -1,5 +1,5 @@
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { useContext, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { AuthContext } from './context/AuthContextValue';
 import { LanguageContext } from './context/LanguageContext';
@@ -121,7 +121,32 @@ function AppContent() {
 }
 
 export default function App() {
-  const [language, setLanguage] = useState('th');
+  const [language, setLanguage] = useState(() => {
+    try {
+      return localStorage.getItem('libraflow-language') === 'en' ? 'en' : 'th';
+    } catch {
+      return 'th';
+    }
+  });
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+    document.title = language === 'th'
+      ? 'LibraFlow — ห้องสมุดของทุกเรื่องราว'
+      : 'LibraFlow — Library of Stories';
+    const description = document.querySelector('meta[name="description"]');
+    description?.setAttribute(
+      'content',
+      language === 'th'
+        ? 'LibraFlow ห้องสมุดออนไลน์ ค้นหาและเลือกยืมหนังสือเล่มถัดไปของคุณ'
+        : 'LibraFlow online library. Discover and borrow your next book.',
+    );
+    try {
+      localStorage.setItem('libraflow-language', language);
+    } catch {
+      // The selected language still works for this session when storage is unavailable.
+    }
+  }, [language]);
 
   return (
     <LanguageContext.Provider value={{ language, setLanguage }}>

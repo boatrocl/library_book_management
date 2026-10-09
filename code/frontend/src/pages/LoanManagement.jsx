@@ -1,12 +1,14 @@
 import { useCallback, useContext, useEffect, useState } from 'react';
 import { AuthContext } from '../context/AuthContextValue';
+import { useLanguage } from '../context/LanguageContext';
 import api from '../api';
 
 export default function LoanManagement() {
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState({ type: '', text: '' });
+  const [message, setMessage] = useState({ type: '', th: '', en: '' });
   const { user } = useContext(AuthContext); // 2. ดึงข้อมูล user จาก Context
+  const { language, t, enumLabel } = useLanguage();
 
   // State สำหรับฟอร์มสร้างใบยืมใหม่
   const [borrowData, setBorrowData] = useState({
@@ -22,7 +24,7 @@ export default function LoanManagement() {
     } catch (error) {
       if (signal?.aborted) return;
       console.error("Fetch loans error:", error);
-      setMessage({ type: 'error', text: 'ไม่สามารถดึงข้อมูลใบยืมได้' });
+      setMessage({ type: 'error', th: 'ไม่สามารถดึงข้อมูลใบยืมได้', en: 'Could not load loans.' });
     } finally {
       if (!signal?.aborted) setLoading(false);
     }
@@ -43,7 +45,7 @@ export default function LoanManagement() {
 
   const handleBorrowSubmit = async (e) => {
     e.preventDefault();
-    setMessage({ type: '', text: '' });
+    setMessage({ type: '', th: '', en: '' });
     
     // จัดรูปแบบ Payload ให้ตรงกับ BorrowRequest
     const payload = {
@@ -53,16 +55,13 @@ export default function LoanManagement() {
 
     try {
       await api.post('/api/v1/loans', payload);
-      setMessage({ type: 'success', text: 'บันทึกการยืมสำเร็จ' });
+      setMessage({ type: 'success', th: 'บันทึกการยืมสำเร็จ', en: 'Loan recorded successfully.' });
       setBorrowData({ memberId: '', barcodes: '' });
       setLoading(true);
       await fetchLoans();
     } catch (error) {
       console.error("Borrow error:", error);
-      setMessage({ 
-        type: 'error', 
-        text: error.response?.data?.message || 'เกิดข้อผิดพลาดในการยืม (เช่น โควต้าเต็ม, ติดค่าปรับ, หนังสือไม่ว่าง)' 
-      });
+      setMessage({ type: 'error', th: error.response?.data?.message || 'เกิดข้อผิดพลาดในการยืม (เช่น โควต้าเต็ม, ติดค่าปรับ, หนังสือไม่ว่าง)', en: 'Could not create the loan. Check the member limit, unpaid fines, and book availability.' });
     }
   };
 
@@ -70,32 +69,34 @@ export default function LoanManagement() {
   const handleAction = async (id, action) => {
     try {
       await api.patch(`/api/v1/loans/${id}/${action}`);
-      setMessage({ 
-        type: 'success', 
-        text: action === 'return' ? 'บันทึกการคืนหนังสือสำเร็จ' : 'ต่ออายุใบยืมสำเร็จ' 
+      setMessage({
+        type: 'success',
+        th: action === 'return' ? 'บันทึกการคืนหนังสือสำเร็จ' : 'ต่ออายุใบยืมสำเร็จ',
+        en: action === 'return' ? 'Book return recorded successfully.' : 'Loan renewed successfully.',
       });
       setLoading(true);
       await fetchLoans();
     } catch (error) {
       console.error(`${action} error:`, error);
-      setMessage({ 
-        type: 'error', 
-        text: error.response?.data?.message || `เกิดข้อผิดพลาดในการ${action === 'return' ? 'คืน' : 'ต่ออายุ'}` 
+      setMessage({
+        type: 'error',
+        th: error.response?.data?.message || `เกิดข้อผิดพลาดในการ${action === 'return' ? 'คืน' : 'ต่ออายุ'}`,
+        en: action === 'return' ? 'Could not record the book return.' : 'Could not renew the loan.',
       });
     }
   };
 
   // 3. เพิ่มฟังก์ชันสำหรับ ADMIN ลบใบยืม
   const handleDeleteLoan = async (id) => {
-    if (!window.confirm('คุณแน่ใจหรือไม่ที่จะลบใบยืมนี้ออกจากระบบ? (สิทธิ์เฉพาะ ADMIN)')) return;
+    if (!window.confirm(t('คุณแน่ใจหรือไม่ที่จะลบใบยืมนี้ออกจากระบบ? (สิทธิ์เฉพาะ ADMIN)', 'Are you sure you want to delete this loan? (ADMIN only)'))) return;
     try {
       await api.delete(`/api/v1/loans/${id}`);
-      setMessage({ type: 'success', text: 'ยกเลิกใบยืมสำเร็จ' });
+      setMessage({ type: 'success', th: 'ยกเลิกใบยืมสำเร็จ', en: 'Loan cancelled successfully.' });
       setLoading(true);
       await fetchLoans();
     } catch (error) {
       console.error("Delete loan error:", error);
-      setMessage({ type: 'error', text: 'เกิดข้อผิดพลาด ไม่สามารถลบใบยืมได้' });
+      setMessage({ type: 'error', th: 'เกิดข้อผิดพลาด ไม่สามารถลบใบยืมได้', en: 'Could not delete the loan.' });
     }
   };
 
@@ -103,20 +104,20 @@ export default function LoanManagement() {
     <main className="lf-workspace-page">
       <div className="lf-workspace-content max-w-6xl mx-auto">
         
-        <h1 className="text-3xl font-bold text-gray-800">จัดการการยืม-คืน</h1>
+        <h1 className="text-3xl font-bold text-gray-800">{t('จัดการการยืม-คืน', 'Manage loans and returns')}</h1>
 
-        {message.text && (
+        {(message.th || message.en) && (
           <div className={`p-4 rounded-md font-medium ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-            {message.text}
+            {t(message.th, message.en)}
           </div>
         )}
 
         {/* ส่วนฟอร์มยืมหนังสือใหม่ */}
         <div className="p-6 bg-white border shadow-xs rounded-xl">
-          <h2 className="mb-4 text-xl font-bold text-gray-800">บันทึกการยืมใหม่</h2>
+          <h2 className="mb-4 text-xl font-bold text-gray-800">{t('บันทึกการยืมใหม่', 'Create a loan')}</h2>
           <form onSubmit={handleBorrowSubmit} className="flex items-end gap-4">
             <div className="flex-1">
-              <label className="block mb-1 text-sm font-medium text-gray-700">รหัสสมาชิก (Member ID)</label>
+              <label className="block mb-1 text-sm font-medium text-gray-700">{t('รหัสสมาชิก (Member ID)', 'Member ID')}</label>
               <input 
                 type="number" 
                 name="memberId" 
@@ -124,11 +125,11 @@ export default function LoanManagement() {
                 onChange={handleInputChange} 
                 required 
                 className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500" 
-                placeholder="เช่น: 3"
+                placeholder={t('เช่น: 3', 'e.g. 3')}
               />
             </div>
             <div className="flex-2">
-              <label className="block mb-1 text-sm font-medium text-gray-700">บาร์โค้ดหนังสือ (คั่นด้วยลูกน้ำ)</label>
+              <label className="block mb-1 text-sm font-medium text-gray-700">{t('บาร์โค้ดหนังสือ (คั่นด้วยลูกน้ำ)', 'Book barcodes (comma-separated)')}</label>
               <input 
                 type="text" 
                 name="barcodes" 
@@ -136,14 +137,14 @@ export default function LoanManagement() {
                 onChange={handleInputChange} 
                 required 
                 className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500" 
-                placeholder="เช่น: LIB-00231, LIB-00842"
+                placeholder="e.g. LIB-00231, LIB-00842"
               />
             </div>
             <button 
               type="submit" 
               className="px-6 py-2 font-bold text-white transition bg-blue-600 rounded-md hover:bg-blue-700 h-[42px]"
             >
-              ทำรายการยืม
+              {t('ทำรายการยืม', 'Create loan')}
             </button>
           </form>
         </div>
@@ -151,28 +152,28 @@ export default function LoanManagement() {
         {/* ส่วนตารางรายการใบยืม */}
         <div className="overflow-hidden bg-white border shadow-xs rounded-xl">
           <div className="p-4 border-b bg-gray-50">
-            <h2 className="text-lg font-bold text-gray-800">ประวัติการทำรายการล่าสุด</h2>
+            <h2 className="text-lg font-bold text-gray-800">{t('ประวัติการทำรายการล่าสุด', 'Recent loan activity')}</h2>
           </div>
           {loading ? (
-            <div className="py-10 text-center text-gray-500">กำลังโหลดข้อมูล...</div>
+            <div className="py-10 text-center text-gray-500">{t('กำลังโหลดข้อมูล...', 'Loading loans...')}</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-100 border-b">
-                    <th className="p-4 text-sm font-semibold text-gray-700">รหัสใบยืม</th>
-                    <th className="p-4 text-sm font-semibold text-gray-700">ผู้ยืม</th>
-                    <th className="p-4 text-sm font-semibold text-gray-700">วันที่ยืม</th>
-                    <th className="p-4 text-sm font-semibold text-gray-700">สถานะ</th>
-                    <th className="p-4 text-sm font-semibold text-right text-gray-700">จัดการ</th>
+                    <th className="p-4 text-sm font-semibold text-gray-700">{t('รหัสใบยืม', 'Loan ID')}</th>
+                    <th className="p-4 text-sm font-semibold text-gray-700">{t('ผู้ยืม', 'Member')}</th>
+                    <th className="p-4 text-sm font-semibold text-gray-700">{t('วันที่ยืม', 'Loan date')}</th>
+                    <th className="p-4 text-sm font-semibold text-gray-700">{t('สถานะ', 'Status')}</th>
+                    <th className="p-4 text-sm font-semibold text-right text-gray-700">{t('จัดการ', 'Actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
                   {loans.map(loan => (
                     <tr key={loan.id} className="border-b hover:bg-gray-50">
                       <td className="p-4 text-sm font-medium text-gray-800">{loan.loanCode}</td>
-                      <td className="p-4 text-sm text-gray-600">{loan.memberName} ({loan.memberTier})</td>
-                      <td className="p-4 text-sm text-gray-600">{new Date(loan.loanDate).toLocaleDateString('th-TH')}</td>
+                      <td className="p-4 text-sm text-gray-600">{loan.memberName} ({enumLabel(loan.memberTier)})</td>
+                      <td className="p-4 text-sm text-gray-600">{new Date(loan.loanDate).toLocaleDateString(language === 'th' ? 'th-TH' : 'en-US')}</td>
                       <td className="p-4 text-sm">
                         <span className={`px-2 py-1 text-xs font-bold rounded-full ${
                           loan.status === 'ACTIVE' ? 'bg-blue-100 text-blue-800' :
@@ -180,7 +181,7 @@ export default function LoanManagement() {
                           loan.status === 'OVERDUE' ? 'bg-red-100 text-red-800' :
                           'bg-gray-100 text-gray-800'
                         }`}>
-                          {loan.status}
+                          {enumLabel(loan.status)}
                         </span>
                       </td>
                       <td className="p-4 space-x-2 text-sm text-right">
@@ -190,14 +191,14 @@ export default function LoanManagement() {
                               onClick={() => handleAction(loan.id, 'return')}
                               className="px-3 py-1 text-xs font-semibold text-green-700 bg-green-100 rounded-md hover:bg-green-200"
                             >
-                              คืน
+                              {t('คืน', 'Return')}
                             </button>
                             {loan.status === 'ACTIVE' && (
                               <button 
                                 onClick={() => handleAction(loan.id, 'renew')}
                                 className="px-3 py-1 text-xs font-semibold text-yellow-700 bg-yellow-100 rounded-md hover:bg-yellow-200"
                               >
-                                ต่ออายุ
+                                {t('ต่ออายุ', 'Renew')}
                               </button>
                             )}
                           </>
@@ -209,7 +210,7 @@ export default function LoanManagement() {
                             onClick={() => handleDeleteLoan(loan.id)}
                             className="px-3 py-1 text-xs font-semibold text-red-700 bg-red-100 rounded-md hover:bg-red-200"
                         >
-                            ลบใบยืม (Admin)
+                            {t('ลบใบยืม (Admin)', 'Delete loan (Admin)')}
                         </button>
                         )}
                       </td>
@@ -217,7 +218,7 @@ export default function LoanManagement() {
                   ))}
                   {loans.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="p-6 text-center text-gray-500">ไม่มีข้อมูลใบยืมในระบบ</td>
+                      <td colSpan="5" className="p-6 text-center text-gray-500">{t('ไม่มีข้อมูลใบยืมในระบบ', 'No loans found.')}</td>
                     </tr>
                   )}
                 </tbody>
