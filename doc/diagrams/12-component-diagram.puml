@@ -31,13 +31,8 @@ package "Data Tier" {
   database "PostgreSQL 16" as DB
 }
 
-package "External Services" {
-  [SMTP Mail Service] as MAIL
-}
-
 interface "HTTPS / JSON" as API
 interface "JDBC" as JDBC
-interface "SMTP" as SMTPI
 
 UI -( API
 API - SEC
@@ -49,9 +44,6 @@ SVC --> PAT : ใช้กฎธุรกิจ
 SVC --> REPO : query / persist
 REPO -( JDBC
 JDBC - DB
-PAT -( SMTPI : Observer event
-SMTPI - MAIL
-
 note right of CTRL
   ห้ามเรียก Repository ตรง
   ทุก request ต้องผ่าน Service Layer
@@ -61,7 +53,7 @@ note bottom of PAT
   Strategy : คำนวณค่าปรับ
   State : สถานะใบยืม
   Chain : ตรวจสิทธิ์การยืม
-  Observer : แจ้งเตือนคิวจอง
+  Observer : กันตัวเล่ม/ส่งต่อคิว; email/SMS ยังไม่เชื่อม
   Template Method : ออกรายงาน
 end note
 

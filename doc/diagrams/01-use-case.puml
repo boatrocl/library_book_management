@@ -18,7 +18,6 @@ left to right direction
 actor "สมาชิก\n(MEMBER)" as MEMBER
 actor "บรรณารักษ์\n(LIBRARIAN)" as LIBRARIAN
 actor "ผู้ดูแลระบบ\n(ADMIN)" as ADMIN
-actor "ระบบอีเมล\n(SMTP Service)" as MAIL
 
 MEMBER <|-- LIBRARIAN
 LIBRARIAN <|-- ADMIN
@@ -56,7 +55,7 @@ rectangle "LibraFlow" {
   package "กระบวนการภายใน" {
     usecase "UC17\nตรวจสอบสิทธิ์การยืม" as UC17
     usecase "UC18\nคำนวณค่าปรับ" as UC18
-    usecase "UC19\nแจ้งเตือนคิวจอง" as UC19
+    usecase "UC19\nจัดคิวและกันตัวเล่ม" as UC19
   }
 }
 
@@ -79,8 +78,6 @@ LIBRARIAN --> UC14
 ADMIN --> UC15
 ADMIN --> UC16
 
-UC19 --> MAIL
-
 UC10 ..> UC17 : <<include>>
 UC11 ..> UC18 : <<include>>
 UC11 ..> UC19 : <<include>>
@@ -99,7 +96,8 @@ end note
 
 note right of UC19
   ใช้ Observer Pattern
-  ApplicationEvent (BR-10)
+  READY + RESERVED 48 ชั่วโมง (BR-10)
+  แจ้งเตือนจริงยังเป็น log; ไม่มี SMTP/SMS
 end note
 
 @enduml

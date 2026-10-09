@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContextValue';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -69,7 +69,7 @@ export default function Navbar() {
                 </span>
                 <button 
                   onClick={handleLogout}
-                  className="px-4 py-2 text-sm font-bold text-blue-700 bg-white rounded-md hover:bg-gray-100 transition shadow-sm"
+                  className="px-4 py-2 text-sm font-bold text-blue-700 bg-white rounded-md hover:bg-gray-100 transition shadow-xs"
                 >
                   ออกจากระบบ
                 </button>
@@ -77,7 +77,7 @@ export default function Navbar() {
             ) : (
               <Link 
                 to="/login"
-                className="px-4 py-2 text-sm font-bold text-blue-700 bg-white rounded-md hover:bg-gray-100 transition shadow-sm"
+                className="px-4 py-2 text-sm font-bold text-blue-700 bg-white rounded-md hover:bg-gray-100 transition shadow-xs"
               >
                 เข้าสู่ระบบ
               </Link>

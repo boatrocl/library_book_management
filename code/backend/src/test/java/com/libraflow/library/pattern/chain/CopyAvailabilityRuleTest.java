@@ -17,6 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -28,7 +29,7 @@ import static org.mockito.Mockito.mock;
  * Unit Test สำหรับ CopyAvailabilityRule (BR-04)
  * ตรวจสอบความพร้อมของตัวเล่มหนังสือ:
  * - ตัวเล่มที่มีสถานะ AVAILABLE สามารถยืมได้
- * - ตัวเล่มที่มีสถานะ ON_LOAN, RESERVED, DAMAGED, LOST ไม่สามารถยืมได้
+ * - ตัวเล่มที่มีสถานะ ON_LOAN, DAMAGED, LOST หรือ RESERVED ของผู้อื่นยืมไม่ได้
  */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("CopyAvailabilityRule (BR-04) — ตรวจสอบสถานะความพร้อมของตัวเล่ม")
@@ -109,7 +110,7 @@ class CopyAvailabilityRuleTest {
     }
 
     @Nested
-    @DisplayName("กรณีมีตัวเล่มที่ไม่พร้อมให้ยืม (ON_LOAN, RESERVED, DAMAGED, LOST)")
+    @DisplayName("กรณีมีตัวเล่มที่ไม่พร้อมให้ยืม หรือ RESERVED ของผู้อื่น")
     class UnavailableCopiesTests {
 
         @Test
@@ -181,6 +182,17 @@ class CopyAvailabilityRuleTest {
 
             assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COPY_NOT_AVAILABLE);
             assertThat(exception.getMessage()).contains("RESERVED");
+        }
+
+        @Test
+        @DisplayName("ตัวเล่ม RESERVED ผ่านได้เฉพาะเจ้าของคิว READY ที่ยังไม่หมดอายุ")
+        void check_copyReservedForMember_shouldPass() {
+            BookCopy copy = createMockCopy("LIB-RES-02", BookCopyStatus.RESERVED);
+            lenient().when(copy.getId()).thenReturn(42L);
+            BorrowContext context = new BorrowContext(
+                    mockUser, MemberTier.STUDENT, List.of(copy), 0L, BigDecimal.ZERO, Set.of(42L));
+
+            assertDoesNotThrow(() -> rule.check(context));
         }
 
         @Test

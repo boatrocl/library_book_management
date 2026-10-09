@@ -1,6 +1,7 @@
 package com.libraflow.library.pattern.chain;
 
 import com.libraflow.library.domain.entity.BookCopy;
+import com.libraflow.library.domain.enums.BookCopyStatus;
 import com.libraflow.library.exception.BusinessException;
 import com.libraflow.library.exception.ErrorCode;
 import org.springframework.stereotype.Component;
@@ -8,7 +9,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 /**
- * กฎข้อที่ 4 ของ Chain of Responsibility — BR-04: ยืมได้เฉพาะตัวเล่มที่มีสถานะ AVAILABLE เท่านั้น
+ * BR-04: ยืมได้เฉพาะตัวเล่ม AVAILABLE หรือ RESERVED ที่กันไว้ให้เจ้าของคิว READY ซึ่งยังไม่หมดเวลา
  * อ้างอิง doc/project-overview.md ข้อ 3 และ doc/diagrams/05-sequence-borrow.puml ขั้นที่ 45
  */
 @Component
@@ -27,7 +28,9 @@ public class CopyAvailabilityRule implements BorrowRule {
         }
 
         List<String> unavailableCopies = copies.stream()
-                .filter(copy -> !copy.isAvailable())
+                .filter(copy -> !copy.isAvailable()
+                        && !(copy.getStatus() == BookCopyStatus.RESERVED
+                        && ctx.isCopyReservedForMember(copy.getId())))
                 .map(copy -> copy.getBarcode() + " (สถานะ: " + copy.getStatus() + ")")
                 .toList();
 

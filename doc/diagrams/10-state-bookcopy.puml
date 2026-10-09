@@ -15,8 +15,9 @@ skinparam state {
 AVAILABLE --> ON_LOAN : borrow() (BR-04)
 AVAILABLE --> RESERVED : กันตัวเล่มให้คิวจองลำดับแรก (BR-10)
 
-RESERVED --> ON_LOAN : สมาชิกมารับภายใน 48 ชม.
-RESERVED --> AVAILABLE : หมดเวลารับ\n/ Reservation -> EXPIRED
+RESERVED --> ON_LOAN : เจ้าของคิว READY ยืมภายใน 48 ชม.
+RESERVED --> AVAILABLE : ยกเลิกคิว\n/ Reservation -> CANCELLED
+RESERVED --> AVAILABLE : หมดเวลารับ\n/ Reservation -> EXPIRED; advance queue
 
 ON_LOAN --> AVAILABLE : returnBook()\n[สภาพปกติ]
 ON_LOAN --> DAMAGED : returnBook()\n[ชำรุด]
@@ -28,8 +29,8 @@ LOST --> [*] : ตัดจำหน่าย
 
 note as N1
   สถานะนี้ถูกใช้ใน CopyAvailabilityRule
-  ของ Chain of Responsibility
-  เพื่อตัดสินว่ายืมได้หรือไม่
+  ของ Chain of Responsibility: ยืมได้เฉพาะเจ้าของคิว READY
+  ที่ยังไม่หมดเวลา; คิวอื่นไม่ได้รับอนุญาต
 end note
 
 @enduml

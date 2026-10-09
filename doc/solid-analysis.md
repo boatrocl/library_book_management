@@ -1,112 +1,66 @@
 # SOLID Analysis — LibraFlow
 
-> **สถานะเอกสาร:** เลขบรรทัดของโมดูล **Catalog** (สมาชิกคนที่ 1) และ **Circulation/Loan** (สมาชิกคนที่ 2) ตรวจสอบกับโค้ดจริงแล้ว
-> ส่วนที่ทำเครื่องหมาย _(รอโมดูล Fine / Report)_ เป็นของสมาชิกคนอื่น ให้เจ้าของโมดูลมาเติมเมื่องานเสร็จ
->
-> ตรวจเลขบรรทัดซ้ำได้ด้วย
-> `grep -n "ชื่อคลาสหรือเมธอด" -r code/backend/src/main/java`
-
----
+เอกสารนี้ยกตัวอย่างจาก implementation ที่ตรวจใน repository ณ 8 ตุลาคม 2569.
+อ้างอิงชื่อไฟล์แทนเลขบรรทัด เพราะเลขบรรทัดเปลี่ยนได้เมื่อแก้โค้ด
+การใช้ design pattern ไม่ได้แปลว่าทุกคลาสทำตาม SOLID โดยอัตโนมัติ
 
 ## S — Single Responsibility Principle
 
-**แต่ละคลาสมีเหตุผลที่จะถูกแก้ไขเพียงเหตุผลเดียว**
+ให้แต่ละคลาสมีหน้าที่หลักที่ชัดเจนและเหตุผลในการเปลี่ยนที่เกี่ยวข้องกัน
 
-| ไฟล์ | บรรทัด | คำอธิบาย |
-|---|---|---|
-| `mapper/BookMapper.java` | 22–56 | หน้าที่เดียวคือแปลง Entity เป็น DTO ไม่มี business logic และ **ไม่แตะ Repository เลย** จำนวนตัวเล่มรับเข้ามาเป็นพารามิเตอร์ ไม่ได้ไปนับเอง — ถ้า mapper ยิง query ได้เมื่อไหร่ มันจะกลายเป็นแหล่งกำเนิด N+1 ทันที |
-| `exception/GlobalExceptionHandler.java` | 24–97 | รับผิดชอบการแปลง Exception เป็น HTTP Response เท่านั้น เหตุผลเดียวที่จะถูกแก้คือ "รูปแบบ error response เปลี่ยน" ผลพลอยได้คือไม่มี `try-catch` แม้แต่ตัวเดียวใน Controller ทั้งโปรเจค |
-| `service/impl/BookQueryServiceImpl.java` | 51–62 | `search()` ทำหน้าที่ประสานงานอย่างเดียว — เรียก repository, เรียก query นับตัวเล่ม, แล้วส่งต่อให้ mapper ไม่คำนวณหรือแปลงข้อมูลเอง |
-| `common/BarcodeGenerator.java` | 22–38 | สร้างเลขบาร์โค้ดถัดไปเท่านั้น ไม่รู้จักฐานข้อมูล จึงทดสอบได้โดยไม่ต้องยก Spring ขึ้นมา |
-| `service/impl/LoanServiceImpl.java` | 76–141 | ควบคุม orchestration ของกระบวนการยืม-คืน ประสานงาน Chain of Responsibility, State และ Observer โดยส่งต่อการตัดสินใจให้กฎและสถานะ ไม่คำนวณ business rules เอง |
-
-**ตัวอย่างสิ่งที่หลีกเลี่ยง:** ไม่มีคลาสใดในระบบที่รวม validation + business logic + persistence
-ไว้ด้วยกัน — `BookController` ไม่มีการเรียก `BookRepository` โดยตรงแม้แต่บรรทัดเดียว
-
----
+| ตัวอย่าง | หน้าที่ |
+|---|---|
+| `mapper/BookMapper.java` | แปลง entity เป็น DTO; รับจำนวนตัวเล่มจาก caller และไม่ query repository |
+| `exception/GlobalExceptionHandler.java` | แปลง exception เป็น HTTP error response |
+| `service/impl/LoanServiceImpl.java` | ประสาน flow ยืม/คืน/ต่ออายุ แล้วใช้ rules, state, FineService และ event publisher ตามงาน |
+| `pattern/template/AbstractReportGenerator.java` | ใช้ขั้นตอนร่วมของรายงาน; subclasses สร้างผลลัพธ์ CSV หรือ PDF |
+| `service/event/listener/ReservationNotificationListener.java` | รับ event คืนหนังสือและปรับ reservation ลำดับแรก |
 
 ## O — Open/Closed Principle
 
-**เปิดให้ขยาย ปิดไม่ให้แก้ไข — เพิ่มฟีเจอร์ด้วยการเพิ่มคลาส/ค่า ไม่ใช่แก้ if-else เดิม**
+ระบบมีจุดที่ขยาย behavior ผ่าน implementation ใหม่ได้ โดยบางกรณียังต้องเพิ่ม enum หรือ mapping:
 
-| ไฟล์ | บรรทัด | คำอธิบาย |
-|---|---|---|
-| `exception/ErrorCode.java` | 14–53 | ผูก `HttpStatus` ไว้กับ enum แต่ละค่า ทำให้เพิ่มรหัสข้อผิดพลาดใหม่แค่เติมค่าใน enum ที่เดียว |
-| `exception/GlobalExceptionHandler.java` | 29–39 | `handleBusiness()` อ่าน status จาก `ex.getErrorCode().getStatus()` — **ไม่มี `switch` หรือ `if-else` ตรวจรหัสแม้แต่จุดเดียว** สมาชิกคนที่ 2 และ 3 เพิ่ม ErrorCode ของตัวเองได้โดยไม่ต้องแตะไฟล์นี้เลย |
-| `dto/response/PageResponse.java` | 37–46 | `from(Page<E>, Function<E,T>)` ใช้ซ้ำกับ resource ใดก็ได้โดยไม่ต้องแก้คลาส เพียงส่งฟังก์ชันแปลงเข้ามา |
-| `pattern/chain/BorrowRule.java` | 9–27 | การตรวจสอบเงื่อนไขการยืมใช้ Chain of Responsibility (`List<BorrowRule>`) เพิ่มกฎใหม่ได้โดยการสร้างคลาสใหม่ ไม่ต้องแก้โค้ดเดิมใน `LoanServiceImpl` (บรรทัด 95–98) |
-| `pattern/strategy/FineStrategyResolver.java` | _(รอโมดูล Fine)_ | เลือก strategy ตาม MemberTier |
+| ตัวอย่าง | วิธีขยายและข้อควรทราบ |
+|---|---|
+| `pattern/chain/BorrowRule.java` | เพิ่มกฎตรวจยืมเป็น implementation ใหม่; `LoanServiceImpl` ใช้รายการ rules และเรียงด้วย `order()` |
+| `service/strategy/FineCalculationStrategy.java` | `FineServiceImpl` จัด strategy ตาม `MemberTier`; การเพิ่ม tier ใหม่ต้องเพิ่ม enum/tier mapping ที่เกี่ยวข้องด้วย |
+| `pattern/template/AbstractReportGenerator.java` | subclasses implement `render`; `ReportController` ปัจจุบันเลือก CSV หรือ PDF |
+| `exception/ErrorCode.java` และ `GlobalExceptionHandler.java` | เพิ่ม error code ใน enum ได้โดย handler ใช้ status จาก code; ไม่ต้องเพิ่ม case แยกใน handler |
 
-**พิสูจน์:** ตอนเพิ่ม `BARCODE_ALREADY_EXISTS` เข้าระบบ แตะไฟล์เดียวคือ `ErrorCode.java`
-โดยที่ `GlobalExceptionHandler` ซึ่งทดสอบผ่านแล้วไม่ถูกแก้เลย
-
----
+`LoanStateFactory` เลือก implementation จาก `LoanStatus`; การเพิ่ม state ต้องอัปเดต factory/mapping ด้วย
+จึงไม่ควรกล่าวว่าทุกส่วนเปิดขยายโดยไม่แก้โค้ดเดิม
 
 ## L — Liskov Substitution Principle
 
-**Subclass ใช้แทน Superclass ได้โดยไม่พังตรรกะ และไม่ throw `UnsupportedOperationException`**
-
-| ไฟล์ | บรรทัด | คำอธิบาย |
-|---|---|---|
-| `service/impl/BookQueryServiceImpl.java` | 36–102 | implement ทุกเมธอดของ `BookQueryService` อย่างมีความหมายจริง ไม่มีเมธอดไหนโยน `UnsupportedOperationException` |
-| `service/impl/BookCommandServiceImpl.java` | 43–188 | เช่นเดียวกัน — กรณีที่ทำงานไม่ได้จะโยน `BusinessException` ซึ่งเป็น **ผลลัพธ์เชิงธุรกิจที่ประกาศไว้ใน contract ของ interface** ไม่ใช่การปฏิเสธว่า "เมธอดนี้ใช้ไม่ได้" |
-| `pattern/state/ReturnedState.java` | 20–50 | implement ทุกเมธอดของ `LoanState` โดยสถานะที่ทำ action ไม่ได้ (เช่น คืนซ้ำหรือต่ออายุ) ต้องโยน `BusinessException` ไม่ใช่ `UnsupportedOperationException` เพื่อรักษา LSP |
-| `pattern/template/CsvReportGenerator.java` | _(รอโมดูล Report)_ | ใช้แทน AbstractReportGenerator ได้โดย caller ไม่ต้องรู้ชนิดจริง |
-
-**หลักที่ยึด:** ทุก implementation ไม่ทำให้ precondition เข้มขึ้นและไม่ทำให้ postcondition อ่อนลง
-
----
+- `MemberStatusRule`, `UnpaidFineRule`, `LoanQuotaRule` และ `CopyAvailabilityRule` ใช้ผ่าน `BorrowRule` ใน chain เดียวกัน.
+- `ActiveState`, `OverdueState`, `ReturnedState` และ `LostState` ใช้ผ่าน `LoanState`; transition ที่ผิดกฎถูกปฏิเสธด้วย business exception ตาม contract.
+- `CsvReportGenerator` และ `PdfReportGenerator` เติมขั้น render ของ `AbstractReportGenerator`; controller เรียกผ่านชนิดฐาน.
+- ชุด unit tests `LoanStateTest` และ test ของ borrow rules ตรวจ behavior ของ implementations.
 
 ## I — Interface Segregation Principle
 
-**แยก interface ย่อยตามการใช้งาน ไม่มี Fat Interface**
-
-| ไฟล์ | บรรทัด | คำอธิบาย |
-|---|---|---|
-| `service/BookQueryService.java` | 21–31 | มีเฉพาะเมธอดอ่านข้อมูล — `search`, `findById`, `findCopies` |
-| `service/BookCommandService.java` | 15–27 | มีเฉพาะเมธอดเขียนข้อมูล — `create`, `update`, `delete`, `addCopy` |
-| `controller/api/PublicCatalogController.java` | 40–47 | ถือ `BookQueryService` ตัวเดียว **ไม่รู้จัก `BookCommandService` เลย** ต่อให้เขียนพลาดก็เรียกเมธอดเขียนข้อมูลไม่ได้ เพราะ compile ไม่ผ่าน |
-| `controller/api/BookController.java` | 42–48 | กลับกัน — ถือเฉพาะ `BookCommandService` ทำให้ขอบเขตสิทธิ์ตรงกับขอบเขตของคลาสพอดี สมาชิกคนที่ 5 ใส่ `@PreAuthorize` ที่ระดับคลาสได้เลย |
-
-**ตัวอย่างสิ่งที่หลีกเลี่ยง:** ไม่มี interface ชื่อ `LibraryService` ที่รวม
-`saveBook`, `borrow`, `payFine`, `generateReport` ไว้ด้วยกัน
-
----
+- `BookQueryService` รวมงานอ่าน; `PublicCatalogController` ใช้เฉพาะ interface นี้.
+- `BookCommandService` รวม create/update/delete/add-copy; `BookController` ใช้เฉพาะ interface นี้.
+- การแยก query/command ช่วยไม่ให้ public catalog ได้ dependency สำหรับเขียนข้อมูล.
 
 ## D — Dependency Inversion Principle
 
-**โมดูลระดับสูงขึ้นกับ abstraction ไม่ใช่ concrete class + ใช้ Constructor Injection เท่านั้น**
+- Controllers ขึ้นกับ service interfaces เช่น `LoanService`, `BookQueryService` และ `BookCommandService`.
+- `LoanServiceImpl` รับ repository interfaces, `List<BorrowRule>`, `FineService` และ `ApplicationEventPublisher` ผ่าน constructor.
+- `LoanStateFactory` และ `LoanMapper` ที่ `LoanServiceImpl` ใช้เป็น concrete collaborators; `BookMapper` และ `BarcodeGenerator` ที่ catalog services ใช้ก็เป็น utility classes. จึงไม่อ้างว่าทุก service dependency เป็น interface.
+- `FineServiceImpl` รับ `FineRepository` และ `List<FineCalculationStrategy>` ผ่าน constructor; unit tests สามารถ inject mocks โดยไม่ต้องเริ่ม Spring context.
+- ใน services/controllers ที่ตรวจ ไม่พบ field injection; constructor injection ทำให้ dependencies ชัดเจนและทดสอบได้.
 
-| ไฟล์ | บรรทัด | คำอธิบาย |
-|---|---|---|
-| `service/impl/BookCommandServiceImpl.java` | 47–69 | field ทั้ง 7 ตัวเป็น `private final` ของชนิด **interface** ทั้งหมด และรับผ่าน constructor ตัวเดียว |
-| `service/impl/BookQueryServiceImpl.java` | 38–48 | เช่นเดียวกัน — `BookRepository`, `BookCopyRepository` เป็น interface ที่ Spring Data สร้าง implementation ให้ตอน runtime |
-| `controller/api/BookController.java` | 44–48 | ขึ้นกับ `BookCommandService` (interface) ไม่ใช่ `BookCommandServiceImpl` |
-| `controller/api/PublicCatalogController.java` | 42–46 | ขึ้นกับ `BookQueryService` (interface) |
-| `service/impl/LoanServiceImpl.java` | 52–74 | field ทั้งหมดเป็น `private final` ของชนิด **interface** ทั้งหมด (`LoanRepository`, `BookCopyRepository`, `UserRepository`, `List<BorrowRule>`, `LoanStateFactory`, `ApplicationEventPublisher`, `LoanMapper`) และรับผ่าน constructor ตัวเดียว |
-| `controller/api/LoanController.java` | 38–42 | ขึ้นกับ `LoanService` (interface) ไม่ใช่ `LoanServiceImpl` |
+## Report implementation
 
-**กฎที่บังคับใช้ทั้งโปรเจค**
-- ห้ามใช้ `@Autowired` บน field หรือ setter — มีเฉพาะ Constructor Injection
-- ห้ามใช้ `new` สร้าง Service หรือ Repository ในโค้ด production
-- ทุก dependency ของ Service ต้องเป็นชนิด interface
+เส้นทางที่ `ReportController` ใช้จริงคือ `pattern/template/AbstractReportGenerator`
+กับ `CsvReportGenerator` และ `PdfReportGenerator`. คลาสใน `service/report/`
+เช่น `FineReportGenerator` และ `ReservationReportGenerator` เป็น implementation อีกชุด
+ที่ controller ปัจจุบันไม่ได้เรียก; ไม่ควรอธิบายว่าเป็น report API path.
 
-**ผลที่ได้ (พิสูจน์ได้จริงในเทสต์):** `BookCommandServiceImplTest` ใช้ `@Mock` กับ repository
-ทั้ง 5 ตัวแล้ว inject ผ่าน constructor ได้ทันที ทดสอบกฎ BR-11 จบใน 0.5 วินาที
-โดยไม่ต้องยก Spring Context หรือฐานข้อมูลขึ้นมาเลย — ถ้าเคยเขียน `new BookRepositoryImpl()`
-ไว้ในคลาส จะ mock ไม่ได้และต้องใช้ฐานข้อมูลจริงทดสอบ
+## Fine calculation
 
----
-## ส่วนของคนที่ 3 (ระบบค่าปรับ, การจอง, ออกรายงาน)
-
-### S — Single Responsibility Principle
-- **ไฟล์:** `FineReportGenerator.java` และ `ReservationReportGenerator.java`
-- **เหตุผล:** คลาสเหล่านี้ทำหน้าที่เดียวคือ "ออกรายงาน" ตามประเภทของตัวเอง โดยแยกออกจาก Business Logic หลักของการคำนวณค่าปรับและการจอง เพื่อไม่ให้คลาสปะปนกัน
-
-### O — Open/Closed Principle
-- **ไฟล์:** `FineCalculationStrategy.java`, `StandardMemberFineStrategy.java`, `FacultyMemberFineStrategy.java`
-- **เหตุผล:** ระบบค่าปรับเปิดรับการขยาย (Open for extension) ผ่านอินเทอร์เฟซ `FineCalculationStrategy` หากในอนาคตมีประเภทสมาชิกใหม่ (เช่น นักศึกษา ป.โท) ก็แค่สร้างคลาสใหม่มา Implements โดยไม่ต้องแก้ไข (Closed for modification) โค้ดเดิมของ `FineServiceImpl`
-
-### D — Dependency Inversion Principle
-- **ไฟล์:** `FineServiceImpl.java` (บรรทัดที่รับ Constructor) และ `ReservationNotificationListener.java`
-- **เหตุผล:** `FineServiceImpl` ไม่ได้ผูกมัดกับคลาสคำนวณค่าปรับแบบเจาะจง (Concrete) แต่ผูกมัดกับ `FineCalculationStrategy` (Interface) แทน และใช้วิธี **Constructor Injection** ในการรับออบเจกต์เข้ามา ทำให้โค้ดลดความเกี่ยวพันกัน (Loose Coupling)
+`StudentFineStrategy`, `StaffFineStrategy` และ `ExternalFineStrategy` ใช้ `MemberTier`:
+3 บาท/วัน, 5 บาท/วันโดยจำกัดสูงสุด 300 บาท, และ 10 บาท/วันตามลำดับ.
+การเรียกคืนช้าสร้างค่าปรับผ่าน `LoanServiceImpl`; รายการที่ scheduler เปลี่ยนเป็น `LOST`
+ถูกคิดค่าชดใช้ตามราคาหนังสือเต็มจำนวนผ่าน `FineService.generateLostBookFine`.

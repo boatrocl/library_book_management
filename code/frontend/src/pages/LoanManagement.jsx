@@ -1,10 +1,10 @@
-import { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { useCallback, useContext, useEffect, useState } from 'react';
+import { AuthContext } from '../context/AuthContextValue';
 import api from '../api';
 
 export default function LoanManagement() {
   const [loans, setLoans] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
   const { user } = useContext(AuthContext); // 2. ดึงข้อมูล user จาก Context
 
@@ -14,22 +14,27 @@ export default function LoanManagement() {
     barcodes: ''
   });
 
-  const fetchLoans = async () => {
-    setLoading(true);
+  const fetchLoans = useCallback(async (signal) => {
     try {
-      const response = await api.get('/api/v1/loans?size=50');
+      const response = await api.get('/api/v1/loans?size=50', { signal });
+      if (signal?.aborted) return;
       setLoans(response.data.content || []);
     } catch (error) {
+      if (signal?.aborted) return;
       console.error("Fetch loans error:", error);
       setMessage({ type: 'error', text: 'ไม่สามารถดึงข้อมูลใบยืมได้' });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchLoans();
-  }, []);
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (!controller.signal.aborted) return fetchLoans(controller.signal);
+    });
+    return () => controller.abort();
+  }, [fetchLoans]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -50,7 +55,8 @@ export default function LoanManagement() {
       await api.post('/api/v1/loans', payload);
       setMessage({ type: 'success', text: 'บันทึกการยืมสำเร็จ' });
       setBorrowData({ memberId: '', barcodes: '' });
-      fetchLoans();
+      setLoading(true);
+      await fetchLoans();
     } catch (error) {
       console.error("Borrow error:", error);
       setMessage({ 
@@ -68,7 +74,8 @@ export default function LoanManagement() {
         type: 'success', 
         text: action === 'return' ? 'บันทึกการคืนหนังสือสำเร็จ' : 'ต่ออายุใบยืมสำเร็จ' 
       });
-      fetchLoans();
+      setLoading(true);
+      await fetchLoans();
     } catch (error) {
       console.error(`${action} error:`, error);
       setMessage({ 
@@ -84,7 +91,8 @@ export default function LoanManagement() {
     try {
       await api.delete(`/api/v1/loans/${id}`);
       setMessage({ type: 'success', text: 'ยกเลิกใบยืมสำเร็จ' });
-      fetchLoans();
+      setLoading(true);
+      await fetchLoans();
     } catch (error) {
       console.error("Delete loan error:", error);
       setMessage({ type: 'error', text: 'เกิดข้อผิดพลาด ไม่สามารถลบใบยืมได้' });
@@ -104,7 +112,7 @@ export default function LoanManagement() {
         )}
 
         {/* ส่วนฟอร์มยืมหนังสือใหม่ */}
-        <div className="p-6 bg-white border shadow-sm rounded-xl">
+        <div className="p-6 bg-white border shadow-xs rounded-xl">
           <h2 className="mb-4 text-xl font-bold text-gray-800">บันทึกการยืมใหม่</h2>
           <form onSubmit={handleBorrowSubmit} className="flex items-end gap-4">
             <div className="flex-1">
@@ -119,7 +127,7 @@ export default function LoanManagement() {
                 placeholder="เช่น: 3"
               />
             </div>
-            <div className="flex-[2]">
+            <div className="flex-2">
               <label className="block mb-1 text-sm font-medium text-gray-700">บาร์โค้ดหนังสือ (คั่นด้วยลูกน้ำ)</label>
               <input 
                 type="text" 
@@ -141,7 +149,7 @@ export default function LoanManagement() {
         </div>
 
         {/* ส่วนตารางรายการใบยืม */}
-        <div className="overflow-hidden bg-white border shadow-sm rounded-xl">
+        <div className="overflow-hidden bg-white border shadow-xs rounded-xl">
           <div className="p-4 border-b bg-gray-50">
             <h2 className="text-lg font-bold text-gray-800">ประวัติการทำรายการล่าสุด</h2>
           </div>

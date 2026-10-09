@@ -12,11 +12,11 @@
 
 | ลำดับ | ชื่อ-นามสกุล | รหัสนักศึกษา | Section | Branch | หน้าที่รับผิดชอบ |
 |---|---|---|---|---|---|
-| 1 |  |  |  |  | Backend: Book / BookCopy / Category / Publisher / Author CRUD, Repository Layer, Swagger Config |
-| 2 |  |  |  |  | Backend: Loan / Return flow, State Pattern, Chain of Responsibility |
-| 3 |  |  |  |  | Backend: Fine (Strategy), Reservation (Observer), Report (Template Method) |
-| 4 |  |  |  |  | Frontend React ทั้งหมด + API Integration |
-| 5 |  |  |  |  | Security (JWT), Docker, CI/CD, Deployment, Unit & Integration Test |
+| 1 | นายอชิรวัช บึงไสย์ | 673380298-3 | 01 | `achirawat_673380298-3_01` | Backend: Book / BookCopy / Category / Publisher / Author CRUD, Repository Layer, Swagger Config |
+| 2 | นายวัชรวิศว์ น้อยเมล์ | 673380059-1 | 01 | `watcharawit_673380059-1_01` | Backend: Loan / Return flow, State Pattern, Chain of Responsibility |
+| 3 | นายกรกฏ พรมทอง | 673380025-8 | 01 | `korakot_673380025-8_01` | Backend: Fine (Strategy), Reservation (Observer), Report (Template Method) |
+| 4 | นายปกรณ์เกียรติ ศรีจันทร์ | 673380045-2 | 01 | `pakornkiat_673380045-2_01` | Frontend React ทั้งหมด + API Integration |
+| 5 | นายสรวิชญ์ ทะมานันท์ | 673380295-9 | 01 | `sorawit_673380295-9_01` | Security (JWT), Docker, CI/CD, Deployment, Unit & Integration Test |
 
 > ⚠️ ชื่อ Branch ต้องเป็นรูปแบบ `ชื่อ_รหัสนักศึกษา_section` เท่านั้น (ผิดรูปแบบ = −5 คะแนนรายบุคคล)
 
@@ -32,7 +32,7 @@
 | ORM | Spring Data JPA (Hibernate) |
 | Migration | Flyway |
 | API Documentation | springdoc-openapi 3.1.1 (Swagger UI) |
-| Frontend | React 18 + Vite + Axios + TailwindCSS |
+| Frontend | React 19.2.8 + Vite 8.3.2 + Axios + Tailwind CSS 4.3.3 |
 | Security | Spring Security + JWT |
 | Validation | Jakarta Bean Validation |
 | Testing | JUnit 5, Mockito, Spring Boot Test, Testcontainers |
@@ -66,6 +66,7 @@
 
 รายละเอียดเพิ่มเติม: [`doc/diagrams/12-component-diagram.puml`](doc/diagrams/12-component-diagram.puml)
 และ [`doc/diagrams/13-deployment-diagram.puml`](doc/diagrams/13-deployment-diagram.puml)
+ภาพที่ export แล้วและวิธี render: [`doc/diagrams/README.md`](doc/diagrams/README.md)
 
 ---
 
@@ -80,6 +81,7 @@
 | Many-to-Many (โบนัส) | `books` ↔ `authors` ผ่านตาราง `book_authors` |
 
 - ER Diagram: [`doc/diagrams/11-er-diagram.puml`](doc/diagrams/11-er-diagram.puml)
+- ภาพ ER Diagram: [`doc/diagrams/images/11-er-diagram.svg`](doc/diagrams/images/11-er-diagram.svg)
 - Data Dictionary: [`doc/data-dictionary.md`](doc/data-dictionary.md)
 
 ### Flyway Migration
@@ -92,9 +94,17 @@
 | `V3_1__add_role_and_auth_seed.sql` | เพิ่ม role, role constraint และ BCrypt authentication seed สำหรับ ADMIN / LIBRARIAN / MEMBER | คนที่ 5 |
 | `V4__init_loan.sql` | loans, loan_items | คนที่ 2 |
 | `V5__init_fine_reservation.sql` | fines, reservations | คนที่ 3 |
-| `V6__seed_data.sql` | ข้อมูลตัวอย่างส่วนที่เหลือ | ทีม |
+| `V7__add_tier_to_users.sql` | เพิ่ม `users.member_tier` ค่าเริ่มต้น `STUDENT` | ทีม |
+| `V8__add_fine_reservation_foreign_keys.sql` | เพิ่ม Foreign Key ที่ขาดจาก `fines` และ `reservations` | ทีม |
+| `V9__reserve_book_copy_for_ready_reservations.sql` | ผูกคิว READY กับตัวเล่มที่กันไว้ และ reset คิว READY เก่าที่ไม่เคยผูกตัวเล่ม | ทีม |
 
 > ไฟล์ migration ใช้ร่วมกันทั้งทีม ห้ามแก้ไฟล์ที่ merge เข้า `develop` ไปแล้ว ให้เพิ่มไฟล์ `V` ถัดไปแทน
+> ปัจจุบันไม่มีไฟล์ V6 ใน repository; V7–V9 มีอยู่ตามลำดับปัจจุบัน ห้ามสร้าง V6 ย้อนหลัง
+
+การจองที่มีสถานะ `READY` จะผูกกับตัวเล่มที่กันไว้ 48 ชั่วโมง ตัวเล่ม `RESERVED`
+ยืมได้เฉพาะสมาชิกเจ้าของคิวที่ยังไม่หมดเวลา เมื่อยกเลิกหรือหมดเวลา ระบบคืนตัวเล่ม
+และส่ง event ให้คิวถัดไป อีเมล/SMS ยังไม่ได้เชื่อมผู้ให้บริการจริง; ปัจจุบันระบบเขียน log
+เพื่อระบุว่าสมาชิกพร้อมรับหนังสือแล้ว
 
 ---
 
@@ -103,7 +113,7 @@
 ### ความต้องการของระบบ
 
 - JDK 17 หรือสูงกว่า
-- Node.js 20+
+- Node.js 20.19+ หรือ 22.12+
 - Docker Desktop / Docker Engine + Docker Compose
 - (ไม่ต้องติดตั้ง Maven — ใช้ Maven Wrapper `./mvnw` ที่มากับโปรเจค)
 
@@ -262,6 +272,16 @@ cd code/backend
 - Testcontainers
 - PostgreSQL 16
 
+ตรวจ frontend เพิ่มเติมด้วย:
+
+```bash
+cd code/frontend
+npm ci
+npm run lint
+npm run build
+npm audit
+```
+
 Security Unit Tests:
 
 ```text
@@ -279,16 +299,8 @@ AuthSecurityIntegrationTest
 Integration Test ใช้ PostgreSQL 16 จริงผ่าน Testcontainers
 และทดสอบ Flyway migration, authentication, JWT และ role authorization
 
-ผลการทดสอบล่าสุด:
-
-```text
-Tests run: 40
-Failures: 0
-Errors: 0
-Skipped: 0
-
-BUILD SUCCESS
-```
+จำนวน test เปลี่ยนตาม branch และการเพิ่ม test ให้ตรวจผลล่าสุดจาก `./mvnw verify`
+และ workflow ใน GitHub Actions ก่อน merge ห้ามใช้ตัวเลขผลทดสอบที่คัดลอกมาจากรอบก่อน
 
 รายงานผลการทดสอบ:
 
@@ -358,10 +370,13 @@ jdbc:postgresql://<NEON_HOST>:5432/libraflow?sslmode=require
 
 ### Backend
 
-Backend deploy ด้วย Docker บน Render จาก branch:
+Backend ใช้ Docker บน Render โดย production ควร deploy จาก branch `main`
+ส่วน `develop` ใช้รวมและทดสอบงานก่อนปล่อย production. README รุ่นก่อนระบุ `develop`
+เป็น branch ของ Render; ต้องตรวจ branch จริงใน Render Dashboard ก่อนยืนยันการแก้ค่าบริการ
 
 ```text
-develop
+Production: main (ค่าที่แนะนำ; ตรวจ Render Dashboard ก่อนเปลี่ยน)
+Integration / test: develop
 ```
 
 Render configuration:
@@ -405,10 +420,16 @@ https://library-book-management-ybt2.onrender.com/swagger-ui.html
 
 | ส่วน | URL |
 |---|---|
-| Frontend | _(รอ deploy)_ |
+| Frontend | https://library-book-management-alpha.vercel.app/ |
 | Backend API | https://library-book-management-ybt2.onrender.com |
 | Swagger UI | https://library-book-management-ybt2.onrender.com/swagger-ui.html |
 | PostgreSQL | Neon PostgreSQL |
+
+การแยก environment ที่ต้องการใช้คือ `main` สำหรับ production และ `develop` สำหรับ integration
+แต่ public URL หรือชื่อ branch `production` ใน Neon ไม่ยืนยันว่า Render ต่อฐานข้อมูล/branch ใดอยู่
+โปรดตรวจ branch ที่ Render deploy และเทียบชื่อ host/database ใน `DB_URL` กับ Neon Dashboard
+โดยปิดบังค่า username/password ก่อนแชร์ภาพหน้าจอ รายละเอียดอยู่ใน
+[`doc/security-ci-deployment.md`](doc/security-ci-deployment.md)
 
 ---
 
@@ -441,11 +462,7 @@ library_book_management/
 │   │       │   │   ├── exception/
 │   │       │   │   └── common/
 │   │       │   └── resources/
-│   │       │       └── db/migration/
-│   │       │           ├── V1__init_catalog.sql
-│   │       │           ├── V2__seed_catalog.sql
-│   │       │           ├── V3__init_users.sql
-│   │       │           └── V3_1__add_role_and_auth_seed.sql
+│   │       │       └── db/migration/    # V1, V2, V3, V3_1, V4, V5, V7, V8, V9
 │   │       └── test/java/com/libraflow/library/
 │   │           ├── controller/api/
 │   │           ├── integration/
@@ -457,8 +474,6 @@ library_book_management/
 │   │               └── AuthServiceImplTest.java
 │   └── frontend/                # React + Vite
 ├── test/
-│   ├── unit/
-│   ├── integration/
 │   └── report/
 │       └── member5-security-test-report.md
 ├── doc/
@@ -468,8 +483,8 @@ library_book_management/
 │   ├── data-dictionary.md
 │   ├── api-spec.md
 │   ├── security-ci-deployment.md
-│   ├── diagrams/                # ไฟล์ .puml ทั้งหมด + ภาพ export
-│   └── slide/
+│   ├── diagrams/                # PlantUML source และภาพที่ export
+│   └── slide/                   # LibraFlow-Presentation.pptx
 ├── docker-compose.yml
 ├── .env.example
 └── img/
@@ -490,7 +505,8 @@ library_book_management/
 ```bash
 git config --local user.name  "ชื่อจริงของตนเอง"
 git config --local user.email "อีเมลที่ผูกกับบัญชี GitHub ของตนเอง"
-git checkout -b somchai_66123456_01
+git fetch origin
+git switch -c <ชื่อ_รหัสนักศึกษา_01> origin/develop
 ```
 
 **Commit Message Convention:** `<type>: <สิ่งที่ทำ>`
@@ -503,5 +519,8 @@ test: add unit test for LoanService
 docs: update API specification
 ```
 
-การรวมงานทุกครั้งต้องเปิด Pull Request เข้า `develop`
-และมี reviewer ในทีมอย่างน้อย 1 คน
+การรวมงานรายบุคคลให้เปิด Pull Request จาก branch ส่วนตัวเข้า `develop`
+และให้สมาชิกในทีม review อย่างน้อย 1 คน หลัง CI ผ่านและทดสอบรวมแล้ว
+ให้ทีมเปิด Pull Request จาก `develop` เข้า `main` เพื่อ release production.
+
+สไลด์นำเสนอ: [`doc/slide/LibraFlow-Presentation.pptx`](doc/slide/LibraFlow-Presentation.pptx)

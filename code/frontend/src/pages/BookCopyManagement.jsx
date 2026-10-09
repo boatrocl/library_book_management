@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
 
@@ -7,37 +7,43 @@ export default function BookCopyManagement() {
   const navigate = useNavigate();
   const [copies, setCopies] = useState([]);
   const [bookTitle, setBookTitle] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  const fetchData = async () => {
-    setLoading(true);
+  const fetchData = useCallback(async (signal) => {
     try {
-      // ดึงชื่อหนังสือมาแสดงหัวเว็บ
-      const bookRes = await api.get(`/api/v1/books/${id}`);
+      const [bookRes, copiesRes] = await Promise.all([
+        api.get(`/api/v1/books/${id}`, { signal }),
+        api.get(`/api/v1/books/${id}/copies`, { signal })
+      ]);
+      if (signal?.aborted) return;
+
       setBookTitle(bookRes.data.title);
-      
-      // ดึงรายการตัวเล่มทั้งหมดของหนังสือเล่มนี้
-      const copiesRes = await api.get(`/api/v1/books/${id}/copies`);
       setCopies(copiesRes.data);
     } catch (error) {
+      if (signal?.aborted) return;
       console.error("Fetch copies error:", error);
       setMessage({ type: 'error', text: 'ไม่สามารถดึงข้อมูลตัวเล่มได้' });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
-    fetchData();
-  }, [id]);
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (!controller.signal.aborted) return fetchData(controller.signal);
+    });
+    return () => controller.abort();
+  }, [fetchData]);
 
   const handleAddCopy = async () => {
     try {
       // โค้ด Backend ของเพื่อนรองรับการสร้างบาร์โค้ดอัตโนมัติเมื่อส่งข้อมูลว่างไป
       await api.post(`/api/v1/books/${id}/copies`, { shelfLocation: 'General' });
       setMessage({ type: 'success', text: 'เพิ่มตัวเล่มหนังสือใหม่เข้าคลังสำเร็จ' });
-      fetchData(); // โหลดตารางใหม่
+      setLoading(true);
+      await fetchData(); // โหลดตารางใหม่
     } catch (error) {
       console.error("Add copy error:", error);
       setMessage({ type: 'error', text: 'ไม่สามารถเพิ่มตัวเล่มได้' });
@@ -61,7 +67,7 @@ export default function BookCopyManagement() {
           </div>
         )}
 
-        <div className="overflow-hidden bg-white border shadow-sm rounded-xl">
+        <div className="overflow-hidden bg-white border shadow-xs rounded-xl">
           <div className="flex items-center justify-between p-4 border-b bg-gray-50">
             <h2 className="text-lg font-bold text-gray-800">รายการตัวเล่มทั้งหมด</h2>
             <button onClick={handleAddCopy} className="px-4 py-2 text-sm font-bold text-white transition bg-green-600 rounded-md hover:bg-green-700">

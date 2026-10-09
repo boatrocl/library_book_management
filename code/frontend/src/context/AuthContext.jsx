@@ -1,30 +1,45 @@
-import { createContext, useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import { AuthContext } from './AuthContextValue';
 
-// สร้าง Context เป็นศูนย์กลางข้อมูล
-export const AuthContext = createContext();
+function userFromStoredToken() {
+  if (typeof window === 'undefined') return null;
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const token = localStorage.getItem('token');
+  if (!token) return null;
 
-  // ตรวจสอบ Token ในกระเป๋าทุกครั้งที่โหลดแอปพลิเคชัน
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        setUser({
-          id: decoded.id || decoded.userId || decoded.sub,
-          role: decoded.role,
-          username: decoded.sub // Spring Security มักเก็บ username ไว้ใน sub
-        });
-      } catch (error) {
-        console.error("Token ไม่ถูกต้อง:", error);
-        localStorage.removeItem('token');
-      }
+  try {
+    const decoded = jwtDecode(token);
+    if (decoded.exp && decoded.exp * 1000 <= Date.now()) {
+      localStorage.removeItem('token');
+      return null;
     }
-    setIsLoading(false);
+
+    return {
+      id: decoded.id || decoded.userId || decoded.sub,
+      role: decoded.role,
+      username: decoded.sub
+    };
+  } catch (error) {
+    console.error('Token ไม่ถูกต้อง:', error);
+    localStorage.removeItem('token');
+    return null;
+  }
+}
+
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(userFromStoredToken);
+
+  // Keep this tab in sync when another tab logs in or out.
+  useEffect(() => {
+    const handleStorage = (event) => {
+      if (event.key === null || event.key === 'token') {
+        setUser(userFromStoredToken());
+      }
+    };
+
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
   }, []);
 
   // ฟังก์ชันสำหรับเรียกใช้ตอน Login สำเร็จ
@@ -45,8 +60,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading: false }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}

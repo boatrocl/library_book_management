@@ -6,6 +6,7 @@ import com.libraflow.library.domain.entity.LoanItem;
 import com.libraflow.library.domain.enums.BookCopyStatus;
 import com.libraflow.library.domain.enums.LoanStatus;
 import com.libraflow.library.repository.LoanRepository;
+import com.libraflow.library.service.FineService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.EnableScheduling;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
@@ -36,9 +38,11 @@ public class LoanScheduler {
     private static final Logger log = LoggerFactory.getLogger(LoanScheduler.class);
 
     private final LoanRepository loanRepository;
+    private final FineService fineService;
 
-    public LoanScheduler(LoanRepository loanRepository) {
+    public LoanScheduler(LoanRepository loanRepository, FineService fineService) {
         this.loanRepository = loanRepository;
+        this.fineService = fineService;
     }
 
     /**
@@ -121,6 +125,11 @@ public class LoanScheduler {
                 if (!item.isReturned()) {
                     BookCopy copy = item.getBookCopy();
                     if (copy != null && copy.getStatus() == BookCopyStatus.ON_LOAN) {
+                        int overdueDays = Math.toIntExact(Math.max(
+                                0,
+                                ChronoUnit.DAYS.between(item.getDueDate(), today)
+                        ));
+                        fineService.generateLostBookFine(item, overdueDays);
                         copy.setStatus(BookCopyStatus.LOST);
                         log.info("BookCopy id {} (barcode: {}) updated to LOST for loan id {}",
                                 copy.getId(), copy.getBarcode(), loan.getId());
