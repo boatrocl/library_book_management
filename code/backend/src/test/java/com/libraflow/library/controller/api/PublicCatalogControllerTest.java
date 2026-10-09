@@ -1,5 +1,6 @@
 package com.libraflow.library.controller.api;
 
+import com.libraflow.library.domain.enums.BookAvailabilityFilter;
 import com.libraflow.library.dto.response.BookResponse;
 import com.libraflow.library.dto.response.PageResponse;
 import com.libraflow.library.exception.ResourceNotFoundException;
@@ -19,6 +20,8 @@ import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -75,6 +78,7 @@ class PublicCatalogControllerTest {
                 bookQueryService.search(
                         any(),
                         any(),
+                        any(),
                         any(Pageable.class)
                 )
         ).thenReturn(
@@ -91,7 +95,7 @@ class PublicCatalogControllerTest {
 
         mockMvc.perform(
                         get(
-                                "/api/v1/books?keyword=clean&page=0&size=10&sort=title,asc"
+                                "/api/v1/books?keyword=clean&availability=AVAILABLE&page=0&size=10&sort=title,asc"
                         )
                 )
                 .andExpect(
@@ -140,6 +144,13 @@ class PublicCatalogControllerTest {
                         jsonPath("$.last")
                                 .value(true)
                 );
+
+        verify(bookQueryService).search(
+                any(),
+                any(),
+                eq(BookAvailabilityFilter.AVAILABLE),
+                any(Pageable.class)
+        );
     }
 
     @Test
@@ -151,6 +162,7 @@ class PublicCatalogControllerTest {
 
         when(
                 bookQueryService.search(
+                        any(),
                         any(),
                         any(),
                         any(Pageable.class)

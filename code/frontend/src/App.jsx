@@ -1,7 +1,8 @@
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
-import { useContext } from 'react';
+import { useContext, useState } from 'react';
 import { AuthProvider } from './context/AuthContext';
 import { AuthContext } from './context/AuthContextValue';
+import { LanguageContext } from './context/LanguageContext';
 import Login from './pages/Login';
 import Catalog from './pages/Catalog';
 import Navbar from './components/Navbar';
@@ -37,7 +38,7 @@ function AppContent() {
   const isAuthPage = location.pathname === '/login' || location.pathname === '/register';
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="app-root min-h-screen">
       {!isAuthPage && <Navbar />}
 
       <Routes>
@@ -116,9 +117,13 @@ function AppContent() {
 }
 
 export default function App() {
+  const [language, setLanguage] = useState('th');
+
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <LanguageContext.Provider value={{ language, setLanguage }}>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </LanguageContext.Provider>
   );
 }
