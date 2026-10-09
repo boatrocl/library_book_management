@@ -16,9 +16,11 @@ import java.util.Optional;
 public interface ReservationRepository extends JpaRepository<Reservation, Long> {
 
     // หาคิวจองที่เก่าที่สุด (คิวแรก) สำหรับหนังสือเล่มนั้นๆ ที่สถานะเป็น WAITING
-    Optional<Reservation> findFirstByBookIdAndStatusOrderByReservedAtAsc(Long bookId, ReservationStatus status);
+    Optional<Reservation> findFirstByBookIdAndStatusOrderByReservedAtAscIdAsc(Long bookId, ReservationStatus status);
 
     List<Reservation> findAllByBookIdAndStatusOrderByReservedAtAscIdAsc(Long bookId, ReservationStatus status);
+
+    boolean existsByBookIdAndStatusIn(Long bookId, Collection<ReservationStatus> statuses);
 
     Optional<Reservation> findByUserIdAndReservedCopyIdAndStatusAndExpiresAtAfter(
             Long userId, Long copyId, ReservationStatus status, LocalDateTime now);

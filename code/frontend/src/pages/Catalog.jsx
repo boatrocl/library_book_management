@@ -54,6 +54,11 @@ const COPY = {
     bookTitleUnknown: 'ไม่ระบุชื่อหนังสือ',
     closeDetails: 'ปิดรายละเอียด',
     detailsHeading: 'รายละเอียดหนังสือ',
+    bookInfoTabs: 'รายละเอียดและกฎการใช้บริการ',
+    detailsTab: 'ข้อมูลหนังสือ',
+    rulesTab: 'กฎและเงื่อนไข',
+    acceptRules: 'ฉันอ่านและยอมรับกฎการยืมและการจองแล้ว',
+    readRules: 'อ่านกฎก่อนทำรายการ',
     unknown: 'ไม่ระบุ',
     publisher: 'สำนักพิมพ์',
     year: 'ปีที่พิมพ์',
@@ -139,6 +144,11 @@ const COPY = {
     bookTitleUnknown: 'Untitled book',
     closeDetails: 'Close details',
     detailsHeading: 'Book details',
+    bookInfoTabs: 'Book details and library rules',
+    detailsTab: 'Book information',
+    rulesTab: 'Rules and terms',
+    acceptRules: 'I have read and agree to the borrowing and reservation rules.',
+    readRules: 'Read the rules before continuing',
     unknown: 'Not listed',
     publisher: 'Publisher',
     year: 'Published',
@@ -325,7 +335,7 @@ export default function Catalog() {
   async function borrowBook(book) {
     setBorrowState({ status: 'loading' });
     try {
-      const response = await api.post('/api/v1/loans/self', { bookId: book.id });
+      const response = await api.post('/api/v1/loans/self', { bookId: book.id, termsAccepted: true });
       const nextAvailableCopies = Math.max(Number(book.availableCopies || 0) - 1, 0);
       setBooks((current) => current.map((item) => item.id === book.id
         ? { ...item, availableCopies: nextAvailableCopies }
@@ -346,7 +356,7 @@ export default function Catalog() {
   async function reserveBook(book) {
     setReservationState({ status: 'loading' });
     try {
-      const response = await api.post('/api/v1/reservations/self', { bookId: book.id });
+      const response = await api.post('/api/v1/reservations/self', { bookId: book.id, termsAccepted: true });
       setReservationState({ status: 'success', reservation: response.data });
     } catch (error) {
       const code = error?.response?.data?.errorCode;
@@ -586,6 +596,7 @@ export default function Catalog() {
 
       {selectedBook && (
         <BookDetailsDialog
+          key={selectedBook.id}
           book={selectedBook}
           labels={text}
           categoryName={categoryName}
