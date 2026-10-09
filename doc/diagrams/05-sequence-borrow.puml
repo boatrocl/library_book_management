@@ -66,6 +66,11 @@ group ตรวจสอบสิทธิ์ตามลำดับกฎ
   R -> R : MemberStatusRule (BR-01)
   R -> R : UnpaidFineRule (BR-02)
   R -> R : LoanQuotaRule (BR-03)
+  R -> LR : existsActiveLoanByUserIdAndBookId for each title
+  LR -> DB : ตรวจรายการ ACTIVE/OVERDUE ที่ยังไม่คืน
+  DB --> LR : มีรายการหรือไม่
+  LR --> R : boolean
+  R -> R : NoDuplicateTitleLoanRule (BR-09)
   R -> R : CopyAvailabilityRule (BR-04)
 end
 
