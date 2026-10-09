@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react';
+import { useContext, useRef, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContextValue';
 import { useLanguage } from '../context/LanguageContext';
@@ -25,6 +25,7 @@ export default function Navbar() {
   const { user, logout } = useContext(AuthContext);
   const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
+  const managementMenuRef = useRef(null);
   const canManage = user && ['LIBRARIAN', 'ADMIN'].includes(user.role);
 
   function handleLogout() {
@@ -35,6 +36,9 @@ export default function Navbar() {
 
   function closeMenu() {
     setMenuOpen(false);
+    if (managementMenuRef.current) {
+      managementMenuRef.current.open = false;
+    }
   }
 
   return (
@@ -64,7 +68,7 @@ export default function Navbar() {
             <NavLink to="/about" className={linkClass} onClick={closeMenu}>{t('เกี่ยวกับเรา', 'About')}</NavLink>
             {user && <NavLink to="/profile" className={linkClass} onClick={closeMenu}>{t('โปรไฟล์ส่วนตัว', 'My profile')}</NavLink>}
             {canManage && (
-              <details className="management-menu">
+              <details className="management-menu" ref={managementMenuRef}>
                 <summary>{t('จัดการระบบ', 'Management')} <span aria-hidden="true">⌄</span></summary>
                 <div className="management-menu__panel">
                   <NavLink to="/admin/books" className={linkClass} onClick={closeMenu}>{t('จัดการหนังสือ', 'Manage books')}</NavLink>
