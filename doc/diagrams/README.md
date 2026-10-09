@@ -1,86 +1,51 @@
-# Diagrams — LibraFlow
+# LibraFlow diagrams
 
-ไฟล์ทั้งหมดในโฟลเดอร์นี้เขียนด้วย **PlantUML** (`.puml`)
-ทุกไฟล์ผ่านการตรวจ syntax ด้วย `plantuml.jar` v1.2025.2 แล้ว (render เป็น SVG ได้สำเร็จ)
+ไฟล์ `.puml` เป็น source ที่แก้ไขได้ ภาพ SVG สำหรับขยายดูรายละเอียดอยู่ใน `images/`
+และ PNG สำหรับเอกสาร/การนำเสนออยู่ใน `png/`. สร้างและตรวจ render ด้วย PlantUML 1.2025.2
+วันที่ 8 ต.ค. 2569.
 
----
+| # | Diagram | Source | PNG | SVG |
+|---|---|---|---|---|
+| 1 | Use Case | [01-use-case.puml](01-use-case.puml) | [PNG](png/01-use-case.png) | [SVG](images/01-use-case.svg) |
+| 2 | Use Case Description | [02-use-case-description.md](02-use-case-description.md) | — | — |
+| 3 | Domain Model | [03-domain-model.puml](03-domain-model.puml) | [PNG](png/03-domain-model.png) | [SVG](images/03-domain-model.svg) |
+| 4 | Class Diagram and patterns | [04-class-diagram.puml](04-class-diagram.puml) | [PNG](png/04-class-diagram.png) | [SVG](images/04-class-diagram.svg) |
+| 5 | Sequence — borrow | [05-sequence-borrow.puml](05-sequence-borrow.puml) | [PNG](png/05-sequence-borrow.png) | [SVG](images/05-sequence-borrow.svg) |
+| 6 | Sequence — return, fine and reservation | [06-sequence-return.puml](06-sequence-return.puml) | [PNG](png/06-sequence-return.png) | [SVG](images/06-sequence-return.svg) |
+| 7 | Sequence — search and pagination | [07-sequence-search.puml](07-sequence-search.puml) | [PNG](png/07-sequence-search.png) | [SVG](images/07-sequence-search.svg) |
+| 8 | Activity — borrow | [08-activity-borrow.puml](08-activity-borrow.puml) | [PNG](png/08-activity-borrow.png) | [SVG](images/08-activity-borrow.svg) |
+| 9 | State — loan | [09-state-loan.puml](09-state-loan.puml) | [PNG](png/09-state-loan.png) | [SVG](images/09-state-loan.svg) |
+| 10 | State — book copy | [10-state-bookcopy.puml](10-state-bookcopy.puml) | [PNG](png/10-state-bookcopy.png) | [SVG](images/10-state-bookcopy.svg) |
+| 11 | ER / database schema | [11-er-diagram.puml](11-er-diagram.puml) | [PNG](png/11-er-diagram.png) | [SVG](images/11-er-diagram.svg) |
+| 12 | Component | [12-component-diagram.puml](12-component-diagram.puml) | [PNG](png/12-component-diagram.png) | [SVG](images/12-component-diagram.svg) |
+| 13 | Deployment topology | [13-deployment-diagram.puml](13-deployment-diagram.puml) | [PNG](png/13-deployment-diagram.png) | [SVG](images/13-deployment-diagram.svg) |
 
-## รายการ Diagram
+## Render again
 
-| ไฟล์ | ชนิด | ตรงกับข้อกำหนดในใบงาน |
-|---|---|---|
-| `01-use-case.puml` | Use Case Diagram | ✅ Use Case Diagram |
-| `02-use-case-description.md` | Use Case Description | ✅ Use Case Description |
-| `03-domain-model.puml` | Domain Model / Conceptual Class Diagram | ✅ Domain Model |
-| `04-class-diagram.puml` | Class Diagram (แสดงตำแหน่ง Design Pattern) | ✅ Class Diagram + ตำแหน่ง Pattern |
-| `05-sequence-borrow.puml` | Sequence — บันทึกการยืม | ✅ Sequence #1 |
-| `06-sequence-return.puml` | Sequence — คืน + คิดค่าปรับ + แจ้งคิวจอง | ✅ Sequence #2 |
-| `07-sequence-search.puml` | Sequence — ค้นหาหนังสือ (Pagination) | ✅ Sequence #3 |
-| `08-activity-borrow.puml` | Activity Diagram | ✅ Activity Diagram |
-| `09-state-loan.puml` | State Diagram — Loan | ✅ State Diagram |
-| `10-state-bookcopy.puml` | State Diagram — BookCopy | ✅ State Diagram (เพิ่มเติม) |
-| `11-er-diagram.puml` | ER Diagram / Database Schema | ✅ ER Diagram |
-| `12-component-diagram.puml` | Component Diagram | ✅ Component Diagram |
-| `13-deployment-diagram.puml` | Deployment Diagram | ✅ Deployment Diagram |
-
-ครบทุกชนิดตามข้อ 9.1 ของใบงาน
-
----
-
-## วิธี Render เป็นรูปภาพ
-
-### วิธีที่ 1 — VS Code (สะดวกที่สุดตอนแก้ไข)
-
-1. ติดตั้ง extension **PlantUML** (jebbs.plantuml)
-2. ติดตั้ง Java และ Graphviz
-   - Windows: `winget install Graphviz.Graphviz`
-   - macOS: `brew install graphviz`
-   - Ubuntu: `sudo apt install graphviz default-jre`
-3. เปิดไฟล์ `.puml` แล้วกด `Alt + D` เพื่อดูตัวอย่าง
-4. Export: `Ctrl + Shift + P` → `PlantUML: Export Current Diagram` → เลือก PNG หรือ SVG
-
-### วิธีที่ 2 — Command Line (ใช้ export ทั้งโฟลเดอร์ทีเดียว)
+From this directory, with Java installed and `plantuml.jar` available:
 
 ```bash
-# ดาวน์โหลด plantuml.jar จาก https://github.com/plantuml/plantuml/releases
-java -jar plantuml.jar -tpng -o ./png *.puml
-java -jar plantuml.jar -tsvg -o ./svg *.puml
+java -jar plantuml.jar -tpng -o png *.puml
+java -jar plantuml.jar -tsvg -o images *.puml
 ```
 
-### วิธีที่ 3 — เว็บ (ไม่ต้องติดตั้งอะไร)
+The checked-in exports use subfolders `images/` with separate PNG and SVG files. To reproduce
+that layout from the repository root in PowerShell:
 
-วางโค้ดที่ https://www.plantuml.com/plantuml/uml/
+```powershell
+$files = Get-ChildItem doc/diagrams/*.puml | ForEach-Object { $_.FullName }
+java -jar plantuml.jar -tpng -o png $files
+java -jar plantuml.jar -tsvg -o images $files
+```
 
----
+PlantUML uses the `Tahoma` font for Thai labels. If Thai glyphs are missing on Linux, install
+a Thai-capable font and adjust `skinparam defaultFontName` in the source before exporting.
 
-## ⚠️ การแสดงผลภาษาไทย
+## Keep diagrams aligned with code
 
-PlantUML ใช้ฟอนต์ของระบบในการวาดข้อความ ถ้า render แล้วภาษาไทยกลายเป็นกล่องสี่เหลี่ยม
-(□□□) แปลว่าเครื่องที่ render ไม่มีฟอนต์ที่รองรับภาษาไทย
-
-**วิธีแก้**
-
-1. ทุกไฟล์ตั้งค่าไว้แล้วเป็น `skinparam defaultFontName "Tahoma"` ซึ่งมีอยู่ใน Windows ทุกเครื่อง
-2. บน macOS เปลี่ยนเป็น
-
-   ```
-   skinparam defaultFontName "Thonburi"
-   ```
-
-3. บน Linux / Docker ติดตั้งฟอนต์ไทยก่อน แล้วเปลี่ยนเป็น `"Noto Sans Thai"`
-
-   ```bash
-   sudo apt install fonts-thai-tlwg fonts-noto-cjk
-   ```
-
-4. หากยังมีปัญหาและต้องส่งงานด่วน ให้ export เป็น **SVG** แทน PNG
-   เพราะ SVG ฝังข้อความเป็น text ทำให้เบราว์เซอร์ใช้ฟอนต์ของตัวเองแสดงผลแทน
-
----
-
-## ข้อควรรู้ก่อนแก้ไข
-
-- Diagram ทุกไฟล์อ้างอิงรหัสกฎ `BR-xx` จาก [`../project-overview.md`](../project-overview.md) — ถ้าแก้กฎ ต้องแก้ทั้งสองที่ให้ตรงกัน
-- `04-class-diagram.puml` ต้องตรงกับตารางใน [`../design-patterns.md`](../design-patterns.md)
-- `11-er-diagram.puml` ต้องตรงกับ [`../data-dictionary.md`](../data-dictionary.md) และ Flyway migration script
-- Class Diagram ต้องสะท้อนโค้ดจริง ไม่ใช่โครงที่ตั้งใจไว้ตอนแรก — อัปเดตก่อนส่งเสมอ
+- ER diagram: compare with every Flyway migration and [`../data-dictionary.md`](../data-dictionary.md).
+- Class diagram: compare with actual classes and [`../design-patterns.md`](../design-patterns.md).
+- Loan/return sequences and state diagrams: keep aligned with `LoanServiceImpl`, `LoanScheduler`
+  and the current business rules in [`../project-overview.md`](../project-overview.md).
+- Deployment diagram is intended topology. A public service URL does not prove the deployed
+  Git branch or the database branch selected by its connection string; verify both in provider dashboards.

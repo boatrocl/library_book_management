@@ -1,5 +1,5 @@
 import { useState, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContextValue';
 import api from '../api';
 
 export default function FineManagement() {
@@ -73,7 +73,7 @@ export default function FineManagement() {
         <h1 className="text-3xl font-bold text-gray-800">จัดการค่าปรับ</h1>
 
         {/* ฟอร์มค้นหาผู้ใช้ */}
-        <div className="p-6 bg-white border shadow-sm rounded-xl">
+        <div className="p-6 bg-white border shadow-xs rounded-xl">
           <form onSubmit={handleSearch} className="flex items-end gap-4">
             <div className="flex-1">
               <label className="block mb-1 text-sm font-medium text-gray-700">รหัสสมาชิก (Member ID)</label>
@@ -103,7 +103,7 @@ export default function FineManagement() {
 
         {/* ตารางแสดงค่าปรับ */}
         {hasSearched && (
-          <div className="overflow-hidden bg-white border shadow-sm rounded-xl">
+          <div className="overflow-hidden bg-white border shadow-xs rounded-xl">
             <div className="flex items-center justify-between p-4 border-b bg-gray-50">
               <h2 className="text-lg font-bold text-gray-800">รายการค่าปรับค้างชำระ (UNPAID)</h2>
               {fines.length > 0 && (

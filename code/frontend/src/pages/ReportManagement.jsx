@@ -66,7 +66,7 @@ export default function ReportManagement() {
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           
           {/* Card 1: รายงานสถิติการยืม (CSV) */}
-          <div className="p-6 bg-white border shadow-sm rounded-xl">
+          <div className="p-6 bg-white border shadow-xs rounded-xl">
             <h2 className="mb-4 text-xl font-bold text-gray-800">สถิติการยืม (CSV)</h2>
             <p className="mb-4 text-sm text-gray-600">ดาวน์โหลดข้อมูลการยืมหนังสือทั้งหมดตามช่วงวันที่กำหนด</p>
             <form onSubmit={handleDownloadCsv} className="space-y-4">
@@ -101,7 +101,7 @@ export default function ReportManagement() {
           </div>
 
           {/* Card 2: รายงานหนังสือค้างส่ง (PDF) */}
-          <div className="p-6 bg-white border shadow-sm rounded-xl">
+          <div className="p-6 bg-white border shadow-xs rounded-xl">
             <h2 className="mb-4 text-xl font-bold text-gray-800">หนังสือค้างส่ง (PDF)</h2>
             <p className="mb-4 text-sm text-gray-600">ดาวน์โหลดสรุปรายการใบยืมที่เลยกำหนดและยังไม่ได้คืนทั้งหมด (สถานะ OVERDUE)</p>
             <div className="mt-8">

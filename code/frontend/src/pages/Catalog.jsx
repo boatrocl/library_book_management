@@ -5,32 +5,42 @@ export default function Catalog() {
   const [books, setBooks] = useState([]);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [loadedRequest, setLoadedRequest] = useState(null);
   
   // เพิ่ม State สำหรับระบบค้นหา
   const [searchInput, setSearchInput] = useState('');
   const [keyword, setKeyword] = useState('');
 
-  const fetchBooks = async (currentPage, currentKeyword) => {
-    setLoading(true);
-    try {
-      // ประกอบ URL โดยเช็กว่ามีคำค้นหาหรือไม่ (ป้องกันการส่ง keyword ว่างเปล่าไปกวน API)
-      const keywordParam = currentKeyword ? `&keyword=${encodeURIComponent(currentKeyword)}` : '';
-      const response = await api.get(`/api/v1/books?page=${currentPage}&size=8${keywordParam}`);
-      
-      setBooks(response.data.content);
-      setTotalPages(response.data.totalPages);
-    } catch (error) {
-      console.error("เกิดข้อผิดพลาดในการดึงข้อมูลหนังสือ", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const requestKey = `${page}:${keyword}`;
+  const loading = loadedRequest !== requestKey;
 
   // ดึงข้อมูลเมื่อ page หรือ keyword เปลี่ยน
   useEffect(() => {
-    fetchBooks(page, keyword);
-  }, [page, keyword]);
+    const controller = new AbortController();
+    const loadBooks = async () => {
+      try {
+        // ประกอบ URL โดยไม่ส่ง keyword ว่างไปที่ API
+        const keywordParam = keyword ? `&keyword=${encodeURIComponent(keyword)}` : '';
+        const response = await api.get(
+          `/api/v1/books?page=${page}&size=8${keywordParam}`,
+          { signal: controller.signal }
+        );
+        if (controller.signal.aborted) return;
+
+        setBooks(response.data.content || []);
+        setTotalPages(response.data.totalPages || 1);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("เกิดข้อผิดพลาดในการดึงข้อมูลหนังสือ", error);
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoadedRequest(requestKey);
+      }
+    };
+
+    void loadBooks();
+    return () => controller.abort();
+  }, [keyword, page, requestKey]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -58,7 +68,7 @@ export default function Catalog() {
               placeholder="ค้นหาชื่อหนังสือ..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              className="w-full px-4 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500 md:w-64"
+              className="w-full px-4 py-2 border rounded-l-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 md:w-64"
             />
             {keyword && (
               <button 
@@ -84,7 +94,7 @@ export default function Catalog() {
           <>
             {/* กรณีไม่พบหนังสือ */}
             {books.length === 0 ? (
-              <div className="py-20 text-center text-gray-500 bg-white border rounded-lg shadow-sm">
+              <div className="py-20 text-center text-gray-500 bg-white border rounded-lg shadow-xs">
                 ไม่พบหนังสือที่ค้นหา
               </div>
             ) : (
@@ -92,7 +102,7 @@ export default function Catalog() {
                 {/* วาดการ์ดหนังสือ */}
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                   {books.map((book) => (
-                    <div key={book.id} className="flex flex-col justify-between p-5 transition bg-white border rounded-lg shadow-sm hover:shadow-md">
+                    <div key={book.id} className="flex flex-col justify-between p-5 transition bg-white border rounded-lg shadow-xs hover:shadow-md">
                       <div>
                         <h2 className="mb-2 text-lg font-bold text-blue-700 line-clamp-2" title={book.title}>
                           {book.title}

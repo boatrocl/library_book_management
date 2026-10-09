@@ -36,7 +36,8 @@ import java.util.List;
  * ข้อมูลที่เขียนไปแล้วจะถูก rollback ทั้งชุด เพราะ BusinessException สืบทอด
  * RuntimeException ซึ่ง Spring rollback ให้อัตโนมัติ
  *
- * SOLID - D: dependency ทุกตัวเป็น interface รับผ่าน constructor เดียว
+ * SOLID - D: repositories เป็น interface ส่วน mapper และ barcode generator เป็น utility
+ * ที่ inject ผ่าน constructor เช่นกัน ไม่มี field injection
  */
 @Service
 @Transactional

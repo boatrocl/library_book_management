@@ -25,8 +25,8 @@ public final class LoanPolicyUtil {
 
     /**
      * กำหนด MemberTier จากข้อมูลของ User
-     * - บุคลากร/ผู้ดูแล (ADMIN, LIBRARIAN) -> STAFF
-     * - สมาชิกทั่วไป (MEMBER หรืออื่น ๆ) -> STUDENT
+     * - ADMIN และ LIBRARIAN ใช้นโยบาย STAFF
+     * - MEMBER ใช้ member_tier ที่บันทึกไว้ และใช้ STUDENT เมื่อไม่มีค่าหรือค่าไม่ถูกต้อง
      */
     public static MemberTier resolveMemberTier(User member) {
         if (member == null) {
@@ -35,7 +35,13 @@ public final class LoanPolicyUtil {
         if (member.getRole() == UserRole.ADMIN || member.getRole() == UserRole.LIBRARIAN) {
             return MemberTier.STAFF;
         }
-        return MemberTier.STUDENT;
+        try {
+            return member.getMemberTier() == null
+                    ? MemberTier.STUDENT
+                    : MemberTier.valueOf(member.getMemberTier().trim().toUpperCase());
+        } catch (IllegalArgumentException exception) {
+            return MemberTier.STUDENT;
+        }
     }
 
     /**

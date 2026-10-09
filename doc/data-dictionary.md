@@ -1,218 +1,185 @@
 # Data Dictionary — LibraFlow
 
-ฐานข้อมูล: **PostgreSQL 16** · Migration: **Flyway** (`V1__init_catalog.sql` … `V6__seed_data.sql`
-— ดูตารางแบ่งไฟล์ตามผู้รับผิดชอบใน [`../README.md`](../README.md))
-ER Diagram: [`diagrams/11-er-diagram.puml`](diagrams/11-er-diagram.puml)
+อ้างอิง schema จาก Flyway migrations ใน `code/backend/src/main/resources/db/migration/`
+ณ เวอร์ชัน V9. เอกสารนี้อธิบาย schema ที่โค้ดจะสร้างเมื่อรัน migration ครบ
+การ deploy จริงต้องตรวจสอบผล Flyway บนฐานข้อมูลเป้าหมายอีกครั้ง
 
----
+สัญลักษณ์: `PK` primary key, `FK` foreign key, `UK` unique, `IDX` index,
+`NN` not null. ถ้าไม่ได้ระบุ `NN` คอลัมน์นั้นอนุญาต `NULL` ตาม migration
 
-## สรุปตารางทั้งหมด (12 ตาราง)
+## Migration history
 
-| # | ตาราง | คำอธิบาย |
+| Version | ไฟล์ | ผลต่อ schema |
 |---|---|---|
-| 1 | `users` | บัญชีผู้ใช้ระบบทุก Role |
-| 2 | `user_profiles` | ข้อมูลส่วนตัวของผู้ใช้ (One-to-One กับ `users`) |
-| 3 | `categories` | หมวดหมู่หนังสือ |
-| 4 | `publishers` | สำนักพิมพ์ |
-| 5 | `authors` | ผู้แต่ง |
-| 6 | `books` | หนังสือระดับ Title |
-| 7 | `book_authors` | ตารางเชื่อม Many-to-Many ระหว่าง `books` และ `authors` |
-| 8 | `book_copies` | ตัวเล่มจริงบนชั้น (มีบาร์โค้ดของตัวเอง) |
-| 9 | `loans` | ใบยืม |
-| 10 | `loan_items` | รายการตัวเล่มในใบยืม |
-| 11 | `fines` | ค่าปรับ (One-to-One กับ `loan_items`) |
-| 12 | `reservations` | การจองคิวหนังสือ |
+| V1 | `V1__init_catalog.sql` | ตาราง catalog 6 ตาราง |
+| V2 | `V2__seed_catalog.sql` | seed ข้อมูล catalog ไม่มีการเปลี่ยน schema |
+| V3 | `V3__init_users.sql` | `users`, `user_profiles` และ seed admin เดิม |
+| V3.1 | `V3_1__add_role_and_auth_seed.sql` | เพิ่ม `users.role`, role check และบัญชี seed ที่ใช้ BCrypt |
+| V4 | `V4__init_loan.sql` | `loans`, `loan_items` |
+| V5 | `V5__init_fine_reservation.sql` | `fines`, `reservations`; ยังไม่มี FK ของสองตารางนี้ |
+| V6 | ไม่มีไฟล์ | เวอร์ชันนี้ขาดอยู่ใน repository ปัจจุบัน ไม่ควรสร้างย้อนหลังหลัง V7–V9 |
+| V7 | `V7__add_tier_to_users.sql` | เพิ่ม `users.member_tier` โดย default `STUDENT` |
+| V8 | `V8__add_fine_reservation_foreign_keys.sql` | เพิ่ม FK จาก fines และ reservations พร้อมตรวจข้อมูลกำพร้าก่อน |
+| V9 | `V9__reserve_book_copy_for_ready_reservations.sql` | เพิ่ม `reservations.reserved_copy_id`; คิว READY เก่าที่ไม่มีตัวเล่มจะกลับเป็น WAITING |
 
-> รวม 12 ตาราง (เกินข้อกำหนดขั้นต่ำ 6 ตาราง)
+## Tables
 
----
+### 1. `users`
 
-## 1. users
-
-| Column | Type | Null | Key | Default | คำอธิบาย |
-|---|---|---|---|---|---|
-| id | BIGSERIAL | N | PK | | รหัสผู้ใช้ |
-| username | VARCHAR(50) | N | UK | | ชื่อสำหรับเข้าระบบ |
-| email | VARCHAR(120) | N | UK, IDX | | อีเมล |
-| password | VARCHAR(255) | N | | | รหัสผ่านเข้ารหัส BCrypt |
-| role | VARCHAR(20) | N | IDX | 'MEMBER' | ADMIN / LIBRARIAN / MEMBER |
-| status | VARCHAR(20) | N | | 'ACTIVE' | ACTIVE / SUSPENDED |
-| created_at | TIMESTAMP | N | | now() | วันที่สร้าง (JPA Auditing) |
-| updated_at | TIMESTAMP | Y | | | วันที่แก้ไขล่าสุด |
-
-**Index:** `idx_users_email`, `idx_users_role`
-
----
-
-## 2. user_profiles
-
-| Column | Type | Null | Key | คำอธิบาย |
+| Column | Type | Nullability | Key / default | Meaning |
 |---|---|---|---|---|
-| id | BIGSERIAL | N | PK | |
-| user_id | BIGINT | N | FK → users.id, **UK** | บังคับ One-to-One ด้วย UNIQUE |
-| full_name | VARCHAR(120) | N | | ชื่อ-นามสกุล |
-| phone | VARCHAR(20) | Y | | เบอร์โทรศัพท์ |
-| address | VARCHAR(255) | Y | | ที่อยู่ |
-| birth_date | DATE | Y | | วันเกิด |
-| member_tier | VARCHAR(20) | N | IDX | STUDENT / STAFF / EXTERNAL |
-| joined_at | DATE | N | | วันที่สมัครสมาชิก |
+| `id` | BIGSERIAL | NN | PK | รหัสผู้ใช้ |
+| `username` | VARCHAR(50) | NN | UK | ชื่อเข้าใช้งาน |
+| `password_hash` | VARCHAR(255) | NN | | รหัสผ่านที่ผ่าน BCrypt |
+| `email` | VARCHAR(100) | NN | UK | อีเมล |
+| `is_active` | BOOLEAN | nullable | DEFAULT TRUE | สถานะเปิดใช้งาน |
+| `created_at` | TIMESTAMP | nullable | DEFAULT CURRENT_TIMESTAMP | วันเวลาสร้างบัญชี |
+| `role` | VARCHAR(20) | NN | DEFAULT `MEMBER`; CHECK `ADMIN`, `LIBRARIAN`, `MEMBER` | สิทธิ์ในระบบ |
+| `member_tier` | VARCHAR(20) | nullable | DEFAULT `STUDENT` | ประเภทสมาชิก: `STUDENT`, `STAFF`, `EXTERNAL` |
 
-**JPA:** `@OneToOne(mappedBy = "user", cascade = ALL, orphanRemoval = true, fetch = LAZY)`
-**เหตุผล:** โปรไฟล์เกิดและตายพร้อมบัญชีผู้ใช้ จึง cascade ได้อย่างปลอดภัย
+V3 สร้าง index `idx_users_username` และ `idx_users_email` เพิ่มจาก unique indexes ที่ฐานข้อมูลสร้างให้อัตโนมัติ จึงซ้ำหน้าที่กันและควรทบทวนใน migration ภายหลัง
 
----
+### 2. `user_profiles`
 
-## 3. categories
-
-| Column | Type | Null | Key | คำอธิบาย |
+| Column | Type | Nullability | Key / default | Meaning |
 |---|---|---|---|---|
-| id | BIGSERIAL | N | PK | |
-| name | VARCHAR(80) | N | UK | ชื่อหมวดหมู่ |
-| description | VARCHAR(255) | Y | | คำอธิบาย |
+| `user_id` | BIGINT | NN | PK, FK → `users.id` ON DELETE CASCADE | ใช้ร่วมเป็น PK เพื่อบังคับ One-to-One |
+| `first_name` | VARCHAR(100) | NN | | ชื่อ |
+| `last_name` | VARCHAR(100) | NN | | นามสกุล |
+| `phone_number` | VARCHAR(20) | nullable | | เบอร์โทรศัพท์ |
+| `address` | TEXT | nullable | | ที่อยู่ |
 
----
+### 3. `categories`
 
-## 4. publishers
-
-| Column | Type | Null | Key | คำอธิบาย |
+| Column | Type | Nullability | Key / default | Meaning |
 |---|---|---|---|---|
-| id | BIGSERIAL | N | PK | |
-| name | VARCHAR(120) | N | UK | ชื่อสำนักพิมพ์ |
-| country | VARCHAR(60) | Y | | ประเทศ |
+| `id` | BIGSERIAL | NN | PK | รหัสหมวดหมู่ |
+| `name` | VARCHAR(80) | NN | UK | ชื่อหมวดหมู่ |
+| `description` | VARCHAR(255) | nullable | | คำอธิบาย |
 
----
+### 4. `publishers`
 
-## 5. authors
-
-| Column | Type | Null | Key | คำอธิบาย |
+| Column | Type | Nullability | Key / default | Meaning |
 |---|---|---|---|---|
-| id | BIGSERIAL | N | PK | |
-| full_name | VARCHAR(120) | N | IDX | ชื่อผู้แต่ง |
-| nationality | VARCHAR(60) | Y | | สัญชาติ |
-| biography | TEXT | Y | | ประวัติโดยย่อ |
+| `id` | BIGSERIAL | NN | PK | รหัสสำนักพิมพ์ |
+| `name` | VARCHAR(120) | NN | UK | ชื่อสำนักพิมพ์ |
+| `country` | VARCHAR(60) | nullable | | ประเทศ |
 
----
+### 5. `authors`
 
-## 6. books
-
-| Column | Type | Null | Key | คำอธิบาย |
+| Column | Type | Nullability | Key / default | Meaning |
 |---|---|---|---|---|
-| id | BIGSERIAL | N | PK | |
-| isbn | VARCHAR(20) | N | UK | เลข ISBN |
-| title | VARCHAR(200) | N | IDX | ชื่อหนังสือ |
-| publish_year | INT | Y | | ปีที่พิมพ์ |
-| price | NUMERIC(10,2) | Y | | ราคาปก (ใช้คิดค่าชดใช้กรณีหาย BR-08) |
-| category_id | BIGINT | N | FK → categories.id, IDX | หมวดหมู่ |
-| publisher_id | BIGINT | N | FK → publishers.id, IDX | สำนักพิมพ์ |
-| created_at | TIMESTAMP | N | | |
+| `id` | BIGSERIAL | NN | PK | รหัสผู้แต่ง |
+| `full_name` | VARCHAR(120) | NN | IDX `idx_authors_full_name` | ชื่อผู้แต่ง; อนุญาตชื่อซ้ำ |
+| `nationality` | VARCHAR(60) | nullable | | สัญชาติ |
+| `biography` | TEXT | nullable | | ประวัติ |
 
-**Index:** `idx_books_title` (รองรับการค้นหาแบบ LIKE), `idx_books_category_id`
-**JPA:** `@ManyToOne(fetch = LAZY)` **ไม่ใส่ cascade** — ลบหนังสือต้องไม่ลบหมวดหมู่หรือสำนักพิมพ์
+### 6. `books`
 
----
-
-## 7. book_authors (Join Table — Many-to-Many)
-
-| Column | Type | Null | Key | คำอธิบาย |
+| Column | Type | Nullability | Key / default | Meaning |
 |---|---|---|---|---|
-| book_id | BIGINT | N | PK, FK → books.id | |
-| author_id | BIGINT | N | PK, FK → authors.id | |
+| `id` | BIGSERIAL | NN | PK | รหัสชื่อหนังสือ |
+| `isbn` | VARCHAR(20) | NN | UK | ISBN |
+| `title` | VARCHAR(200) | NN | IDX `idx_books_title` | ชื่อหนังสือ |
+| `publish_year` | INT | nullable | | ปีพิมพ์ |
+| `price` | NUMERIC(10,2) | nullable | | ราคาหนังสือ |
+| `category_id` | BIGINT | NN | FK → `categories.id`, IDX | หมวดหมู่ |
+| `publisher_id` | BIGINT | NN | FK → `publishers.id`, IDX | สำนักพิมพ์ |
+| `created_at` | TIMESTAMP | NN | DEFAULT `now()` | วันเวลาสร้างรายการ |
 
-**Composite Primary Key** `(book_id, author_id)` กันข้อมูลซ้ำในตัว
-**JPA:** `@ManyToMany` + `@JoinTable` ฝั่ง owner คือ `Book`
+### 7. `book_authors`
 
----
-
-## 8. book_copies
-
-| Column | Type | Null | Key | คำอธิบาย |
+| Column | Type | Nullability | Key / default | Meaning |
 |---|---|---|---|---|
-| id | BIGSERIAL | N | PK | |
-| barcode | VARCHAR(30) | N | UK | บาร์โค้ดติดสันหนังสือ |
-| book_id | BIGINT | N | FK → books.id, IDX | หนังสือต้นเรื่อง |
-| status | VARCHAR(20) | N | IDX | AVAILABLE / ON_LOAN / RESERVED / DAMAGED / LOST |
-| shelf_location | VARCHAR(30) | Y | | ตำแหน่งชั้นวาง เช่น A3-02 |
-| acquired_at | DATE | N | | วันที่รับเข้าคลัง |
+| `book_id` | BIGINT | NN | ส่วนของ composite PK, FK → `books.id` ON DELETE CASCADE | หนังสือ |
+| `author_id` | BIGINT | NN | ส่วนของ composite PK, FK → `authors.id` | ผู้แต่ง |
 
-**Index:** `idx_copies_book_status (book_id, status)` — ใช้ตอนหาตัวเล่มว่างของหนังสือเล่มหนึ่ง
-**JPA:** `@OneToMany(mappedBy = "book", cascade = PERSIST/MERGE, fetch = LAZY)`
-**เหตุผล:** ไม่ใช้ `REMOVE` เพราะห้ามลบหนังสือทิ้งตัวเล่มที่ยังถูกยืมอยู่ (BR-11)
+Composite PK คือ (`book_id`, `author_id`); มี index `idx_book_authors_author_id` สำหรับค้นย้อนจากผู้แต่ง
 
----
+### 8. `book_copies`
 
-## 9. loans
-
-| Column | Type | Null | Key | คำอธิบาย |
+| Column | Type | Nullability | Key / default | Meaning |
 |---|---|---|---|---|
-| id | BIGSERIAL | N | PK | |
-| loan_code | VARCHAR(20) | N | UK | รหัสใบยืม เช่น LN-20260912-0007 |
-| user_id | BIGINT | N | FK → users.id, IDX | ผู้ยืม |
-| librarian_id | BIGINT | Y | FK → users.id | บรรณารักษ์ผู้บันทึก |
-| loan_date | TIMESTAMP | N | | วันเวลาที่ยืม |
-| status | VARCHAR(20) | N | IDX | ACTIVE / OVERDUE / RETURNED / LOST |
+| `id` | BIGSERIAL | NN | PK | รหัสตัวเล่ม |
+| `barcode` | VARCHAR(30) | NN | UK | บาร์โค้ดประจำตัวเล่ม |
+| `book_id` | BIGINT | NN | FK → `books.id` | ชื่อหนังสือต้นทาง |
+| `status` | VARCHAR(20) | NN | CHECK `AVAILABLE`, `ON_LOAN`, `RESERVED`, `DAMAGED`, `LOST` | สถานะตัวเล่ม |
+| `shelf_location` | VARCHAR(30) | nullable | | ตำแหน่งชั้น |
+| `acquired_at` | DATE | NN | | วันที่รับเข้า |
 
----
+Index: `idx_copies_book_status` (`book_id`, `status`)
 
-## 10. loan_items
+### 9. `loans`
 
-| Column | Type | Null | Key | คำอธิบาย |
+| Column | Type | Nullability | Key / default | Meaning |
 |---|---|---|---|---|
-| id | BIGSERIAL | N | PK | |
-| loan_id | BIGINT | N | FK → loans.id, IDX | ใบยืมต้นสังกัด |
-| book_copy_id | BIGINT | N | FK → book_copies.id, IDX | ตัวเล่มที่ยืม |
-| due_date | DATE | N | IDX | กำหนดคืน (คำนวณตาม BR-05) |
-| returned_at | DATE | Y | | วันที่คืนจริง (NULL = ยังไม่คืน) |
-| renew_count | SMALLINT | N | | จำนวนครั้งที่ต่ออายุ (≤ 2 ตาม BR-06) |
+| `id` | BIGSERIAL | NN | PK | รหัสใบยืม |
+| `loan_code` | VARCHAR(20) | NN | UK | รหัสใบยืมที่แสดงผู้ใช้ |
+| `user_id` | BIGINT | NN | FK → `users.id`; IDX `idx_loans_user_id` | สมาชิกผู้ยืม |
+| `librarian_id` | BIGINT | nullable | FK → `users.id` | ผู้บันทึกการยืม |
+| `loan_date` | TIMESTAMP | NN | DEFAULT CURRENT_TIMESTAMP | วันเวลายืม |
+| `status` | VARCHAR(20) | NN | CHECK `ACTIVE`, `OVERDUE`, `RETURNED`, `LOST`; IDX `idx_loans_status` | สถานะใบยืม |
 
-**JPA:** `@ManyToOne(fetch = LAZY)` ฝั่ง `Loan` ใช้
-`@OneToMany(mappedBy = "loan", cascade = ALL, orphanRemoval = true)`
-**เหตุผล:** `LoanItem` เป็น composition ของ `Loan` ไม่มีความหมายเมื่อไม่มีใบยืม
+### 10. `loan_items`
 
----
-
-## 11. fines
-
-| Column | Type | Null | Key | คำอธิบาย |
+| Column | Type | Nullability | Key / default | Meaning |
 |---|---|---|---|---|
-| id | BIGSERIAL | N | PK | |
-| loan_item_id | BIGINT | N | FK → loan_items.id, **UK** | บังคับ One-to-One |
-| amount | NUMERIC(10,2) | N | | ยอดค่าปรับ |
-| overdue_days | INT | N | | จำนวนวันที่เกินกำหนด |
-| status | VARCHAR(20) | N | IDX | UNPAID / PAID / WAIVED |
-| created_at | TIMESTAMP | N | | วันที่เกิดค่าปรับ |
-| paid_at | TIMESTAMP | Y | | วันที่ชำระ |
+| `id` | BIGSERIAL | NN | PK | รหัสรายการ |
+| `loan_id` | BIGINT | NN | FK → `loans.id` ON DELETE CASCADE; IDX | ใบยืม |
+| `book_copy_id` | BIGINT | NN | FK → `book_copies.id`; IDX | ตัวเล่มที่ยืม |
+| `due_date` | DATE | NN | IDX `idx_loan_items_due_date` | กำหนดคืน |
+| `returned_at` | DATE | nullable | | วันที่คืนจริง |
+| `renew_count` | SMALLINT | NN | DEFAULT 0; CHECK 0 ถึง 2 | จำนวนการต่ออายุ |
 
-**หมายเหตุ:** ใช้ `NUMERIC` ไม่ใช้ `DOUBLE` เพราะเป็นข้อมูลเงิน ต้องไม่มีความคลาดเคลื่อนทศนิยม
+### 11. `fines`
 
----
-
-## 12. reservations
-
-| Column | Type | Null | Key | คำอธิบาย |
+| Column | Type | Nullability | Key / default | Meaning |
 |---|---|---|---|---|
-| id | BIGSERIAL | N | PK | |
-| user_id | BIGINT | N | FK → users.id, IDX | ผู้จอง |
-| book_id | BIGINT | N | FK → books.id, IDX | หนังสือที่จอง (ระดับ Title) |
-| reserved_at | TIMESTAMP | N | | เวลาที่จอง (ใช้เรียงคิว) |
-| expires_at | TIMESTAMP | Y | | หมดเวลารับ (48 ชม. หลังสถานะ READY) |
-| status | VARCHAR(20) | N | IDX | WAITING / READY / FULFILLED / CANCELLED / EXPIRED |
+| `id` | BIGSERIAL | NN | PK | รหัสค่าปรับ |
+| `loan_item_id` | BIGINT | NN | UK; V8 FK → `loan_items.id` | รายการยืมที่เกิดค่าปรับ; จำกัดหนึ่งค่าปรับต่อรายการ |
+| `amount` | NUMERIC(10,2) | NN | | จำนวนเงิน |
+| `overdue_days` | INT | NN | | จำนวนวันที่เกินกำหนด |
+| `status` | VARCHAR(20) | NN | | `UNPAID`, `PAID`, `WAIVED` ตาม enum ในแอป; migration ยังไม่มี CHECK constraint |
+| `created_at` | TIMESTAMP | NN | DEFAULT CURRENT_TIMESTAMP | เวลาสร้างค่าปรับ |
+| `paid_at` | TIMESTAMP | nullable | | เวลาชำระหรือยกเว้น |
 
-**Unique Constraint:** `uk_reservation_active (user_id, book_id)` เมื่อ status IN ('WAITING','READY')
-— บังคับกฎ BR-09 ที่ระดับฐานข้อมูล ไม่พึ่งแค่โค้ด
+### 12. `reservations`
 
----
+| Column | Type | Nullability | Key / default | Meaning |
+|---|---|---|---|---|
+| `id` | BIGSERIAL | NN | PK | รหัสการจอง |
+| `user_id` | BIGINT | NN | IDX `idx_reservations_user_id`; V8 FK → `users.id` | สมาชิกผู้จอง |
+| `book_id` | BIGINT | NN | IDX `idx_reservations_book_id`; V8 FK → `books.id` | หนังสือที่จอง |
+| `reserved_copy_id` | BIGINT | nullable | IDX; V9 FK → `book_copies.id` | ตัวเล่มที่กันไว้เมื่อสถานะ READY |
+| `reserved_at` | TIMESTAMP | NN | DEFAULT CURRENT_TIMESTAMP | เวลาจอง |
+| `expires_at` | TIMESTAMP | nullable | | เวลาหมดอายุการรับหนังสือ |
+| `status` | VARCHAR(20) | NN | V9 CHECK: READY ต้องมี `reserved_copy_id` และ `expires_at` | สถานะการจอง |
 
-## สรุปความสัมพันธ์
+Partial unique index `uk_reservation_active` จำกัดคู่ (`user_id`, `book_id`) ให้มีสถานะ `WAITING` หรือ `READY` ได้เพียงรายการเดียว
+`uk_reservations_ready_copy` กันไม่ให้ตัวเล่มเดียวถูกมอบให้คิว READY มากกว่าหนึ่งรายการพร้อมกัน
+และ `idx_reservations_ready_expiry` ช่วยค้นคิวที่เลยเวลารับหนังสือ
 
-| ประเภท | คู่ความสัมพันธ์ | วิธีบังคับ |
-|---|---|---|
-| One-to-One | `users` ↔ `user_profiles` | UNIQUE บน `user_profiles.user_id` |
-| One-to-One | `loan_items` ↔ `fines` | UNIQUE บน `fines.loan_item_id` |
-| One-to-Many | `categories` → `books` | FK `books.category_id` |
-| One-to-Many | `publishers` → `books` | FK `books.publisher_id` |
-| One-to-Many | `books` → `book_copies` | FK `book_copies.book_id` |
-| One-to-Many | `users` → `loans` | FK `loans.user_id` |
-| One-to-Many | `loans` → `loan_items` | FK `loan_items.loan_id` |
-| One-to-Many | `users` → `reservations` | FK `reservations.user_id` |
-| One-to-Many | `books` → `reservations` | FK `reservations.book_id` |
-| Many-to-Many | `books` ↔ `authors` | Join Table `book_authors` |
+## Relationships
+
+| Relationship | Database enforcement |
+|---|---|
+| `users` 1:1 `user_profiles` | `user_profiles.user_id` เป็น PK และ FK |
+| `loan_items` 1:0..1 `fines` | `fines.loan_item_id` เป็น UK และ FK ใน V8 |
+| `categories` 1:N `books` | `books.category_id` FK |
+| `publishers` 1:N `books` | `books.publisher_id` FK |
+| `books` 1:N `book_copies` | `book_copies.book_id` FK |
+| `users` 1:N `loans` | `loans.user_id` FK; `librarian_id` เป็น FK เพิ่มอีกทาง |
+| `loans` 1:N `loan_items` | `loan_items.loan_id` FK |
+| `book_copies` 1:N `loan_items` | `loan_items.book_copy_id` FK |
+| `users` 1:N `reservations` | `reservations.user_id` FK ใน V8 |
+| `books` 1:N `reservations` | `reservations.book_id` FK ใน V8 |
+| `book_copies` 1:N `reservations` | `reservations.reserved_copy_id` FK ใน V9; มีได้ไม่เกินหนึ่งรายการ READY ต่อตัวเล่ม |
+| `books` M:N `authors` | `book_authors` เป็น join table |
+
+## Notes for maintainers
+
+- ห้ามแก้ migration ที่ merge หรือรันไปแล้ว; เพิ่ม migration ใหม่แทน
+- V8 จะหยุดพร้อมข้อความอธิบายถ้าพบ orphan rows ก่อนเพิ่ม FK ต้องสำรองและตรวจข้อมูลจริงก่อน deploy
+- V5 ไม่มี FK ของ fines/reservations; V8 เพิ่ม FK หลัก และ V9 เพิ่ม FK ของตัวเล่มที่กันให้คิว
+- V9 เปลี่ยน READY เก่าที่ไม่มีตัวเล่มกลับเป็น WAITING เพื่อป้องกันการยืมตัวเล่มที่ไม่ได้กันจริง
+- การมี migration ใน Git ไม่ยืนยันว่า Render/Neon ได้รัน migration นั้นแล้ว
