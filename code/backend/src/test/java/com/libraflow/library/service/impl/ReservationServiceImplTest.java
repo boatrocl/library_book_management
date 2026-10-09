@@ -8,6 +8,7 @@ import com.libraflow.library.domain.enums.BookCopyStatus;
 import com.libraflow.library.domain.enums.ReservationStatus;
 import com.libraflow.library.exception.BusinessException;
 import com.libraflow.library.exception.ErrorCode;
+import com.libraflow.library.dto.response.ReservationResponse;
 import com.libraflow.library.pattern.observer.BookCopyAvailableEvent;
 import com.libraflow.library.repository.BookCopyRepository;
 import com.libraflow.library.repository.BookRepository;
@@ -86,6 +87,53 @@ class ReservationServiceImplTest {
 
         assertEquals(ErrorCode.DUPLICATE_RESERVATION, error.getErrorCode());
         verify(reservationRepository, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    void createReservation_rejectsWhenAnAvailableCopyExists() {
+        User user = org.mockito.Mockito.mock(User.class);
+        Book book = org.mockito.Mockito.mock(Book.class);
+        when(userRepository.findById(3L)).thenReturn(Optional.of(user));
+        when(user.getUsername()).thenReturn("member");
+        when(bookRepository.findById(7L)).thenReturn(Optional.of(book));
+        when(bookCopyRepository.countByBookIdAndStatus(7L, BookCopyStatus.AVAILABLE)).thenReturn(1L);
+
+        ReservationServiceImpl service = new ReservationServiceImpl(
+                reservationRepository, userRepository, bookRepository, bookCopyRepository, publisher);
+
+        BusinessException error = assertThrows(BusinessException.class,
+                () -> service.createReservation(3L, 7L, "member", false));
+
+        assertEquals(ErrorCode.BOOK_COPIES_AVAILABLE, error.getErrorCode());
+        verify(reservationRepository, never()).save(any(Reservation.class));
+    }
+
+    @Test
+    void createReservationForMemberCreatesWaitingReservationFromUsername() {
+        User user = org.mockito.Mockito.mock(User.class);
+        Book book = org.mockito.Mockito.mock(Book.class);
+        when(userRepository.findByUsername("member")).thenReturn(Optional.of(user));
+        when(user.getId()).thenReturn(3L);
+        when(user.getUsername()).thenReturn("member");
+        when(userRepository.findById(3L)).thenReturn(Optional.of(user));
+        when(bookRepository.findById(7L)).thenReturn(Optional.of(book));
+        when(bookCopyRepository.countByBookIdAndStatus(7L, BookCopyStatus.AVAILABLE)).thenReturn(0L);
+        when(book.getId()).thenReturn(7L);
+        when(book.getTitle()).thenReturn("A book");
+        when(reservationRepository.findAllByBookIdAndStatusOrderByReservedAtAscIdAsc(7L, ReservationStatus.WAITING))
+                .thenReturn(List.of(new Reservation(user, book)));
+        when(reservationRepository.save(any(Reservation.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        ReservationServiceImpl service = new ReservationServiceImpl(
+                reservationRepository, userRepository, bookRepository, bookCopyRepository, publisher);
+
+        ReservationResponse response = service.createReservationForMember("member", 7L);
+
+        assertEquals("WAITING", response.getStatus());
+        assertEquals("member", response.getUsername());
+        assertEquals("A book", response.getBookTitle());
+        assertEquals(1, response.getQueuePosition());
     }
 
     @Test

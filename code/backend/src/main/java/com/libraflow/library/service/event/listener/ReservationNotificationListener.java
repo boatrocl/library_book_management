@@ -52,7 +52,7 @@ public class ReservationNotificationListener {
 
         // 1. หาคนที่จองคิวแรกสุดที่รออยู่ (WAITING)
         Optional<Reservation> firstInQueue = reservationRepository
-                .findFirstByBookIdAndStatusOrderByReservedAtAsc(bookId, ReservationStatus.WAITING);
+                .findFirstByBookIdAndStatusOrderByReservedAtAscIdAsc(bookId, ReservationStatus.WAITING);
 
         // 2. ถ้ามีคนจอง ให้เปลี่ยนสถานะเป็น READY และกำหนดวันหมดอายุรับหนังสือ (เช่น 48 ชม.)
         firstInQueue.ifPresent(reservation -> {

@@ -30,7 +30,7 @@
 
 | Actor | สิทธิ์ |
 |---|---|
-| **MEMBER** | ค้นหาหนังสือ, ดูรายละเอียด, จองคิว, ยกเลิกการจอง, ดูประวัติการยืมของตนเอง, ดูค่าปรับค้างชำระของตนเอง |
+| **MEMBER** | ค้นหาหนังสือ, ดูรายละเอียด, ยืมตัวเล่มที่ว่างด้วยตนเอง, จองคิว, ยกเลิกการจอง, ดูประวัติการยืมและค่าปรับของตนเอง |
 | **LIBRARIAN** | สิทธิ์ทั้งหมดของ MEMBER + จัดการหนังสือ/ตัวเล่ม, บันทึกการยืม, บันทึกการคืน, ต่ออายุ, รับชำระค่าปรับ, ออกรายงาน |
 | **ADMIN** | สิทธิ์ทั้งหมดของ LIBRARIAN + จัดการผู้ใช้และสิทธิ์, ระงับ/คืนสถานะบัญชี, ตั้งค่านโยบายการยืม, ดู Dashboard |
 
@@ -53,6 +53,7 @@
 | BR-09 | หนังสือหนึ่งเล่ม สมาชิกหนึ่งคนจองซ้ำซ้อนไม่ได้ (ตอบ 409 Conflict) |
 | BR-10 | เมื่อมีการคืนหนังสือ ระบบต้องแจ้งสมาชิกที่จองคิวลำดับแรกโดยอัตโนมัติ และกันตัวเล่มไว้ 48 ชั่วโมง |
 | BR-11 | ลบหนังสือไม่ได้หากยังมีตัวเล่มที่อยู่ในสถานะ `ON_LOAN` หรือ `RESERVED` |
+| BR-12 | สมาชิกต้องยอมรับกฎการใช้บริการก่อนยืมหรือจองด้วยตนเอง ระบบปฏิเสธคำขอที่ไม่มีการยอมรับ |
 
 ### สถานะการทำงานของกฎที่พึ่งพาระบบภายนอก
 
@@ -104,6 +105,7 @@ com.libraflow.library
 │                        LoanStatus, ReservationStatus, FineStatus
 ├── dto/
 │   ├── request/         CreateBookRequest, UpdateBookRequest, BorrowRequest,
+│   │                    MemberBorrowRequest, MemberReservationRequest,
 │   │                    ReturnRequest, CreateReservationRequest, PayFineRequest
 │   └── response/        BookResponse, BookCopyResponse, LoanResponse,
 │                        FineResponse, PageResponse<T>, ErrorResponse

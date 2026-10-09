@@ -2,6 +2,7 @@ package com.libraflow.library.service;
 
 import com.libraflow.library.domain.enums.LoanStatus;
 import com.libraflow.library.dto.request.BorrowRequest;
+import com.libraflow.library.dto.request.MemberBorrowRequest;
 import com.libraflow.library.dto.response.LoanResponse;
 import com.libraflow.library.dto.response.PageResponse;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +17,9 @@ public interface LoanService {
      * บันทึกการยืมหนังสือ (ผ่าน BorrowRule chain และคำนวณวันคืนตาม MemberTier)
      */
     LoanResponse borrow(BorrowRequest request);
+
+    /** Borrow the first available copy on behalf of the authenticated member. */
+    LoanResponse borrowForMember(String username, MemberBorrowRequest request);
 
     /**
      * บันทึกการคืนหนังสือ (ผ่าน State Pattern และ publish BookReturnedEvent)

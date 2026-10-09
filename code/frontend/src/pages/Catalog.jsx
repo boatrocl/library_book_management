@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import BookCard from '../components/BookCard';
 import BookDetailsDialog from '../components/BookDetailsDialog';
+import { AuthContext } from '../context/AuthContextValue';
 import { useLanguage } from '../context/LanguageContext';
 
 const PAGE_SIZE = 8;
 
 const COPY = {
   th: {
+    locale: 'th-TH',
     heroTitle: 'ค้นพบหนังสือที่ใช่สำหรับคุณ',
     searchPlaceholder: 'ค้นหาชื่อหนังสือ ผู้แต่ง หรือ ISBN',
     searchSubmit: 'ค้นหา',
@@ -52,6 +54,11 @@ const COPY = {
     bookTitleUnknown: 'ไม่ระบุชื่อหนังสือ',
     closeDetails: 'ปิดรายละเอียด',
     detailsHeading: 'รายละเอียดหนังสือ',
+    bookInfoTabs: 'รายละเอียดและกฎการใช้บริการ',
+    detailsTab: 'ข้อมูลหนังสือ',
+    rulesTab: 'กฎและเงื่อนไข',
+    acceptRules: 'ฉันอ่านและยอมรับกฎการยืมและการจองแล้ว',
+    readRules: 'อ่านกฎก่อนทำรายการ',
     unknown: 'ไม่ระบุ',
     publisher: 'สำนักพิมพ์',
     year: 'ปีที่พิมพ์',
@@ -61,8 +68,39 @@ const COPY = {
     copiesCount: (amount) => `${amount.toLocaleString('th-TH')} เล่ม`,
     readingRoom: 'มุมอ่านหนังสือ',
     library: 'ห้องสมุด LibraFlow',
+    borrow: 'ยืมหนังสือเล่มนี้',
+    borrowing: 'กำลังบันทึกการยืม…',
+    borrowed: 'ยืมหนังสือสำเร็จ',
+    reserve: 'จองคิวหนังสือ',
+    reserving: 'กำลังจองคิว…',
+    reserved: 'จองคิวสำเร็จ',
+    reservationNumber: 'หมายเลขรายการจอง',
+    queuePosition: 'ลำดับคิว',
+    reservationError: 'จองคิวไม่สำเร็จ กรุณาลองอีกครั้ง',
+    reservationErrors: {
+      DUPLICATE_RESERVATION: 'คุณมีรายการจองหนังสือเล่มนี้อยู่แล้ว',
+      BOOK_COPIES_AVAILABLE: 'ยังมีหนังสือพร้อมให้ยืม กรุณายืมผ่านปุ่มด้านบน',
+    },
+    borrowError: 'ยืมหนังสือไม่สำเร็จ กรุณาลองอีกครั้ง',
+    borrowErrors: {
+      MEMBER_SUSPENDED: 'บัญชีสมาชิกถูกระงับ ไม่สามารถยืมหนังสือได้',
+      UNPAID_FINE_EXCEEDED: 'มีค่าปรับค้างชำระเกินกำหนด กรุณาติดต่อบรรณารักษ์',
+      LOAN_QUOTA_EXCEEDED: 'คุณยืมหนังสือครบโควต้าแล้ว',
+      COPY_NOT_AVAILABLE: 'หนังสือเล่มนี้เพิ่งถูกยืมไป กรุณาเลือกเล่มอื่น',
+    },
+    signInToBorrow: 'เข้าสู่ระบบเพื่อยืม',
+    signInToReserve: 'เข้าสู่ระบบเพื่อจองคิว',
+    memberOnly: 'เข้าสู่ระบบด้วยบัญชีสมาชิกเพื่อยืมหรือจองคิวหนังสือ',
+    staffBorrowHint: 'บรรณารักษ์สามารถบันทึกการยืมได้ที่หน้าจัดการรายการยืม',
+    openCirculation: 'ไปหน้าจัดการรายการยืม',
+    viewLoans: 'ดูรายการยืมของฉัน',
+    viewReservations: 'ดูรายการจองของฉัน',
+    noCopiesToBorrow: 'ขณะนี้ไม่มีตัวเล่มที่พร้อมให้ยืม',
+    loanCode: 'เลขที่ใบยืม',
+    dueDate: 'กำหนดคืน',
   },
   en: {
+    locale: 'en-US',
     heroTitle: 'Find the book that feels right for you',
     searchPlaceholder: 'Search by title, author, or ISBN',
     searchSubmit: 'Search',
@@ -106,6 +144,11 @@ const COPY = {
     bookTitleUnknown: 'Untitled book',
     closeDetails: 'Close details',
     detailsHeading: 'Book details',
+    bookInfoTabs: 'Book details and library rules',
+    detailsTab: 'Book information',
+    rulesTab: 'Rules and terms',
+    acceptRules: 'I have read and agree to the borrowing and reservation rules.',
+    readRules: 'Read the rules before continuing',
     unknown: 'Not listed',
     publisher: 'Publisher',
     year: 'Published',
@@ -115,6 +158,36 @@ const COPY = {
     copiesCount: (amount) => `${amount.toLocaleString('en-US')} copies`,
     readingRoom: 'Reading Room',
     library: 'LibraFlow Library',
+    borrow: 'Borrow this book',
+    borrowing: 'Processing your loan…',
+    borrowed: 'Book borrowed successfully',
+    reserve: 'Join the reservation queue',
+    reserving: 'Joining the queue…',
+    reserved: 'Reservation created',
+    reservationNumber: 'Reservation number',
+    queuePosition: 'Queue position',
+    reservationError: 'Could not reserve this book. Please try again.',
+    reservationErrors: {
+      DUPLICATE_RESERVATION: 'You already have an active reservation for this book.',
+      BOOK_COPIES_AVAILABLE: 'A copy is available. Please borrow it instead.',
+    },
+    borrowError: 'Could not borrow this book. Please try again.',
+    borrowErrors: {
+      MEMBER_SUSPENDED: 'Your membership is suspended. You cannot borrow books.',
+      UNPAID_FINE_EXCEEDED: 'Your unpaid fines exceed the borrowing limit. Contact a librarian.',
+      LOAN_QUOTA_EXCEEDED: 'You have reached your borrowing limit.',
+      COPY_NOT_AVAILABLE: 'This book was just borrowed. Please choose another book.',
+    },
+    signInToBorrow: 'Sign in to borrow',
+    signInToReserve: 'Sign in to reserve',
+    memberOnly: 'Sign in with a member account to borrow a book or join its queue.',
+    staffBorrowHint: 'Librarians can create loans from the loan management page.',
+    openCirculation: 'Open loan management',
+    viewLoans: 'View my loans',
+    viewReservations: 'View my reservations',
+    noCopiesToBorrow: 'There are no available copies to borrow right now.',
+    loanCode: 'Loan ID',
+    dueDate: 'Due date',
   },
 };
 
@@ -145,6 +218,7 @@ function BookOpenIcon({ className = '' }) {
 
 export default function Catalog() {
   const { language, categoryName, t } = useLanguage();
+  const { user } = useContext(AuthContext);
   const [searchParams, setSearchParams] = useSearchParams();
   const text = {
     ...(COPY[language] || COPY.th),
@@ -165,6 +239,8 @@ export default function Catalog() {
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [selectedBook, setSelectedBook] = useState(null);
+  const [borrowState, setBorrowState] = useState({ status: 'idle' });
+  const [reservationState, setReservationState] = useState({ status: 'idle' });
   const [categoriesExpanded, setCategoriesExpanded] = useState(true);
   const [availabilityExpanded, setAvailabilityExpanded] = useState(true);
 
@@ -248,6 +324,47 @@ export default function Catalog() {
   function chooseAvailability(nextAvailability) {
     setAvailability(nextAvailability);
     setPage(0);
+  }
+
+  function openBookDetails(book) {
+    setSelectedBook(book);
+    setBorrowState({ status: 'idle' });
+    setReservationState({ status: 'idle' });
+  }
+
+  async function borrowBook(book) {
+    setBorrowState({ status: 'loading' });
+    try {
+      const response = await api.post('/api/v1/loans/self', { bookId: book.id, termsAccepted: true });
+      const nextAvailableCopies = Math.max(Number(book.availableCopies || 0) - 1, 0);
+      setBooks((current) => current.map((item) => item.id === book.id
+        ? { ...item, availableCopies: nextAvailableCopies }
+        : item));
+      setSelectedBook((current) => current?.id === book.id
+        ? { ...current, availableCopies: nextAvailableCopies }
+        : current);
+      setBorrowState({ status: 'success', loan: response.data });
+    } catch (error) {
+      const code = error?.response?.data?.errorCode;
+      setBorrowState({
+        status: 'error',
+        message: text.borrowErrors[code] || text.borrowError,
+      });
+    }
+  }
+
+  async function reserveBook(book) {
+    setReservationState({ status: 'loading' });
+    try {
+      const response = await api.post('/api/v1/reservations/self', { bookId: book.id, termsAccepted: true });
+      setReservationState({ status: 'success', reservation: response.data });
+    } catch (error) {
+      const code = error?.response?.data?.errorCode;
+      setReservationState({
+        status: 'error',
+        message: text.reservationErrors[code] || text.reservationError,
+      });
+    }
   }
 
   return (
@@ -433,7 +550,7 @@ export default function Catalog() {
             <>
               <div className="book-grid">
                 {books.map((book, index) => (
-                  <BookCard key={book.id} book={book} index={index} labels={text} onDetails={setSelectedBook} />
+                  <BookCard key={book.id} book={book} index={index} labels={text} onDetails={openBookDetails} />
                 ))}
               </div>
               {totalPages > 1 && (
@@ -477,7 +594,20 @@ export default function Catalog() {
         <Link to="/about">{t('เกี่ยวกับ LibraFlow', 'About LibraFlow')}</Link>
       </footer>
 
-      {selectedBook && <BookDetailsDialog book={selectedBook} labels={text} categoryName={categoryName} onClose={() => setSelectedBook(null)} />}
+      {selectedBook && (
+        <BookDetailsDialog
+          key={selectedBook.id}
+          book={selectedBook}
+          labels={text}
+          categoryName={categoryName}
+          user={user}
+          borrowState={borrowState}
+          reservationState={reservationState}
+          onBorrow={() => borrowBook(selectedBook)}
+          onReserve={() => reserveBook(selectedBook)}
+          onClose={() => setSelectedBook(null)}
+        />
+      )}
     </main>
   );
 }

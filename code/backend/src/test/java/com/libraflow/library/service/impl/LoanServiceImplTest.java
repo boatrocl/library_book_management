@@ -9,8 +9,10 @@ import com.libraflow.library.domain.entity.User;
 import com.libraflow.library.domain.enums.BookCopyStatus;
 import com.libraflow.library.domain.enums.LoanStatus;
 import com.libraflow.library.domain.enums.MemberTier;
+import com.libraflow.library.domain.enums.ReservationStatus;
 import com.libraflow.library.domain.enums.UserRole;
 import com.libraflow.library.dto.request.BorrowRequest;
+import com.libraflow.library.dto.request.MemberBorrowRequest;
 import com.libraflow.library.dto.response.LoanItemResponse;
 import com.libraflow.library.dto.response.LoanResponse;
 import com.libraflow.library.dto.response.PageResponse;
@@ -24,6 +26,7 @@ import com.libraflow.library.pattern.observer.BookReturnedEvent;
 import com.libraflow.library.pattern.state.LoanState;
 import com.libraflow.library.pattern.state.LoanStateFactory;
 import com.libraflow.library.repository.BookCopyRepository;
+import com.libraflow.library.repository.BookRepository;
 import com.libraflow.library.repository.LoanRepository;
 import com.libraflow.library.repository.ReservationRepository;
 import com.libraflow.library.repository.UserRepository;
@@ -78,6 +81,9 @@ class LoanServiceImplTest {
     private BookCopyRepository copyRepository;
 
     @Mock
+    private BookRepository bookRepository;
+
+    @Mock
     private UserRepository userRepository;
 
     @Mock
@@ -124,6 +130,7 @@ class LoanServiceImplTest {
         loanService = new LoanServiceImpl(
                 loanRepository,
                 copyRepository,
+                bookRepository,
                 userRepository,
                 reservationRepository,
                 rules,
@@ -281,6 +288,68 @@ class LoanServiceImplTest {
             verify(rule2, never()).check(any());
             verify(loanRepository, never()).save(any());
         }
+
+        @Test
+        @DisplayName("สมาชิกยืมด้วยรหัสหนังสือ: เลือกตัวเล่มว่างที่ล็อกไว้และผ่านกฎยืมเดิม")
+        void borrowForMember_success() {
+            MemberBorrowRequest request = new MemberBorrowRequest(50L, true);
+            when(userRepository.findByUsername("somchai")).thenReturn(Optional.of(mockUser));
+            when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
+            when(mockUser.getId()).thenReturn(1L);
+            when(mockUser.getUsername()).thenReturn("somchai");
+            when(mockUser.getRole()).thenReturn(UserRole.MEMBER);
+            when(bookRepository.existsById(50L)).thenReturn(true);
+            when(copyRepository.findFirstByBookIdAndStatusOrderByBarcodeAsc(50L, BookCopyStatus.AVAILABLE))
+                    .thenReturn(Optional.of(mockCopy1));
+            when(mockCopy1.getBarcode()).thenReturn("BC-050");
+            when(copyRepository.findByBarcodeIn(List.of("BC-050"))).thenReturn(List.of(mockCopy1));
+            when(loanRepository.countActiveLoanItemsByUserId(1L)).thenReturn(0L);
+            when(rule1.order()).thenReturn(1);
+            when(rule2.order()).thenReturn(2);
+            when(loanRepository.existsByLoanCode(anyString())).thenReturn(false);
+            when(loanRepository.save(any(Loan.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(mapper.toResponse(any(Loan.class), eq("somchai"), eq("STUDENT")))
+                    .thenReturn(createDummyResponse(150L));
+
+            LoanResponse response = loanService.borrowForMember("somchai", request);
+
+            assertThat(response.id()).isEqualTo(150L);
+            verify(copyRepository).findFirstByBookIdAndStatusOrderByBarcodeAsc(50L, BookCopyStatus.AVAILABLE);
+            verify(mockCopy1).setStatus(BookCopyStatus.ON_LOAN);
+            verify(rule1).check(any(BorrowContext.class));
+            verify(rule2).check(any(BorrowContext.class));
+        }
+
+        @Test
+        @DisplayName("สมาชิกยืมไม่ได้เมื่อไม่มีตัวเล่มว่าง")
+        void borrowForMember_noAvailableCopy_shouldThrowConflict() {
+            when(userRepository.findByUsername("somchai")).thenReturn(Optional.of(mockUser));
+            when(bookRepository.existsById(50L)).thenReturn(true);
+            when(copyRepository.findFirstByBookIdAndStatusOrderByBarcodeAsc(50L, BookCopyStatus.AVAILABLE))
+                    .thenReturn(Optional.empty());
+
+            BusinessException exception = assertThrows(
+                    BusinessException.class,
+                    () -> loanService.borrowForMember("somchai", new MemberBorrowRequest(50L, true))
+            );
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.COPY_NOT_AVAILABLE);
+            verify(loanRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("สมาชิกยืมไม่ได้เมื่อไม่พบหนังสือ")
+        void borrowForMember_bookNotFound_shouldThrowNotFound() {
+            when(userRepository.findByUsername("somchai")).thenReturn(Optional.of(mockUser));
+            when(bookRepository.existsById(50L)).thenReturn(false);
+
+            assertThrows(
+                    ResourceNotFoundException.class,
+                    () -> loanService.borrowForMember("somchai", new MemberBorrowRequest(50L, true))
+            );
+
+            verify(copyRepository, never()).findFirstByBookIdAndStatusOrderByBarcodeAsc(any(), any());
+        }
     }
 
     @Nested
@@ -400,6 +469,24 @@ class LoanServiceImplTest {
                     ResourceNotFoundException.class,
                     () -> loanService.renewLoan(999L)
             );
+        }
+
+        @Test
+        @DisplayName("ห้ามต่ออายุเมื่อมีสมาชิกกำลังรอจองหนังสือในใบยืม")
+        void renewLoan_blockedByWaitingReservation() {
+            Loan loan = new Loan("LN-001", mockUser, null, LocalDateTime.now(), LoanStatus.ACTIVE);
+            loan.addItem(new LoanItem(loan, mockCopy1, LocalDate.now().plusDays(7)));
+            when(mockCopy1.getBook()).thenReturn(mockBook);
+            when(mockBook.getId()).thenReturn(5L);
+            when(loanRepository.findByIdWithDetails(10L)).thenReturn(Optional.of(loan));
+            when(reservationRepository.existsByBookIdAndStatusIn(5L, List.of(ReservationStatus.WAITING)))
+                    .thenReturn(true);
+
+            BusinessException exception = assertThrows(BusinessException.class, () -> loanService.renewLoan(10L));
+
+            assertThat(exception.getErrorCode()).isEqualTo(ErrorCode.RENEW_BLOCKED_BY_RESERVATION);
+            verify(stateFactory, never()).stateOf(any(Loan.class));
+            verify(loanRepository, never()).save(any(Loan.class));
         }
     }
 

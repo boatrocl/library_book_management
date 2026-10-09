@@ -18,7 +18,7 @@ Class Diagram อยู่ที่ [`diagrams/04-class-diagram.puml`](diagrams/
 
 | Pattern | ปัญหาที่แก้ | Implementation |
 |---|---|---|
-| Chain of Responsibility | ตรวจเงื่อนไขยืมทีละข้อและหยุดเมื่อไม่ผ่าน | `pattern/chain/BorrowRule.java`; `MemberStatusRule`, `UnpaidFineRule`, `LoanQuotaRule`, `CopyAvailabilityRule`; `LoanServiceImpl` เรียงตาม `order()` |
+| Chain of Responsibility | ตรวจเงื่อนไขยืมทีละข้อและหยุดเมื่อไม่ผ่าน ทั้งการยืมด้วยตนเองและที่เคาน์เตอร์ | `pattern/chain/BorrowRule.java`; `MemberStatusRule`, `UnpaidFineRule`, `LoanQuotaRule`, `CopyAvailabilityRule`; `LoanServiceImpl` เรียงตาม `order()` |
 | Strategy | คำนวณค่าปรับตามประเภทสมาชิก โดยแยกอัตราออกจาก service | `service/strategy/FineCalculationStrategy.java`; `StudentFineStrategy`, `StaffFineStrategy`, `ExternalFineStrategy`; `FineServiceImpl` เลือกตาม `MemberTier` |
 | State | จำกัดการคืนและต่ออายุตามสถานะใบยืม | `pattern/state/LoanState.java`; `ActiveState`, `OverdueState`, `ReturnedState`, `LostState`; `LoanStateFactory` |
 | Observer | กันตัวเล่มให้ผู้จองคิวแรกเมื่อมีตัวเล่มพร้อม | `LoanServiceImpl` ส่ง `BookReturnedEvent` (เป็น `BookCopyAvailableEvent`); `ReservationNotificationListener` รับหลัง commit แล้วผูก copy กับคิวแรก เปลี่ยนสถานะเป็น READY/RESERVED |

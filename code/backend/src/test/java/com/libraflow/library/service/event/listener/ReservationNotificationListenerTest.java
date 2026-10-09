@@ -48,7 +48,7 @@ class ReservationNotificationListenerTest {
         // สถานะเริ่มต้นต้องเป็น WAITING
         assertEquals(ReservationStatus.WAITING, mockReservation.getStatus());
 
-        when(reservationRepository.findFirstByBookIdAndStatusOrderByReservedAtAsc(bookId, ReservationStatus.WAITING))
+        when(reservationRepository.findFirstByBookIdAndStatusOrderByReservedAtAscIdAsc(bookId, ReservationStatus.WAITING))
                 .thenReturn(Optional.of(mockReservation));
 
         // Act

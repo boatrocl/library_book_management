@@ -225,11 +225,15 @@ Role ที่รองรับ:
 |---|---|
 | `ADMIN` | จัดการข้อมูลระบบและหนังสือ |
 | `LIBRARIAN` | จัดการข้อมูลที่เกี่ยวข้องกับงานห้องสมุด |
-| `MEMBER` | ใช้งาน Endpoint ตามสิทธิ์ของสมาชิก |
+| `MEMBER` | ค้นหา/ดูหนังสือ ยืมตัวเล่มว่าง จองคิวเมื่อไม่มีเล่มว่าง ยกเลิกคิว และดูประวัติยืม/จองกับค่าปรับของตน |
 
 ตัวอย่าง Security Rule:
 
 - `GET /api/v1/books/**` เป็น Public Endpoint
+- `POST /api/v1/loans/self` ให้ `MEMBER` ที่เข้าสู่ระบบยืมหนังสือจากแคตตาล็อก; ระบบเลือกตัวเล่มว่างและใช้ตัวตนจาก JWT
+- `POST /api/v1/reservations/self` ให้ `MEMBER` เข้าคิวเมื่อไม่มีตัวเล่มว่าง; ประวัติและลำดับคิวดูได้จากหน้าโปรไฟล์ และยกเลิกคิวที่ยังรอหรือพร้อมรับได้
+- ก่อนยืมหรือจอง สมาชิกต้องยอมรับกฎที่แสดงในหน้ารายละเอียดหนังสือ; อ่านนโยบายวันยืม ค่าปรับ และคิวจองได้จากเมนู “กฎและเงื่อนไข”
+- `POST /api/v1/loans` ให้ `LIBRARIAN` หรือ `ADMIN` บันทึกการยืมที่เคาน์เตอร์ด้วย member ID และ barcode
 - `POST /api/v1/books/**` ต้องเป็น `ADMIN` หรือ `LIBRARIAN`
 - `PUT /api/v1/books/**` ต้องเป็น `ADMIN` หรือ `LIBRARIAN`
 - `PATCH /api/v1/books/**` ต้องเป็น `ADMIN` หรือ `LIBRARIAN`
@@ -311,15 +315,16 @@ Integration Test ใช้ PostgreSQL 16 จริงผ่าน Testcontainers
 
 ## CI/CD
 
-Backend ใช้ GitHub Actions สำหรับ Continuous Integration
+Backend และ frontend ใช้ GitHub Actions แยก workflow เพื่อให้เห็นผลตรวจแต่ละส่วนชัดเจน
 
 Workflow:
 
 ```text
 .github/workflows/backend-ci.yml
+.github/workflows/frontend-ci.yml
 ```
 
-เมื่อ Workflow ทำงาน ระบบจะ:
+Backend workflow ทำงานดังนี้:
 
 ```text
 Checkout Repository
@@ -345,6 +350,15 @@ Unit Test + Integration Test
 
 Integration Test สามารถสร้าง PostgreSQL ชั่วคราวผ่าน Testcontainers
 บน GitHub Actions runner ได้
+
+Frontend workflow ติดตั้ง dependencies จาก lockfile, ตรวจ ESLint และสร้าง production build:
+
+```bash
+cd code/frontend
+npm ci
+npm run lint
+npm run build
+```
 
 ---
 
@@ -439,7 +453,8 @@ https://library-book-management-ybt2.onrender.com/swagger-ui.html
 library_book_management/
 ├── .github/
 │   └── workflows/
-│       └── backend-ci.yml
+│       ├── backend-ci.yml
+│       └── frontend-ci.yml
 ├── code/
 │   ├── backend/                 # Spring Boot
 │   │   ├── Dockerfile

@@ -19,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -353,6 +354,112 @@ class AuthSecurityIntegrationTest {
                 .andExpect(
                         status().isForbidden()
                 );
+    }
+
+    @Test
+    void memberCanBorrowAvailableBookThroughSelfServiceEndpoint() throws Exception {
+        String token = loginAndGetToken("member01", "Mem@123");
+        Long bookId = jdbcTemplate.queryForObject(
+                "SELECT book_id FROM book_copies WHERE status = 'AVAILABLE' ORDER BY book_id LIMIT 1",
+                Long.class
+        );
+        assertNotNull(bookId);
+
+        mockMvc.perform(
+                        post("/api/v1/loans/self")
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"bookId\": " + bookId + ", \"termsAccepted\": true}")
+                )
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").isNumber())
+                .andExpect(jsonPath("$.status").value("ACTIVE"))
+                .andExpect(jsonPath("$.items[0].dueDate").isNotEmpty());
+
+        Integer activeCopies = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM book_copies WHERE book_id = ? AND status = 'ON_LOAN'",
+                Integer.class,
+                bookId
+        );
+        assertNotNull(activeCopies);
+        assertTrue(activeCopies > 0);
+    }
+
+    @Test
+    void librarianCannotUseMemberSelfServiceBorrowEndpoint() throws Exception {
+        String token = loginAndGetToken("librarian01", "Lib@123");
+
+        mockMvc.perform(
+                        post("/api/v1/loans/self")
+                                .header("Authorization", "Bearer " + token)
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content("{\"bookId\": 1, \"termsAccepted\": true}")
+                )
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void memberSelfServiceActionsRequireTermsAcceptance() throws Exception {
+        String token = loginAndGetToken("member01", "Mem@123");
+
+        mockMvc.perform(post("/api/v1/loans/self")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bookId\": 1, \"termsAccepted\": false}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/api/v1/reservations/self")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bookId\": 1, \"termsAccepted\": false}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void memberCanReserveUnavailableBookListReservationsAndCancel() throws Exception {
+        String token = loginAndGetToken("member01", "Mem@123");
+        Long bookId = jdbcTemplate.queryForObject(
+                "SELECT book_id FROM book_copies WHERE status = 'AVAILABLE' ORDER BY book_id LIMIT 1",
+                Long.class
+        );
+        assertNotNull(bookId);
+        var availableCopyIds = jdbcTemplate.queryForList(
+                "SELECT id FROM book_copies WHERE book_id = ? AND status = 'AVAILABLE'",
+                Long.class,
+                bookId
+        );
+        availableCopyIds.forEach(copyId -> jdbcTemplate.update(
+                "UPDATE book_copies SET status = 'ON_LOAN' WHERE id = ?", copyId));
+
+        Long reservationId = null;
+        try {
+            String response = mockMvc.perform(
+                            post("/api/v1/reservations/self")
+                                    .header("Authorization", "Bearer " + token)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content("{\"bookId\": " + bookId + ", \"termsAccepted\": true}"))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.status").value("WAITING"))
+                    .andExpect(jsonPath("$.queuePosition").value(1))
+                    .andExpect(jsonPath("$.bookId").value(bookId))
+                    .andReturn().getResponse().getContentAsString();
+            reservationId = objectMapper.readTree(response).get("id").asLong();
+
+            mockMvc.perform(get("/api/v1/reservations/self")
+                            .header("Authorization", "Bearer " + token))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].id").value(reservationId));
+
+            mockMvc.perform(delete("/api/v1/reservations/{id}", reservationId)
+                            .header("Authorization", "Bearer " + token))
+                    .andExpect(status().isNoContent());
+        } finally {
+            if (reservationId != null) {
+                jdbcTemplate.update("DELETE FROM reservations WHERE id = ?", reservationId);
+            }
+            availableCopyIds.forEach(copyId -> jdbcTemplate.update(
+                    "UPDATE book_copies SET status = 'AVAILABLE' WHERE id = ?", copyId));
+        }
     }
 
 

@@ -2,7 +2,7 @@
 
 ไฟล์ `.puml` เป็น source ที่แก้ไขได้ ภาพ SVG สำหรับขยายดูรายละเอียดอยู่ใน `images/`
 และ PNG สำหรับเอกสาร/การนำเสนออยู่ใน `png/`. สร้างและตรวจ render ด้วย PlantUML 1.2025.2
-วันที่ 8 ต.ค. 2569.
+วันที่ 9 ต.ค. 2569. แผนภาพ use case, class และ sequence borrow อธิบาย endpoint ยืมด้วยตนเองของ MEMBER.
 
 | # | Diagram | Source | PNG | SVG |
 |---|---|---|---|---|
