@@ -74,17 +74,17 @@ function CoverScene({ variant, theme }) {
   );
 }
 
-function BookCover({ book, index }) {
+function BookCover({ book, index, labels }) {
   const seed = Number(book.id) || index;
   const themeIndex = Math.abs(seed - 1) % COVER_THEMES.length;
   const theme = COVER_THEMES[themeIndex];
-  const title = book.title || 'หนังสือเล่มใหม่';
-  const author = book.authors?.[0] || 'LIBRAFLOW LIBRARY';
+  const title = book.title || labels.newBook;
+  const author = book.authors?.[0] || labels.library;
 
   return (
     <div className="book-cover" style={{ '--cover-ink': theme.ink }} aria-hidden="true">
       <CoverScene variant={themeIndex} theme={theme} />
-      <span className="book-cover__topline">LIBRAFLOW · READING ROOM</span>
+      <span className="book-cover__topline">LIBRAFLOW · {labels.readingRoom}</span>
       <span className="book-cover__title">{title}</span>
       <span className="book-cover__author">{author}</span>
       <span className="book-cover__spine" />
@@ -98,15 +98,15 @@ export default function BookCard({ book, index, labels, onDetails }) {
   return (
     <article className="book-card">
       <div className="book-card__art">
-        <BookCover book={book} index={index} />
+        <BookCover book={book} index={index} labels={labels} />
         <span className={`availability ${available > 0 ? 'availability--available' : 'availability--unavailable'}`}>
           <span className="availability__dot" />
           {available > 0 ? labels.available : labels.unavailable}
         </span>
       </div>
       <div className="book-card__body">
-        <span className="book-card__category">{book.categoryName || labels.general}</span>
-        <h3 title={book.title}>{book.title || 'ไม่ระบุชื่อหนังสือ'}</h3>
+        <span className="book-card__category">{labels.categoryName(book.categoryName) || labels.general}</span>
+        <h3 title={book.title}>{book.title || labels.bookTitleUnknown}</h3>
         <p className="book-card__author">{book.authors?.length ? book.authors.join(', ') : labels.authorUnknown}</p>
         <div className="book-card__meta">
           <span>{book.publishYear || labels.yearUnknown}</span>
