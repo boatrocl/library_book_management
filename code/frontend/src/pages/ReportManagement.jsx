@@ -52,8 +52,8 @@ export default function ReportManagement() {
   };
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <main className="lf-workspace-page">
+      <div className="lf-workspace-content max-w-4xl mx-auto">
         
         <h1 className="text-3xl font-bold text-gray-800">ออกรายงาน</h1>
 
@@ -108,7 +108,7 @@ export default function ReportManagement() {
               <button 
                 onClick={handleDownloadPdf}
                 disabled={loadingPdf}
-                className="w-full px-4 py-2 font-bold text-white transition bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+                className="w-full px-4 py-2 font-bold text-white transition bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
               >
                 {loadingPdf ? 'กำลังเตรียมไฟล์...' : 'ดาวน์โหลด PDF'}
               </button>
@@ -118,6 +118,6 @@ export default function ReportManagement() {
         </div>
 
       </div>
-    </div>
+    </main>
   );
 }

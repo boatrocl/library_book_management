@@ -60,8 +60,8 @@ export default function Navbar() {
         <div className={`site-header__content${menuOpen ? ' is-open' : ''}`} id="primary-navigation">
           <nav className="site-nav" aria-label="เมนูหลัก">
             <NavLink to="/" end className={linkClass} onClick={closeMenu}>{language === 'th' ? 'แคตตาล็อก' : 'Catalog'}</NavLink>
-            <Link className="site-nav__link" to="/#categories" onClick={closeMenu}>{language === 'th' ? 'หมวดหมู่' : 'Categories'}</Link>
-            <Link className="site-nav__link" to="/#about" onClick={closeMenu}>{language === 'th' ? 'เกี่ยวกับ' : 'About'}</Link>
+            <NavLink to="/categories" className={linkClass} onClick={closeMenu}>{language === 'th' ? 'หมวดหมู่' : 'Categories'}</NavLink>
+            <NavLink to="/about" className={linkClass} onClick={closeMenu}>{language === 'th' ? 'เกี่ยวกับเรา' : 'About'}</NavLink>
             {user && <NavLink to="/profile" className={linkClass} onClick={closeMenu}>โปรไฟล์ส่วนตัว</NavLink>}
             {canManage && (
               <details className="management-menu">
