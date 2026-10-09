@@ -1,5 +1,6 @@
 package com.libraflow.library.service;
 
+import com.libraflow.library.domain.enums.BookAvailabilityFilter;
 import com.libraflow.library.dto.response.BookCopyResponse;
 import com.libraflow.library.dto.response.BookResponse;
 import com.libraflow.library.dto.response.PageResponse;
@@ -20,8 +21,9 @@ import java.util.List;
  */
 public interface BookQueryService {
 
-    /** ค้นหาหนังสือพร้อมแบ่งหน้าและเรียงลำดับ (UC02) — keyword และ categoryId เว้นว่างได้ */
-    PageResponse<BookResponse> search(String keyword, Long categoryId, Pageable pageable);
+    /** ค้นด้วยชื่อเรื่อง ISBN หรือชื่อผู้แต่ง พร้อมหมวดหมู่ สถานะ แบ่งหน้า และเรียงลำดับ (UC02) */
+    PageResponse<BookResponse> search(String keyword, Long categoryId,
+                                      BookAvailabilityFilter availability, Pageable pageable);
 
     /** ดูรายละเอียดหนังสือรายเล่ม (UC03) — ไม่พบให้โยน ResourceNotFoundException */
     BookResponse findById(Long id);

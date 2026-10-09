@@ -18,13 +18,18 @@ Authentication: `Authorization: Bearer <JWT>`
 ### Books (Resource หลักที่ 1 — CRUD ครบ)
 | Method | Endpoint | Success | Error | สิทธิ์ | คำอธิบาย |
 |---|---|---|---|---|---|
-| GET | `/api/v1/books?keyword=&categoryId=&page=0&size=10&sort=title,asc` | 200 | 400 | public | **Pagination + Sorting** |
+| GET | `/api/v1/books?keyword=&categoryId=&availability=ALL&page=0&size=10&sort=title,asc` | 200 | 400 | public | **Pagination + Sorting** ค้นด้วยชื่อเรื่อง ISBN ผู้แต่ง และกรองสถานะ `ALL` / `AVAILABLE` / `UNAVAILABLE` ได้ |
 | GET | `/api/v1/books/{id}` | 200 | 404 | public | ดูรายละเอียด |
 | POST | `/api/v1/books` | 201 | 400, 409 | LIBRARIAN | เพิ่มหนังสือ (409 = ISBN ซ้ำ) |
 | PUT | `/api/v1/books/{id}` | 200 | 400, 404 | LIBRARIAN | แก้ไข |
 | DELETE | `/api/v1/books/{id}` | 204 | 404, 409 | LIBRARIAN | ลบ (409 = ยังมีตัวเล่มถูกยืม BR-11) |
 | GET | `/api/v1/books/{id}/copies` | 200 | 404 | public | ตัวเล่มทั้งหมดของหนังสือ |
 | POST | `/api/v1/books/{id}/copies` | 201 | 404, 409 | LIBRARIAN | เพิ่มตัวเล่ม |
+
+### Categories
+| Method | Endpoint | Success | สิทธิ์ | คำอธิบาย |
+|---|---|---|---|---|
+| GET | `/api/v1/categories` | 200 | public | รายการหมวดหมู่เรียงตามชื่อ ใช้กับตัวกรองในแคตตาล็อก |
 
 ### Loans (Resource หลักที่ 2 — CRUD ครบ)
 | Method | Endpoint | Success | Error | สิทธิ์ | คำอธิบาย |
