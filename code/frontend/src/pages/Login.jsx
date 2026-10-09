@@ -1,6 +1,7 @@
 import { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContextValue';
+import AuthLayout from '../components/AuthLayout';
 import api from '../api';
 
 export default function Login() {
@@ -36,55 +37,39 @@ export default function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-md">
-        <h2 className="text-2xl font-bold text-center text-gray-800">เข้าสู่ระบบ LibraFlow</h2>
+    <AuthLayout
+      title="ยินดีต้อนรับกลับ"
+      eyebrow="เข้าสู่ระบบ"
+      description="เข้าสู่บัญชีเพื่อเลือกอ่านและจัดการรายการของคุณ"
+      footer={<>ยังไม่มีบัญชีใช่หรือไม่? <Link to="/register">สมัครสมาชิก</Link></>}
+    >
+      {errorMsg && <div className="lf-form-message lf-form-message--error" role="alert">{errorMsg}</div>}
 
-        {errorMsg && (
-          <div className="p-3 text-sm text-red-700 bg-red-100 rounded-md">
-            {errorMsg}
-          </div>
-        )}
-
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">ชื่อผู้ใช้</label>
-            <input
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">รหัสผ่าน</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full py-2 font-bold text-white bg-blue-600 rounded-md hover:bg-blue-700 transition"
-          >
-            เข้าสู่ระบบ
-          </button>
-          <div className="text-sm text-center text-gray-600 mt-4">
-            ยังไม่มีบัญชีใช่หรือไม่?{' '}
-            <button
-              type="button"
-              onClick={() => navigate('/register')}
-              className="text-blue-600 hover:underline"
-            >
-              สมัครสมาชิก
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      <form onSubmit={handleLogin} className="lf-auth-form">
+        <div className="lf-field">
+          <label htmlFor="login-username">ชื่อผู้ใช้</label>
+          <input
+            id="login-username"
+            type="text"
+            autoComplete="username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+          />
+        </div>
+        <div className="lf-field">
+          <label htmlFor="login-password">รหัสผ่าน</label>
+          <input
+            id="login-password"
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+        <button type="submit" className="lf-form-submit">เข้าสู่ระบบ</button>
+      </form>
+    </AuthLayout>
   );
 }

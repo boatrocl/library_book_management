@@ -67,8 +67,8 @@ export default function FineManagement() {
   const totalUnpaid = fines.reduce((sum, fine) => sum + (fine.amount || 0), 0);
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <main className="lf-workspace-page">
+      <div className="lf-workspace-content max-w-4xl mx-auto">
         
         <h1 className="text-3xl font-bold text-gray-800">จัดการค่าปรับ</h1>
 
@@ -163,6 +163,6 @@ export default function FineManagement() {
         )}
 
       </div>
-    </div>
+    </main>
   );
 }

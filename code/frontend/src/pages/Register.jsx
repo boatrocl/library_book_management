@@ -1,6 +1,7 @@
 import { useState, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContextValue';
+import AuthLayout from '../components/AuthLayout';
 import api from '../api';
 
 export default function Register() {
@@ -52,130 +53,51 @@ export default function Register() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-100 py-10 px-4">
-      {/* ปรับขนาดกล่องให้แคบลงเป็น max-w-md เท่าหน้า Login */}
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-md">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-800">สมัครสมาชิก</h2>
-          <p className="text-sm text-gray-500 mt-1">เข้าร่วมเป็นสมาชิก LibraFlow</p>
+    <AuthLayout
+      title="สร้างบัญชีผู้ใช้"
+      eyebrow="สมัครสมาชิก"
+      description="เริ่มต้นการเดินทางในโลกหนังสือกับ LibraFlow"
+      variant="register"
+      footer={<>มีบัญชีอยู่แล้วใช่หรือไม่? <Link to="/login">เข้าสู่ระบบ</Link></>}
+    >
+      {errorMsg && <div className="lf-form-message lf-form-message--error" role="alert">{errorMsg}</div>}
+      {successMsg && <div className="lf-form-message lf-form-message--success" role="status">{successMsg}</div>}
+
+      <form onSubmit={handleRegister} className="lf-auth-form lf-auth-form--register">
+        <div className="lf-field">
+          <label htmlFor="register-username">ชื่อผู้ใช้</label>
+          <input id="register-username" type="text" name="username" placeholder="ตั้งชื่อผู้ใช้งาน" autoComplete="username" value={formData.username} onChange={handleChange} required />
         </div>
-
-        {errorMsg && (
-          <div className="p-3 text-sm text-red-700 bg-red-100 rounded-md text-center">
-            {errorMsg}
-          </div>
-        )}
-        {successMsg && (
-          <div className="p-3 text-sm text-green-700 bg-green-100 rounded-md text-center">
-            {successMsg}
-          </div>
-        )}
-
-        {/* บีบทุกฟิลด์ให้เป็นแนวตั้ง (space-y-4) */}
-        <form onSubmit={handleRegister} className="space-y-4">
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">ชื่อผู้ใช้</label>
-            <input
-              type="text"
-              name="username"
-              placeholder="ตั้งชื่อผู้ใช้งาน"
-              value={formData.username}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">รหัสผ่าน</label>
-            <input
-              type="password"
-              name="password"
-              placeholder="รหัสผ่านอย่างน้อย 6 ตัวอักษร"
-              value={formData.password}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">อีเมล</label>
-            <input
-              type="email"
-              name="email"
-              placeholder="your@email.com"
-              value={formData.email}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">ชื่อจริง</label>
-            <input
-              type="text"
-              name="firstName"
-              placeholder="ชื่อจริง"
-              value={formData.firstName}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">นามสกุล</label>
-            <input
-              type="text"
-              name="lastName"
-              placeholder="นามสกุล"
-              value={formData.lastName}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">เบอร์โทรศัพท์</label>
-            <input
-              type="text"
-              name="phoneNumber"
-              placeholder="08X-XXX-XXXX (ไม่บังคับ)"
-              value={formData.phoneNumber}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block mb-1 text-sm font-medium text-gray-700">ที่อยู่</label>
-            <textarea
-              name="address"
-              placeholder="ที่อยู่ปัจจุบัน (ไม่บังคับ)"
-              value={formData.address}
-              onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 resize-none"
-              rows="2"
-            ></textarea>
-          </div>
-
-          <button
-            type="submit"
-            disabled={isLoading}
-            className={`w-full py-2 mt-2 font-bold text-white rounded-md transition ${isLoading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}
-          >
-            {isLoading ? 'กำลังประมวลผล...' : 'สมัครสมาชิก'}
-          </button>
-        </form>
-
-        <div className="text-sm text-center text-gray-600">
-          มีบัญชีอยู่แล้วใช่หรือไม่?{' '}
-          <button
-            type="button"
-            onClick={() => navigate('/login')}
-            className="text-blue-600 hover:underline font-medium"
-          >
-            เข้าสู่ระบบ
-          </button>
+        <div className="lf-field">
+          <label htmlFor="register-password">รหัสผ่าน</label>
+          <input id="register-password" type="password" name="password" placeholder="รหัสผ่านอย่างน้อย 6 ตัวอักษร" autoComplete="new-password" value={formData.password} onChange={handleChange} required />
         </div>
-      </div>
-    </div>
+        <div className="lf-field">
+          <label htmlFor="register-email">อีเมล</label>
+          <input id="register-email" type="email" name="email" placeholder="your@email.com" autoComplete="email" value={formData.email} onChange={handleChange} required />
+        </div>
+        <div className="lf-field-grid">
+          <div className="lf-field">
+            <label htmlFor="register-first-name">ชื่อจริง</label>
+            <input id="register-first-name" type="text" name="firstName" autoComplete="given-name" value={formData.firstName} onChange={handleChange} required />
+          </div>
+          <div className="lf-field">
+            <label htmlFor="register-last-name">นามสกุล</label>
+            <input id="register-last-name" type="text" name="lastName" autoComplete="family-name" value={formData.lastName} onChange={handleChange} required />
+          </div>
+        </div>
+        <div className="lf-field">
+          <label htmlFor="register-phone">เบอร์โทรศัพท์ <span>(ไม่บังคับ)</span></label>
+          <input id="register-phone" type="tel" name="phoneNumber" placeholder="08X-XXX-XXXX" autoComplete="tel" value={formData.phoneNumber} onChange={handleChange} />
+        </div>
+        <div className="lf-field">
+          <label htmlFor="register-address">ที่อยู่ <span>(ไม่บังคับ)</span></label>
+          <textarea id="register-address" name="address" placeholder="ที่อยู่ปัจจุบัน" autoComplete="street-address" value={formData.address} onChange={handleChange} rows="2" />
+        </div>
+        <button type="submit" disabled={isLoading} className="lf-form-submit">
+          {isLoading ? 'กำลังประมวลผล...' : 'สร้างบัญชีผู้ใช้'}
+        </button>
+      </form>
+    </AuthLayout>
   );
 }

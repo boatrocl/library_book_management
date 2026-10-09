@@ -51,8 +51,8 @@ export default function BookCopyManagement() {
   };
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <main className="lf-workspace-page">
+      <div className="lf-workspace-content max-w-4xl mx-auto">
         
         <div className="flex items-center space-x-4">
           <button onClick={() => navigate('/admin/books')} className="px-4 py-2 font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300">
@@ -110,6 +110,6 @@ export default function BookCopyManagement() {
           )}
         </div>
       </div>
-    </div>
+    </main>
   );
 }

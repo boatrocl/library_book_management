@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App.jsx';
 import './index.css';
 import './styles/catalog-reference.css';
+import './styles/libraflow-pages.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

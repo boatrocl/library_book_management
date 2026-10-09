@@ -101,22 +101,22 @@ export default function Profile() {
     }
   };
 
-  if (isLoading) return <div className="p-10 font-bold text-center text-gray-600">กำลังโหลดข้อมูล...</div>;
+  if (isLoading) return <main className="lf-workspace-page"><div className="lf-workspace-content lf-workspace-content--narrow"><div className="lf-loading-card">กำลังโหลดข้อมูล...</div></div></main>;
 
   if (!profile) return (
-    <div className="flex justify-center min-h-screen p-8 bg-gray-50">
-      <div className="w-full max-w-3xl p-4 mt-10 text-red-800 bg-red-100 border border-red-200 rounded-md shadow-xs h-fit">
-        {message.text}
+    <main className="lf-workspace-page">
+      <div className="lf-workspace-content lf-workspace-content--narrow">
+        <div className="lf-form-message lf-form-message--error" role="alert">{message.text}</div>
       </div>
-    </div>
+    </main>
   );
 
   // คำนวณยอดค่าปรับรวม
   const totalFines = fines.reduce((sum, fine) => sum + (fine.amount || 0), 0);
 
   return (
-    <div className="min-h-screen p-8 bg-gray-50">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <main className="lf-workspace-page">
+      <div className="lf-workspace-content lf-workspace-content--narrow max-w-4xl mx-auto">
         
         {/* กล่อง 1: ข้อมูลโปรไฟล์หลัก (ของเดิม) */}
         <div className="overflow-hidden bg-white border shadow-xs rounded-xl">
@@ -289,6 +289,6 @@ export default function Profile() {
         </div>
 
       </div>
-    </div>
+    </main>
   );
 }
