@@ -1,10 +1,8 @@
 package com.libraflow.library.controller.api;
 
-import com.libraflow.library.dto.request.ReportRequest;
-import com.libraflow.library.pattern.template.AbstractReportGenerator;
+import com.libraflow.library.service.ReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -18,14 +16,10 @@ import java.time.LocalDate;
 @Tag(name = "Reports", description = "ระบบออกรายงานด้วย Template Method Pattern")
 public class ReportController {
 
-    private final AbstractReportGenerator csvGenerator;
-    private final AbstractReportGenerator pdfGenerator;
+    private final ReportService reportService;
 
-    public ReportController(
-            @Qualifier("csvReportGenerator") AbstractReportGenerator csvGenerator,
-            @Qualifier("pdfReportGenerator") AbstractReportGenerator pdfGenerator) {
-        this.csvGenerator = csvGenerator;
-        this.pdfGenerator = pdfGenerator;
+    public ReportController(ReportService reportService) {
+        this.reportService = reportService;
     }
 
     @Operation(summary = "รายงานสถิติการยืม (CSV)")
@@ -35,8 +29,7 @@ public class ReportController {
             @RequestParam String from,
             @RequestParam String to) {
         
-        ReportRequest req = new ReportRequest("LOAN", LocalDate.parse(from), LocalDate.parse(to));
-        byte[] data = csvGenerator.generate(req);
+        byte[] data = reportService.generateLoanReport(LocalDate.parse(from), LocalDate.parse(to));
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=loan_report.csv")
@@ -49,8 +42,7 @@ public class ReportController {
     @PreAuthorize("hasAnyRole('LIBRARIAN', 'ADMIN')")
     public ResponseEntity<byte[]> getOverdueReport() {
         
-        ReportRequest req = new ReportRequest("OVERDUE", null, null);
-        byte[] data = pdfGenerator.generate(req);
+        byte[] data = reportService.generateOverdueReport();
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=overdue_report.pdf")

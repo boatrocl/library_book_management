@@ -14,29 +14,29 @@ import com.libraflow.library.dto.response.AuthResponse;
 import com.libraflow.library.exception.BusinessException;
 import com.libraflow.library.exception.ErrorCode;
 import com.libraflow.library.repository.UserRepository;
+import com.libraflow.library.repository.UserProfileRepository;
 import com.libraflow.library.security.JwtService;
 import com.libraflow.library.service.AuthService;
-import jakarta.persistence.EntityManager;
 
 @Service
 @Transactional(readOnly = true)
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
-    private final EntityManager entityManager; // ใช้ EntityManager บันทึกแทน Repository ย่อย
 
     public AuthServiceImpl(
             UserRepository userRepository,
+            UserProfileRepository userProfileRepository,
             PasswordEncoder passwordEncoder,
-            JwtService jwtService,
-            EntityManager entityManager
+            JwtService jwtService
     ) {
         this.userRepository = userRepository;
+        this.userProfileRepository = userProfileRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
-        this.entityManager = entityManager;
     }
 
     @Override
@@ -91,7 +91,7 @@ public class AuthServiceImpl implements AuthService {
             request.address()
         );
 
-        entityManager.persist(profile);
+        userProfileRepository.save(profile);
 
         String jwtToken = jwtService.generateToken(savedUser);
 

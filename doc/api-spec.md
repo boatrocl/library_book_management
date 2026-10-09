@@ -1,7 +1,7 @@
 # REST API Specification — LibraFlow
 
 Base URL (local): `http://localhost:8080`
-Base URL (prod): _(รอ deploy)_
+Base URL (prod): `https://library-book-management-ybt2.onrender.com`
 Swagger UI: `/swagger-ui.html` · OpenAPI JSON: `/v3/api-docs`
 Authentication: `Authorization: Bearer <JWT>`
 
@@ -80,8 +80,10 @@ Response เป็น `201 Created` พร้อมรายการจอง�
 ### Reports
 | Method | Endpoint | Success | สิทธิ์ | คำอธิบาย |
 |---|---|---|---|---|
-| GET | `/api/v1/reports/loans?from=&to=&format=CSV` | 200 | LIBRARIAN | Template Method Pattern |
-| GET | `/api/v1/reports/overdue?format=PDF` | 200 | LIBRARIAN | รายงานหนังสือค้างส่ง |
+| GET | `/api/v1/reports/loans?from=YYYY-MM-DD&to=YYYY-MM-DD` | 200 (`text/csv`) | LIBRARIAN, ADMIN | สถิติการยืมตามช่วงวัน; ดาวน์โหลด `loan_report.csv` |
+| GET | `/api/v1/reports/overdue` | 200 (`application/pdf`) | LIBRARIAN, ADMIN | รายงานหนังสือค้างส่ง; ดาวน์โหลด `overdue_report.pdf` |
+
+Report endpoints select CSV/PDF from the route; they do not accept a `format` query parameter.
 
 ---
 
