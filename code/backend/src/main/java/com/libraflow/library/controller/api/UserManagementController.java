@@ -9,6 +9,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -47,10 +48,11 @@ public class UserManagementController {
     @Operation(summary = "เปลี่ยนสถานะบัญชีผู้ใช้")
     public ResponseEntity<UserManagementResponse> updateStatus(
             @PathVariable Long id,
-            @Valid @RequestBody UpdateUserStatusRequest request
+            @Valid @RequestBody UpdateUserStatusRequest request,
+            Authentication authentication
     ) {
         return ResponseEntity.ok(
-                userManagementService.updateStatus(id, request)
+                userManagementService.updateStatus(id, request, authentication.getName())
         );
     }
 
@@ -58,10 +60,11 @@ public class UserManagementController {
     @Operation(summary = "เปลี่ยนสิทธิ์ผู้ใช้")
     public ResponseEntity<UserManagementResponse> updateRole(
             @PathVariable Long id,
-            @Valid @RequestBody UpdateUserRoleRequest request
+            @Valid @RequestBody UpdateUserRoleRequest request,
+            Authentication authentication
     ) {
         return ResponseEntity.ok(
-                userManagementService.updateRole(id, request)
+                userManagementService.updateRole(id, request, authentication.getName())
         );
     }
 }

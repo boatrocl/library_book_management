@@ -12,11 +12,13 @@ public interface UserManagementService {
 
     UserManagementResponse updateStatus(
             Long userId,
-            UpdateUserStatusRequest request
+            UpdateUserStatusRequest request,
+            String requesterUsername
     );
 
     UserManagementResponse updateRole(
             Long userId,
-            UpdateUserRoleRequest request
+            UpdateUserRoleRequest request,
+            String requesterUsername
     );
 }

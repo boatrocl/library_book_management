@@ -5,6 +5,8 @@ import com.libraflow.library.domain.enums.UserRole;
 import com.libraflow.library.dto.request.UpdateUserRoleRequest;
 import com.libraflow.library.dto.request.UpdateUserStatusRequest;
 import com.libraflow.library.dto.response.UserManagementResponse;
+import com.libraflow.library.exception.BusinessException;
+import com.libraflow.library.exception.ErrorCode;
 import com.libraflow.library.exception.ResourceNotFoundException;
 import com.libraflow.library.repository.UserRepository;
 import com.libraflow.library.service.UserManagementService;
@@ -37,13 +39,20 @@ public class UserManagementServiceImpl implements UserManagementService {
     @Transactional
     public UserManagementResponse updateStatus(
             Long userId,
-            UpdateUserStatusRequest request
+            UpdateUserStatusRequest request,
+            String requesterUsername
     ) {
         User user = findUser(userId);
+        boolean suspendingAccount = "SUSPENDED".equals(request.status());
 
-        user.setActive(
-                "ACTIVE".equals(request.status())
-        );
+        if (suspendingAccount && isRequester(user, requesterUsername)) {
+            throw new BusinessException(
+                    ErrorCode.ACCESS_DENIED,
+                    "Administrators cannot suspend their own account."
+            );
+        }
+
+        user.setActive("ACTIVE".equals(request.status()));
 
         return toResponse(userRepository.save(user));
     }
@@ -52,9 +61,17 @@ public class UserManagementServiceImpl implements UserManagementService {
     @Transactional
     public UserManagementResponse updateRole(
             Long userId,
-            UpdateUserRoleRequest request
+            UpdateUserRoleRequest request,
+            String requesterUsername
     ) {
         User user = findUser(userId);
+
+        if (isRequester(user, requesterUsername)) {
+            throw new BusinessException(
+                    ErrorCode.ACCESS_DENIED,
+                    "Administrators cannot change their own role."
+            );
+        }
 
         user.setRole(
                 UserRole.valueOf(request.role())
@@ -70,6 +87,10 @@ public class UserManagementServiceImpl implements UserManagementService {
                                 "ไม่พบข้อมูลผู้ใช้รหัส: " + userId
                         )
                 );
+    }
+
+    private boolean isRequester(User user, String requesterUsername) {
+        return user.getUsername().equals(requesterUsername);
     }
 
     private UserManagementResponse toResponse(User user) {
