@@ -24,7 +24,7 @@ participant "LoanRepository" as LR
 participant "LoanMapper" as M
 database "PostgreSQL" as DB
 
-MEMBER -> C : POST /api/v1/loans/self\n{bookId} + Bearer JWT
+MEMBER -> C : POST /api/v1/loans/self\n{bookId, termsAccepted: true} + Bearer JWT
 activate C
 C -> C : @Valid MemberBorrowRequest\n+ ตรวจ ROLE_MEMBER
 C -> S : borrowForMember(jwtSubject, request)
