@@ -60,6 +60,7 @@ export default function Navbar() {
           <nav className="site-nav" aria-label={t('เมนูหลัก', 'Main navigation')}>
             <NavLink to="/" end className={linkClass} onClick={closeMenu}>{t('แคตตาล็อก', 'Catalog')}</NavLink>
             <NavLink to="/categories" className={linkClass} onClick={closeMenu}>{t('หมวดหมู่', 'Categories')}</NavLink>
+            <NavLink to="/rules" className={linkClass} onClick={closeMenu}>{t('กฎและเงื่อนไข', 'Library rules')}</NavLink>
             <NavLink to="/about" className={linkClass} onClick={closeMenu}>{t('เกี่ยวกับเรา', 'About')}</NavLink>
             {user && <NavLink to="/profile" className={linkClass} onClick={closeMenu}>{t('โปรไฟล์ส่วนตัว', 'My profile')}</NavLink>}
             {canManage && (
