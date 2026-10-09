@@ -35,6 +35,7 @@ rectangle "LibraFlow" {
     usecase "UC05\nยกเลิกการจอง" as UC05
     usecase "UC06\nดูประวัติการยืม" as UC06
     usecase "UC07\nดูค่าปรับค้างชำระ" as UC07
+    usecase "UC20\nยืมหนังสือจากแคตตาล็อก" as UC20
   }
 
   package "งานเคาน์เตอร์" {
@@ -66,6 +67,7 @@ MEMBER --> UC04
 MEMBER --> UC05
 MEMBER --> UC06
 MEMBER --> UC07
+MEMBER --> UC20
 
 LIBRARIAN --> UC08
 LIBRARIAN --> UC09
@@ -79,6 +81,7 @@ ADMIN --> UC15
 ADMIN --> UC16
 
 UC10 ..> UC17 : <<include>>
+UC20 ..> UC17 : <<include>>
 UC11 ..> UC18 : <<include>>
 UC11 ..> UC19 : <<include>>
 UC12 ..> UC17 : <<include>>

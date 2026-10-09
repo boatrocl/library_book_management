@@ -30,7 +30,7 @@
 
 | Actor | สิทธิ์ |
 |---|---|
-| **MEMBER** | ค้นหาหนังสือ, ดูรายละเอียด, จองคิว, ยกเลิกการจอง, ดูประวัติการยืมของตนเอง, ดูค่าปรับค้างชำระของตนเอง |
+| **MEMBER** | ค้นหาหนังสือ, ดูรายละเอียด, ยืมตัวเล่มที่ว่างด้วยตนเอง, จองคิว, ยกเลิกการจอง, ดูประวัติการยืมและค่าปรับของตนเอง |
 | **LIBRARIAN** | สิทธิ์ทั้งหมดของ MEMBER + จัดการหนังสือ/ตัวเล่ม, บันทึกการยืม, บันทึกการคืน, ต่ออายุ, รับชำระค่าปรับ, ออกรายงาน |
 | **ADMIN** | สิทธิ์ทั้งหมดของ LIBRARIAN + จัดการผู้ใช้และสิทธิ์, ระงับ/คืนสถานะบัญชี, ตั้งค่านโยบายการยืม, ดู Dashboard |
 
@@ -104,6 +104,7 @@ com.libraflow.library
 │                        LoanStatus, ReservationStatus, FineStatus
 ├── dto/
 │   ├── request/         CreateBookRequest, UpdateBookRequest, BorrowRequest,
+│   │                    MemberBorrowRequest, MemberReservationRequest,
 │   │                    ReturnRequest, CreateReservationRequest, PayFineRequest
 │   └── response/        BookResponse, BookCopyResponse, LoanResponse,
 │                        FineResponse, PageResponse<T>, ErrorResponse
