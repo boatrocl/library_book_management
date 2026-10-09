@@ -421,29 +421,38 @@ export default function Catalog() {
             <div
               className="category-list filter-group__content"
               id="catalog-category-filters"
+              role="radiogroup"
               aria-label={text.categories}
               hidden={!categoriesExpanded}
             >
-              <button
-                type="button"
-                className={`category-option ${categoryId === '' ? 'is-active' : ''}`}
-                aria-pressed={categoryId === ''}
-                onClick={() => chooseCategory('')}
-              >
-                <span className="category-checkbox" aria-hidden="true">{categoryId === '' ? '✓' : ''}</span>
+              <label className={`category-option ${categoryId === '' ? 'is-active' : ''}`}>
+                <input
+                  className="catalog-filter-radio"
+                  type="radio"
+                  name="catalog-category"
+                  value=""
+                  checked={categoryId === ''}
+                  onChange={() => chooseCategory('')}
+                />
+                <span className="category-radio" aria-hidden="true" />
                 <span>{text.allCategories}</span>
-              </button>
+              </label>
               {categories.map((category) => (
-                <button
-                  type="button"
+                <label
                   className={`category-option ${categoryId === String(category.id) ? 'is-active' : ''}`}
-                  aria-pressed={categoryId === String(category.id)}
                   key={category.id}
-                  onClick={() => chooseCategory(String(category.id))}
                 >
-                  <span className="category-checkbox" aria-hidden="true">{categoryId === String(category.id) ? '✓' : ''}</span>
+                  <input
+                    className="catalog-filter-radio"
+                    type="radio"
+                    name="catalog-category"
+                    value={String(category.id)}
+                    checked={categoryId === String(category.id)}
+                    onChange={() => chooseCategory(String(category.id))}
+                  />
+                  <span className="category-radio" aria-hidden="true" />
                   <span>{categoryName(category.name)}</span>
-                </button>
+                </label>
               ))}
               {categories.length === 0 && <p className="category-empty">{text.allCategories}</p>}
             </div>
@@ -466,36 +475,46 @@ export default function Catalog() {
             <div
               className="status-filter-list filter-group__content"
               id="catalog-availability-filters"
+              role="radiogroup"
               aria-label={text.status}
               hidden={!availabilityExpanded}
             >
-              <button
-                type="button"
-                className={`status-filter-option ${availability === 'ALL' ? 'is-active' : ''}`}
-                aria-pressed={availability === 'ALL'}
-                onClick={() => chooseAvailability('ALL')}
-              >
-                <span className="category-checkbox" aria-hidden="true">{availability === 'ALL' ? '✓' : ''}</span>
+              <label className={`status-filter-option ${availability === 'ALL' ? 'is-active' : ''}`}>
+                <input
+                  className="catalog-filter-radio"
+                  type="radio"
+                  name="catalog-availability"
+                  value="ALL"
+                  checked={availability === 'ALL'}
+                  onChange={() => chooseAvailability('ALL')}
+                />
+                <span className="category-radio" aria-hidden="true" />
                 <span>{text.allStatuses}</span>
-              </button>
-              <button
-                type="button"
-                className={`status-filter-option ${availability === 'AVAILABLE' ? 'is-active' : ''}`}
-                aria-pressed={availability === 'AVAILABLE'}
-                onClick={() => chooseAvailability('AVAILABLE')}
-              >
-                <span className="category-checkbox" aria-hidden="true">{availability === 'AVAILABLE' ? '✓' : ''}</span>
+              </label>
+              <label className={`status-filter-option ${availability === 'AVAILABLE' ? 'is-active' : ''}`}>
+                <input
+                  className="catalog-filter-radio"
+                  type="radio"
+                  name="catalog-availability"
+                  value="AVAILABLE"
+                  checked={availability === 'AVAILABLE'}
+                  onChange={() => chooseAvailability('AVAILABLE')}
+                />
+                <span className="category-radio" aria-hidden="true" />
                 <span>{text.available}</span>
-              </button>
-              <button
-                type="button"
-                className={`status-filter-option ${availability === 'UNAVAILABLE' ? 'is-active' : ''}`}
-                aria-pressed={availability === 'UNAVAILABLE'}
-                onClick={() => chooseAvailability('UNAVAILABLE')}
-              >
-                <span className="category-checkbox" aria-hidden="true">{availability === 'UNAVAILABLE' ? '✓' : ''}</span>
+              </label>
+              <label className={`status-filter-option ${availability === 'UNAVAILABLE' ? 'is-active' : ''}`}>
+                <input
+                  className="catalog-filter-radio"
+                  type="radio"
+                  name="catalog-availability"
+                  value="UNAVAILABLE"
+                  checked={availability === 'UNAVAILABLE'}
+                  onChange={() => chooseAvailability('UNAVAILABLE')}
+                />
+                <span className="category-radio" aria-hidden="true" />
                 <span>{text.unavailable}</span>
-              </button>
+              </label>
             </div>
           </div>
         </aside>
