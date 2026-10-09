@@ -124,7 +124,7 @@ public class LoanServiceImpl implements LoanService {
         BorrowContext ctx = new BorrowContext(
                 member, tier, copies, activeLoanCount, BigDecimal.ZERO, readyReservationsByCopyId.keySet());
 
-        // ตรวจสอบสิทธิ์ผ่าน Chain of Responsibility: BR-01 -> BR-02 -> BR-03 -> BR-09 -> BR-04
+        // ตรวจสอบสิทธิ์ผ่าน Chain of Responsibility: BR-01 -> BR-02 -> BR-03 -> BR-04 -> BR-09
         borrowRules.stream()
                 .sorted(Comparator.comparingInt(BorrowRule::order))
                 .forEach(rule -> rule.check(ctx));

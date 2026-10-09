@@ -17,7 +17,7 @@ public class CopyAvailabilityRule implements BorrowRule {
 
     @Override
     public int order() {
-        return 5;
+        return 4;
     }
 
     @Override
