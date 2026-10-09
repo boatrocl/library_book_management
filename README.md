@@ -37,7 +37,7 @@
 | Validation | Jakarta Bean Validation |
 | Testing | JUnit 5, Mockito, Spring Boot Test, Testcontainers |
 | Container | Docker, Docker Compose |
-| CI/CD | GitHub Actions |
+| CI | GitHub Actions (backend verification and frontend lint/build) |
 | Deployment | Render (Backend) + Neon (PostgreSQL) + Vercel (Frontend) |
 
 ---
@@ -97,9 +97,10 @@
 | `V7__add_tier_to_users.sql` | เพิ่ม `users.member_tier` ค่าเริ่มต้น `STUDENT` | ทีม |
 | `V8__add_fine_reservation_foreign_keys.sql` | เพิ่ม Foreign Key ที่ขาดจาก `fines` และ `reservations` | ทีม |
 | `V9__reserve_book_copy_for_ready_reservations.sql` | ผูกคิว READY กับตัวเล่มที่กันไว้ และ reset คิว READY เก่าที่ไม่เคยผูกตัวเล่ม | ทีม |
+| `V10__tighten_user_indexes_and_fine_status.sql` | ลบ index ซ้ำของ username/email และเพิ่ม CHECK ให้สถานะ fine | ทีม |
 
 > ไฟล์ migration ใช้ร่วมกันทั้งทีม ห้ามแก้ไฟล์ที่ merge เข้า `develop` ไปแล้ว ให้เพิ่มไฟล์ `V` ถัดไปแทน
-> ปัจจุบันไม่มีไฟล์ V6 ใน repository; V7–V9 มีอยู่ตามลำดับปัจจุบัน ห้ามสร้าง V6 ย้อนหลัง
+> ปัจจุบันไม่มีไฟล์ V6 ใน repository; V7–V10 มีอยู่ตามลำดับปัจจุบัน ห้ามสร้าง V6 ย้อนหลัง
 
 การจองที่มีสถานะ `READY` จะผูกกับตัวเล่มที่กันไว้ 48 ชั่วโมง ตัวเล่ม `RESERVED`
 ยืมได้เฉพาะสมาชิกเจ้าของคิวที่ยังไม่หมดเวลา เมื่อยกเลิกหรือหมดเวลา ระบบคืนตัวเล่ม
@@ -313,9 +314,11 @@ Integration Test ใช้ PostgreSQL 16 จริงผ่าน Testcontainers
 
 ---
 
-## CI/CD
+## CI and Deployment
 
-Backend และ frontend ใช้ GitHub Actions แยก workflow เพื่อให้เห็นผลตรวจแต่ละส่วนชัดเจน
+GitHub Actions ทำ CI เท่านั้น: backend verification และ frontend lint/build แยก workflow
+ไม่มี deploy job ใน workflows เหล่านี้ การ deploy ของ Vercel/Render จัดการผ่าน provider integration
+และการตั้งค่าใน dashboard; ผล CI ผ่านไม่ใช่หลักฐานว่า production deploy สำเร็จ.
 
 Workflow:
 
@@ -477,7 +480,7 @@ library_book_management/
 │   │       │   │   ├── exception/
 │   │       │   │   └── common/
 │   │       │   └── resources/
-│   │       │       └── db/migration/    # V1, V2, V3, V3_1, V4, V5, V7, V8, V9
+│   │       │       └── db/migration/    # V1, V2, V3, V3_1, V4, V5, V7, V8, V9, V10
 │   │       └── test/java/com/libraflow/library/
 │   │           ├── controller/api/
 │   │           ├── integration/

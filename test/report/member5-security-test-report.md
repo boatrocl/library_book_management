@@ -1,76 +1,56 @@
-# LibraFlow Test Report — Security and Deployment
+# LibraFlow Test Report — Security, Database and CI Findings
 
-## Test run
+วันที่ตรวจ: 9 ตุลาคม 2569. ตรวจ branch `sorawit_673380295-9_01` บน Arch Linux.
 
-วันที่ตรวจ: 8 ตุลาคม 2569. ตรวจ working tree บน branch `sorawit_673380295-9_01`.
-Target backend คือ Java 17; เครื่องตรวจใช้ Java 23.0.1, Node.js 24.14.0 และ npm 11.9.0.
+## Local verification
 
-## Results
+รัน verification เต็ม 3 รอบต่อเนื่อง โดยแต่ละรอบรัน backend, frontend และ `git diff --check`:
 
-| Check | Command | Result |
+| Check | Command | Result per round |
 |---|---|---|
-| Backend unit / API tests | `mvnw.cmd -Dtest="*Test,!AuthSecurityIntegrationTest" test` | ผ่าน 133, failures 0, errors 0 |
-| Full backend verification | `mvnw.cmd clean verify` | 133 ผ่าน, 0 failures, 1 error จากทั้งหมด 134 tests: Testcontainers หา Docker Engine ไม่พบ |
-| Frontend lint | `npm run lint` | ผ่าน |
-| Frontend production build | `npm run build` | ผ่าน; Vite สร้าง assets สำเร็จ |
-| Frontend dependency audit | `npm audit --audit-level=high` | 0 vulnerabilities |
-| Vercel home | `GET /` | HTTP 200 |
-| Render Swagger UI | `GET /swagger-ui.html` | HTTP 200 |
-| Render OpenAPI | `GET /v3/api-docs` | HTTP 200 |
-| Render public books endpoint | `GET /api/v1/books` | HTTP 200 |
+| Backend verification | `cd code/backend && ./mvnw --batch-mode --no-transfer-progress clean verify` | ผ่านทั้ง 3 รอบ: 170 tests, 0 failures, 0 errors, 0 skipped |
+| Database integration | Testcontainers with PostgreSQL 16; Flyway migrations V1–V10 | ผ่านทั้ง 3 รอบ; V10 applied and schema reached version 10 |
+| Frontend install, lint and build | `cd code/frontend && npm ci && npm run lint && npm run build` | ผ่านทั้ง 3 รอบ; Vite production build completed |
+| Dependency audit | `npm ci` audit | 0 vulnerabilities reported in all 3 rounds |
+| Patch formatting | `git diff --check` | ผ่านทั้ง 3 รอบ |
 
-คำสั่ง backend ที่ยกเว้น integration test ใช้เพื่อแยกยืนยัน unit/API tests เท่านั้น
-และไม่ได้แทน `clean verify`. Full verification error เกิดเพราะเครื่องไม่มี Docker Engine
-ที่ Testcontainers ต้องใช้; ไม่มี assertion failure ในรอบ `clean verify` ล่าสุด. ผล unit/API test ที่ไม่ใช้
-Docker ผ่านครบ 133 รายการ.
+เครื่องที่ใช้ทดสอบ: Java 27 (compile target Java 17), Node.js 26.11.1, npm 12.2.0,
+Docker Engine 29.9.0 บน Arch Linux. Workflow บน GitHub ตั้ง Java 17 และ Node.js 22;
+ผล GitHub Actions ของ pull request ให้ตรวจใน PR ก่อน merge.
 
-## Security implementation checked in source
+Frontend ไม่มี `test` หรือ browser end-to-end script ใน `package.json`; การยืนยัน frontend
+ในรายงานนี้จึงครอบคลุม lint และ production build ไม่ใช่ browser interaction test.
 
-- Password hashing ด้วย BCrypt.
-- JWT secret อ่านจาก Base64 `JWT_SECRET` และตรวจความยาวขั้นต่ำ 256 bits; token ตรวจ issuer, signature และ expiration.
-- API แบบ stateless; role checks อยู่ใน `SecurityConfig` และ method-level annotations.
-- CORS จำกัด origin ด้วย `FRONTEND_ORIGIN`.
-- Production credentials ต้องอยู่ใน environment variables; ห้ามใส่ secret ใน Git หรือแชท.
+## Findings addressed
 
-## Database and migration notes
+- Registration now persists `UserProfile` through `UserProfileRepository`.
+- User management rejects an administrator changing their own role or suspending their own account at the backend service layer.
+- Report controllers now depend on `ReportService`; CSV/PDF generation is delegated through the report generator interface.
+- Flyway V10 removes redundant username/email indexes and validates a CHECK constraint for supported fine statuses. Earlier migrations remain unchanged.
+- API, data dictionary, design-pattern, SOLID evidence, and CI/deployment documentation now match the implemented routes and workflow behavior.
+- GitHub Actions workflows provide CI checks only. They do not deploy; Vercel and Render deployment remains provider-managed, and no provider deployment credentials are added to the repository.
+- Reservation readiness is updated in-system and logged. Real email/SMS delivery is future work.
 
-- Hibernate ใช้ `ddl-auto=validate`; Flyway เป็นเจ้าของการเปลี่ยน schema.
-- V8 เพิ่ม foreign keys ที่ขาดสำหรับ `fines.loan_item_id`, `reservations.user_id` และ `reservations.book_id`.
-- V8 มี preflight ตรวจ orphan records; V9 เพิ่ม `reservations.reserved_copy_id`, CHECK constraint, partial unique index และดัชนี expiry เพื่อกันตัวเล่มจริงให้คิว READY.
-- V9 เปลี่ยนคิว READY เก่าที่ไม่มีตัวเล่มกลับเป็น WAITING; V8/V9 ยังไม่ได้ apply กับ Neon ในการตรวจครั้งนี้.
-- คิว READY กันตัวเล่มไว้ 48 ชั่วโมง; เจ้าของคิวเท่านั้นยืมได้ และยกเลิก/หมดเวลาจะคืนตัวเล่มให้คิวถัดไป. การแจ้งอีเมล/SMS ยังเป็น log เท่านั้น.
-- ก่อน deploy V8/V9 ให้ตรวจ migration history และข้อมูลบน staging/สำเนาฐานข้อมูลก่อน; ห้ามแก้ migration ที่ apply ไปแล้ว.
+## Production verification limits
 
-## Deployment evidence and limits
+Production SPA routes `/login`, `/profile`, and `/admin/users` returned `200 text/html` in a URL
+smoke check on 9 October 2026. This verifies the routes responded at that time; it does not identify
+the deployed Git commit or database branch. The V10 migration is present and tested locally, but its
+application to Render/Neon must be confirmed from the provider and Flyway history after deployment.
 
-URL สาธารณะที่ทดสอบตอบสนองตามผลข้างต้น แต่ response status ไม่เปิดเผย Git branch ที่ Render deploy
-หรือ branch ของ Neon ที่เลือกจาก `DB_URL`. ภาพ Neon ที่ผู้ใช้ส่งแสดง branch `production`
-และ database `libraflow`; ภาพนี้ยังไม่ยืนยันว่า Render เชื่อมต่อ branch ดังกล่าว.
+## Reproduction commands
 
-Render Dashboard ต้องตรวจ branch ของ Production service (ควรเป็น `main`), Root Directory,
-และชื่อตัวแปรที่ตั้งไว้. เทียบ host และ database ใน `DB_URL` กับ Neon connection details โดยปิด
-username/password ก่อนแชร์หลักฐาน. ห้ามส่ง connection string เต็ม, password หรือ `JWT_SECRET`.
-
-## Commands for a complete local run
-
-เปิด Docker Desktop/Docker Engine ก่อน:
-
-```powershell
+```bash
 cd code/backend
-.\mvnw.cmd clean verify
+./mvnw --batch-mode --no-transfer-progress clean verify
 
-cd ..\frontend
+cd ../frontend
 npm ci
 npm run lint
 npm run build
-npm audit --audit-level=high
 ```
-
-GitHub Actions workflow คือ `.github/workflows/backend-ci.yml`; push ทุก branch และ pull request
-เข้า `develop`/`main` รัน backend verification และ frontend checks.
 
 ## Submission ownership
 
-ผู้ใช้ยืนยันว่าใบงานห้ามจ้างคนนอกกลุ่มทำงาน แต่อนุญาตให้ใช้ AI ช่วย debug, coding และเอกสารได้.
-การแก้ไขและเอกสารในรอบนี้ทำตามคำขอผู้ใช้; ไม่มีการสร้าง commit หรือ push.
-สมาชิกควรตรวจทานและอธิบายการเปลี่ยนแปลงได้ และทำ commit/push ด้วยบัญชีของตนตามกติกากลุ่ม.
+This work was requested by project member 5 and uses the `boatrocl` Git author identity as requested.
+The team should review the code and be ready to explain the implementation and test results.
