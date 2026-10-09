@@ -302,16 +302,30 @@
 }
 
 .filter-group__heading {
+  margin: 0;
+}
+
+.filter-group__toggle {
   display: flex;
+  width: 100%;
   min-height: 26px;
   align-items: center;
   gap: 10px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: #183655;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
 }
 
-.filter-group__heading h2 {
+.filter-group__toggle:focus-visible {
+  border-radius: 5px;
+}
+
+.filter-group__title {
   flex: 1;
-  margin: 0;
   color: #183655;
   font-family: Loma, sans-serif;
   font-size: 17px;
@@ -328,6 +342,11 @@
   color: #264d6b;
   font-size: 18px;
   line-height: 1;
+  transition: transform .18s ease;
+}
+
+.filter-group__content[hidden] {
+  display: none;
 }
 
 .category-list {
@@ -531,6 +550,9 @@
 }
 
 .book-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid #e4e8ea;
   border-radius: 10px;
@@ -660,7 +682,10 @@
 }
 
 .book-card__body {
-  min-height: 163px;
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
   padding: 10px 13px 12px;
 }
 
@@ -672,25 +697,37 @@
 }
 
 .book-card h3 {
-  min-height: 43px;
+  display: block;
+  min-height: 0;
   margin: 2px 0 3px;
+  overflow: visible;
   color: #152f54;
   font-family: Loma, sans-serif;
   font-size: 16px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: initial;
+  -webkit-line-clamp: unset;
 }
 
 .book-card__author {
+  overflow: visible;
   color: #63758a;
   font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  white-space: normal;
 }
 
 .book-card__meta {
+  flex-wrap: wrap;
   gap: 6px;
   margin-top: 5px;
   color: #718092;
   font-size: 11px;
+  line-height: 1.4;
 }
 
 .book-card__meta-dot {
@@ -1098,7 +1135,7 @@
   }
 
   .book-card__body {
-    min-height: 151px;
+    min-height: 0;
     padding: 8px 9px 9px;
   }
 
@@ -1107,9 +1144,9 @@
   }
 
   .book-card h3 {
-    min-height: 36px;
+    min-height: 0;
     font-size: 13px;
-    line-height: 1.15;
+    line-height: 1.35;
   }
 
   .book-card__author,

@@ -39,7 +39,6 @@ const COPY = {
     details: 'ดูรายละเอียด',
     authorUnknown: 'ไม่ระบุผู้แต่ง',
     general: 'หนังสือทั่วไป',
-    footer: 'เรื่องราวดี ๆ เริ่มต้นที่หน้าถัดไป',
     previous: 'ก่อนหน้า',
     next: 'ถัดไป',
     page: 'หน้า',
@@ -94,7 +93,6 @@ const COPY = {
     details: 'View details',
     authorUnknown: 'Author not listed',
     general: 'General',
-    footer: 'A good story begins on the next page',
     previous: 'Previous',
     next: 'Next',
     page: 'Page',
@@ -148,7 +146,11 @@ function BookOpenIcon({ className = '' }) {
 export default function Catalog() {
   const { language, categoryName, t } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
-  const text = { ...(COPY[language] || COPY.th), categoryName };
+  const text = {
+    ...(COPY[language] || COPY.th),
+    categoryName,
+    footer: t('เรื่องราวดี ๆ เริ่มต้นที่หน้าถัดไป', 'A good story begins on the next page'),
+  };
   const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [page, setPage] = useState(0);
@@ -163,6 +165,8 @@ export default function Catalog() {
   const [hasError, setHasError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [selectedBook, setSelectedBook] = useState(null);
+  const [categoriesExpanded, setCategoriesExpanded] = useState(true);
+  const [availabilityExpanded, setAvailabilityExpanded] = useState(true);
 
   const requestKey = `${page}:${keyword}:${categoryId}:${availability}:${sort}:${retryCount}`;
   const loading = loadedRequest !== requestKey;
@@ -284,12 +288,25 @@ export default function Catalog() {
       <section className="catalog-layout" aria-label={text.recommended}>
         <aside className="category-sidebar" id="categories">
           <div className="filter-group">
-            <div className="filter-group__heading">
-              <FilterIcon className="filter-group__icon" />
-              <h2>{text.categories}</h2>
-              <span className="filter-group__chevron" aria-hidden="true">⌃</span>
-            </div>
-            <div className="category-list" aria-label={text.categories}>
+            <h2 className="filter-group__heading">
+              <button
+                className="filter-group__toggle"
+                type="button"
+                aria-expanded={categoriesExpanded}
+                aria-controls="catalog-category-filters"
+                onClick={() => setCategoriesExpanded((expanded) => !expanded)}
+              >
+                <FilterIcon className="filter-group__icon" />
+                <span className="filter-group__title">{text.categories}</span>
+                <span className="filter-group__chevron" aria-hidden="true">{categoriesExpanded ? '⌃' : '⌄'}</span>
+              </button>
+            </h2>
+            <div
+              className="category-list filter-group__content"
+              id="catalog-category-filters"
+              aria-label={text.categories}
+              hidden={!categoriesExpanded}
+            >
               <button
                 type="button"
                 className={`category-option ${categoryId === '' ? 'is-active' : ''}`}
@@ -308,7 +325,7 @@ export default function Catalog() {
                   onClick={() => chooseCategory(String(category.id))}
                 >
                   <span className="category-checkbox" aria-hidden="true">{categoryId === String(category.id) ? '✓' : ''}</span>
-                <span>{categoryName(category.name)}</span>
+                  <span>{categoryName(category.name)}</span>
                 </button>
               ))}
               {categories.length === 0 && <p className="category-empty">{text.allCategories}</p>}
@@ -316,12 +333,25 @@ export default function Catalog() {
           </div>
 
           <div className="filter-group filter-group--status">
-            <div className="filter-group__heading">
-              <BookOpenIcon className="filter-group__icon" />
-              <h2>{text.status}</h2>
-              <span className="filter-group__chevron" aria-hidden="true">⌃</span>
-            </div>
-            <div className="status-filter-list" aria-label={text.status}>
+            <h2 className="filter-group__heading">
+              <button
+                className="filter-group__toggle"
+                type="button"
+                aria-expanded={availabilityExpanded}
+                aria-controls="catalog-availability-filters"
+                onClick={() => setAvailabilityExpanded((expanded) => !expanded)}
+              >
+                <BookOpenIcon className="filter-group__icon" />
+                <span className="filter-group__title">{text.status}</span>
+                <span className="filter-group__chevron" aria-hidden="true">{availabilityExpanded ? '⌃' : '⌄'}</span>
+              </button>
+            </h2>
+            <div
+              className="status-filter-list filter-group__content"
+              id="catalog-availability-filters"
+              aria-label={text.status}
+              hidden={!availabilityExpanded}
+            >
               <button
                 type="button"
                 className={`status-filter-option ${availability === 'ALL' ? 'is-active' : ''}`}
