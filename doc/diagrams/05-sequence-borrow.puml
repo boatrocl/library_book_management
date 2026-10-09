@@ -1,5 +1,5 @@
 @startuml 05-sequence-borrow
-title Sequence Diagram #1 — บันทึกการยืมหนังสือ (POST /api/v1/loans)
+title Sequence Diagram #1 — สมาชิกยืมหนังสือจากหน้าแคตตาล็อก
 
 skinparam defaultFontName "Tahoma"
 skinparam defaultFontSize 12
@@ -12,9 +12,11 @@ skinparam sequence {
 }
 autonumber
 
-actor "บรรณารักษ์" as LIB
+actor "สมาชิก" as MEMBER
 participant "LoanController" as C
 participant "LoanServiceImpl" as S
+participant "UserRepository" as UR
+participant "BookRepository" as BR
 participant "BookCopyRepository" as CR
 participant "ReservationRepository" as RR
 collections "BorrowRule chain\n(Chain of Responsibility)" as R
@@ -22,11 +24,25 @@ participant "LoanRepository" as LR
 participant "LoanMapper" as M
 database "PostgreSQL" as DB
 
-LIB -> C : POST /api/v1/loans\n{memberId, barcodes[]}
+MEMBER -> C : POST /api/v1/loans/self\n{bookId} + Bearer JWT
 activate C
-C -> C : @Valid BorrowRequest\n(Bean Validation)
-C -> S : borrow(request)
+C -> C : @Valid MemberBorrowRequest\n+ ตรวจ ROLE_MEMBER
+C -> S : borrowForMember(jwtSubject, request)
 activate S
+S -> UR : findByUsername(jwtSubject)
+UR -> DB : SELECT member by username
+DB --> UR : User
+UR --> S : User
+S -> BR : existsById(bookId)
+BR -> DB : ตรวจหนังสือ
+DB --> BR : exists
+BR --> S : true
+S -> CR : เลือก AVAILABLE copy\nพร้อม PESSIMISTIC_WRITE lock
+CR -> DB : SELECT ... WHERE book_id=?\nAND status='AVAILABLE' ORDER BY barcode\nLIMIT 1 FOR UPDATE
+DB --> CR : BookCopy
+CR --> S : BookCopy ที่ถูกล็อก
+S -> S : สร้าง BorrowRequest(memberId, barcode)
+S -> S : borrow(request)
 
 S -> CR : findByBarcodeIn(barcodes)
 activate CR
@@ -58,7 +74,7 @@ alt ไม่ผ่านกฎข้อใดข้อหนึ่ง
   deactivate R
   S --> C : propagate exception
   C -> C : @RestControllerAdvice จับ
-  C --> LIB : 409 Conflict + ErrorResponse
+  C --> MEMBER : 409 Conflict + ErrorResponse
 else ผ่านทุกกฎ
   R --> S : OK
   S -> S : คำนวณ dueDate ตาม MemberTier (BR-05)
@@ -82,7 +98,7 @@ else ผ่านทุกกฎ
 
   S --> C : LoanResponse
   deactivate S
-  C --> LIB : 201 Created + Location header
+  C --> MEMBER : 201 Created + LoanResponse\n(Location: /api/v1/loans/{id})
 end
 deactivate C
 

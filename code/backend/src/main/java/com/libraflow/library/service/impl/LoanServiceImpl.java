@@ -10,10 +10,13 @@ import com.libraflow.library.domain.enums.BookCopyStatus;
 import com.libraflow.library.domain.enums.LoanStatus;
 import com.libraflow.library.domain.enums.MemberTier;
 import com.libraflow.library.domain.enums.ReservationStatus;
+import com.libraflow.library.dto.request.MemberBorrowRequest;
 import com.libraflow.library.dto.request.BorrowRequest;
 import com.libraflow.library.dto.response.LoanResponse;
 import com.libraflow.library.dto.response.PageResponse;
 import com.libraflow.library.exception.ResourceNotFoundException;
+import com.libraflow.library.exception.BusinessException;
+import com.libraflow.library.exception.ErrorCode;
 import com.libraflow.library.mapper.LoanMapper;
 import com.libraflow.library.pattern.chain.BorrowContext;
 import com.libraflow.library.pattern.chain.BorrowRule;
@@ -21,6 +24,7 @@ import com.libraflow.library.pattern.observer.BookReturnedEvent;
 import com.libraflow.library.pattern.state.LoanState;
 import com.libraflow.library.pattern.state.LoanStateFactory;
 import com.libraflow.library.repository.BookCopyRepository;
+import com.libraflow.library.repository.BookRepository;
 import com.libraflow.library.repository.LoanRepository;
 import com.libraflow.library.repository.ReservationRepository;
 import com.libraflow.library.repository.UserRepository;
@@ -60,6 +64,7 @@ public class LoanServiceImpl implements LoanService {
 
     private final LoanRepository loanRepository;
     private final BookCopyRepository copyRepository;
+    private final BookRepository bookRepository;
     private final UserRepository userRepository;
     private final ReservationRepository reservationRepository;
     private final List<BorrowRule> borrowRules;
@@ -70,6 +75,7 @@ public class LoanServiceImpl implements LoanService {
 
     public LoanServiceImpl(LoanRepository loanRepository,
                            BookCopyRepository copyRepository,
+                           BookRepository bookRepository,
                            UserRepository userRepository,
                            ReservationRepository reservationRepository,
                            List<BorrowRule> borrowRules,
@@ -79,6 +85,7 @@ public class LoanServiceImpl implements LoanService {
                            FineService fineService) {
         this.loanRepository = loanRepository;
         this.copyRepository = copyRepository;
+        this.bookRepository = bookRepository;
         this.userRepository = userRepository;
         this.reservationRepository = reservationRepository;
         this.borrowRules = borrowRules;
@@ -142,6 +149,22 @@ public class LoanServiceImpl implements LoanService {
 
         Loan saved = loanRepository.save(loan);
         return mapper.toResponse(saved, member.getUsername(), tier.name());
+    }
+
+    @Override
+    public LoanResponse borrowForMember(String username, MemberBorrowRequest request) {
+        User member = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("ไม่พบข้อมูลสมาชิก: " + username));
+        if (!bookRepository.existsById(request.bookId())) {
+            throw new ResourceNotFoundException("ไม่พบหนังสือ id: " + request.bookId());
+        }
+
+        BookCopy availableCopy = copyRepository
+                .findFirstByBookIdAndStatusOrderByBarcodeAsc(request.bookId(), BookCopyStatus.AVAILABLE)
+                .orElseThrow(() -> new BusinessException(ErrorCode.COPY_NOT_AVAILABLE));
+
+        // The pessimistic lock on the selected row remains held through borrow() and commit.
+        return borrow(new BorrowRequest(member.getId(), List.of(availableCopy.getBarcode())));
     }
 
     @Override

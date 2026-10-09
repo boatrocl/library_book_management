@@ -10,6 +10,9 @@
 - Password ใช้ `BCryptPasswordEncoder`; JWT ใช้ HMAC key จาก Base64 `JWT_SECRET` ซึ่งต้อง decode ได้อย่างน้อย 32 bytes.
 - API เป็น stateless; JWT ตรวจ issuer, signature และ expiration. Expiration มาจาก `JWT_EXPIRATION` หน่วย milliseconds.
 - `GET /api/v1/books/**`, auth endpoints, Swagger และ CORS preflight เปิดให้เรียกได้โดยไม่ยืนยันตัวตน.
+- `POST /api/v1/loans/self` จำกัดเฉพาะ `MEMBER`; backend ระบุ username จาก JWT และไม่รับ member ID จาก browser.
+- `GET/POST /api/v1/reservations/self` จำกัดเฉพาะ `MEMBER`; backend ใช้ username จาก JWT สำหรับดูประวัติและสร้างคิวจอง.
+- Endpoint ยืมที่เคาน์เตอร์ `POST /api/v1/loans` จำกัด `LIBRARIAN` หรือ `ADMIN`.
 - การเขียน/แก้/ลบหนังสือจำกัด `ADMIN` หรือ `LIBRARIAN`; endpoint อื่นต้องยืนยันตัวตนและอาจมี method-level role เพิ่ม.
 - CORS อนุญาต origin เดียวจาก `FRONTEND_ORIGIN`; production ต้องตั้งเป็น URL ของ frontend จริง.
 
@@ -27,12 +30,12 @@
 
 ## Tests and CI
 
-GitHub Actions workflow: `.github/workflows/backend-ci.yml`.
+GitHub Actions workflows: `.github/workflows/backend-ci.yml` และ `.github/workflows/frontend-ci.yml`.
 
-- Push ทุก branch จะรัน backend `clean verify` และ frontend `npm ci`, lint, build, audit.
-- Pull request เข้า `develop` หรือ `main` จะรัน workflow เช่นกัน.
+- Push ไป `main`, `develop` หรือ branch สมาชิกที่ระบุจะรัน backend `clean verify` และ frontend lint/build แยก workflow.
+- Pull request เข้า `develop` หรือ `main` จะรันทั้ง backend และ frontend workflows.
 - Backend integration test `AuthSecurityIntegrationTest` ใช้ PostgreSQL 16 ผ่าน Testcontainers; ต้องมี Docker daemon.
-- Frontend dependency audit ใช้ `npm audit --audit-level=high`.
+- Frontend checks ใช้ `npm ci`, `npm run lint` และ `npm run build`.
 
 คำสั่งตรวจในเครื่อง:
 

@@ -1,16 +1,35 @@
-# React + Vite
+# LibraFlow Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React single-page application for the LibraFlow library system. It uses Vite, Axios,
+Tailwind CSS, the shared Thai/English language setting, and the Loma font included in
+`public/fonts/`.
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Run these commands from `code/frontend`:
 
-## React Compiler
+```bash
+npm ci
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Vite serves the app at `http://localhost:5173`. The backend API defaults to
+`http://localhost:8080`; set `VITE_API_URL` in a local `.env` file to override it.
 
-## Expanding the ESLint configuration
+## Verification
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm run lint
+npm run build
+```
+
+GitHub Actions runs both checks for pushes to the configured project branches and pull
+requests targeting `develop` or `main` using `.github/workflows/frontend-ci.yml`.
+
+## Main flows
+
+- Browse and filter the public book catalog, then open a responsive book details dialog.
+- Signed-in members can borrow an available copy. The API selects and locks a copy, then
+  returns the loan code and due date for confirmation.
+- Members can review their loan history and fines from the profile page.
+- Librarians and administrators use the management pages for circulation and catalog work.

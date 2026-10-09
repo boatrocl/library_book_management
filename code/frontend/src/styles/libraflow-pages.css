@@ -89,7 +89,7 @@
   align-items: center;
   gap: 10px;
   color: var(--lf-ink);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Loma, sans-serif;
   font-size: 27px;
   font-weight: 700;
   text-decoration: none;
@@ -109,7 +109,7 @@
 .lf-auth-story__copy h1 {
   margin: 14px 0 14px;
   color: var(--lf-ink);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Loma, sans-serif;
   font-size: clamp(36px, 4vw, 56px);
   line-height: 1.16;
 }
@@ -144,7 +144,7 @@
   right: 4%;
   bottom: 14%;
   color: #42664e;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Loma, sans-serif;
   font-size: 15px;
   font-style: italic;
   line-height: 1.4;
@@ -189,7 +189,7 @@
 .lf-auth-card__heading h2 {
   margin: 8px 0 6px;
   color: var(--lf-ink);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Loma, sans-serif;
   font-size: clamp(26px, 2.4vw, 33px);
   line-height: 1.25;
 }
@@ -373,7 +373,7 @@
 .lf-about-hero h1 {
   margin: 10px 0 12px;
   color: var(--lf-ink);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Loma, sans-serif;
   font-size: clamp(34px, 4.1vw, 52px);
   line-height: 1.18;
 }
@@ -416,7 +416,7 @@
   top: 20%;
   right: 0;
   color: #45654b;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Loma, sans-serif;
   font-size: 15px;
   font-style: italic;
   line-height: 1.45;
@@ -446,7 +446,7 @@
 .lf-section-heading h2 {
   margin: 7px 0 0;
   color: var(--lf-ink);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Loma, sans-serif;
   font-size: clamp(23px, 2.6vw, 31px);
 }
 
@@ -631,7 +631,7 @@
 .lf-feature-card h3 {
   margin: 16px 0 7px;
   color: var(--lf-ink);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Loma, sans-serif;
   font-size: 19px;
 }
 
@@ -667,7 +667,7 @@
 .lf-workspace-page h1 {
   margin: 0 0 3px;
   color: var(--lf-ink);
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: Loma, sans-serif;
   font-size: clamp(27px, 3vw, 36px);
   line-height: 1.25;
 }
