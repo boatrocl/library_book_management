@@ -14,6 +14,8 @@ export default function BookManagement() {
   // State สำหรับควบคุม Modal และฟอร์ม
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [formError, setFormError] = useState('');
+  const [formFieldErrors, setFormFieldErrors] = useState([]);
   const [formData, setFormData] = useState({
     isbn: '',
     title: '',
@@ -49,11 +51,15 @@ export default function BookManagement() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
+    setFormError('');
+    setFormFieldErrors([]);
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const openModal = (book = null) => {
     setMessage({ type: '', th: '', en: '' });
+    setFormError('');
+    setFormFieldErrors([]);
     if (book) {
       setEditingId(book.id);
       setFormData({
@@ -61,9 +67,9 @@ export default function BookManagement() {
         title: book.title || '',
         publishYear: book.publishYear || '',
         price: book.price || '',
-        categoryId: book.categoryId || '', // อาจจะต้องดึง ID มาถ้าใน response เดิมไม่มี
-        publisherId: book.publisherId || '',
-        authorIds: book.authors ? book.authors.join(', ') : '' // แปลงกลับเป็น string
+        categoryId: book.categoryId ?? '',
+        publisherId: book.publisherId ?? '',
+        authorIds: Array.isArray(book.authorIds) ? book.authorIds.join(', ') : ''
       });
     } else {
       setEditingId(null);
@@ -75,6 +81,8 @@ export default function BookManagement() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage({ type: '', th: '', en: '' });
+    setFormError('');
+    setFormFieldErrors([]);
 
     // จัดเตรียม Payload ให้ตรงกับ CreateBookRequest / UpdateBookRequest
     const payload = {
@@ -100,7 +108,11 @@ export default function BookManagement() {
       await fetchBooks(); // รีเฟรชตาราง
     } catch (error) {
       console.error("Submit error:", error);
-      setMessage({ type: 'error', th: error.response?.data?.message || 'เกิดข้อผิดพลาด ตรวจสอบข้อมูลให้ถูกต้องตามเงื่อนไข (เช่น ISBN ซ้ำ)', en: 'Could not save the book. Check the details and make sure the ISBN is not already in use.' });
+      setFormFieldErrors(Array.isArray(error.response?.data?.fieldErrors) ? error.response.data.fieldErrors : []);
+      setFormError(error.response?.data?.message || t(
+        'เกิดข้อผิดพลาด ตรวจสอบข้อมูลให้ถูกต้องตามเงื่อนไข (เช่น ISBN ซ้ำ)',
+        'Could not save the book. Check the details and make sure the ISBN is not already in use.'
+      ));
     }
   };
 
@@ -195,14 +207,26 @@ export default function BookManagement() {
 
         {/* Modal สำหรับฟอร์มเพิ่ม/แก้ไขหนังสือ */}
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-            <div className="w-full max-w-2xl bg-white rounded-xl shadow-lg">
+          <div className="book-management-modal-backdrop fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4">
+            <div className="book-management-modal w-full max-w-2xl bg-white rounded-xl shadow-lg" role="dialog" aria-modal="true" aria-labelledby="book-management-modal-title">
               <div className="flex items-center justify-between p-6 border-b">
-                <h2 className="text-xl font-bold text-gray-800">{editingId ? t('แก้ไขหนังสือ', 'Edit book') : t('เพิ่มหนังสือใหม่', 'Add a book')}</h2>
-                <button onClick={() => setIsModalOpen(false)} className="text-gray-500 hover:text-gray-700" aria-label={t('ปิด', 'Close')}>✕</button>
+                <h2 id="book-management-modal-title" className="text-xl font-bold text-gray-800">{editingId ? t('แก้ไขหนังสือ', 'Edit book') : t('เพิ่มหนังสือใหม่', 'Add a book')}</h2>
+                <button onClick={() => { setIsModalOpen(false); setFormError(''); setFormFieldErrors([]); }} className="text-gray-500 hover:text-gray-700" aria-label={t('ปิด', 'Close')}>✕</button>
               </div>
               <div className="p-6">
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  {formError && (
+                    <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800" role="alert" aria-live="assertive">
+                      {formError}
+                      {formFieldErrors.length > 0 && (
+                        <ul className="mt-2 list-inside list-disc">
+                          {formFieldErrors.map((fieldError, index) => (
+                            <li key={`${fieldError.field}-${index}`}>{fieldError.message}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700">{t('ISBN (10 หรือ 13 หลัก)', 'ISBN (10 or 13 digits)')}</label>
@@ -223,18 +247,21 @@ export default function BookManagement() {
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700">{t('รหัสหมวดหมู่ (Category ID)', 'Category ID')}</label>
                       <input type="number" name="categoryId" value={formData.categoryId} onChange={handleInputChange} required className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500" />
+                      <p className="mt-1 text-xs text-gray-500">{t('ID นี้อ้างอิงหมวดหมู่ที่หนังสือสังกัด ใช้รหัสหมวดหมู่ที่มีอยู่ในระบบ', 'This ID points to the book’s category. Use an existing category ID.')}</p>
                     </div>
                     <div>
                       <label className="block mb-1 text-sm font-medium text-gray-700">{t('รหัสสำนักพิมพ์ (Publisher ID)', 'Publisher ID')}</label>
                       <input type="number" name="publisherId" value={formData.publisherId} onChange={handleInputChange} required className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500" />
+                      <p className="mt-1 text-xs text-gray-500">{t('ID นี้อ้างอิงสำนักพิมพ์ ใช้รหัสของสำนักพิมพ์ที่มีอยู่ในระบบ', 'This ID points to the publisher. Use an existing publisher ID.')}</p>
                     </div>
                   </div>
                   <div>
                     <label className="block mb-1 text-sm font-medium text-gray-700">{t('รหัสผู้แต่ง (Author IDs - คั่นด้วยลูกน้ำ เช่น 1, 2)', 'Author IDs (comma-separated, e.g. 1, 2)')}</label>
                     <input type="text" name="authorIds" value={formData.authorIds} onChange={handleInputChange} required className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="1, 3, 5" />
+                    <p className="mt-1 text-xs text-gray-500">{t('กรอกรหัสผู้แต่ง ไม่ใช่ชื่อผู้แต่ง หากมีหลายคนให้คั่นแต่ละรหัสด้วยลูกน้ำ', 'Enter author IDs, not names. Separate multiple IDs with commas.')}</p>
                   </div>
                   <div className="flex justify-end pt-4 space-x-3 border-t">
-                    <button type="button" onClick={() => setIsModalOpen(false)} className="px-4 py-2 font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">{t('ยกเลิก', 'Cancel')}</button>
+                    <button type="button" onClick={() => { setIsModalOpen(false); setFormError(''); setFormFieldErrors([]); }} className="px-4 py-2 font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">{t('ยกเลิก', 'Cancel')}</button>
                     <button type="submit" className="px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">{t('บันทึกข้อมูล', 'Save')}</button>
                   </div>
                 </form>
