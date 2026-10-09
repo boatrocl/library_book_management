@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useContext, useEffect, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import api from '../api';
+import { AuthContext } from '../context/AuthContextValue';
 import { useLanguage } from '../context/LanguageContext';
 
 function readSession() {
@@ -26,7 +27,9 @@ function readSession() {
 }
 
 export default function Profile() {
+  const { user } = useContext(AuthContext);
   const { language, t, enumLabel } = useLanguage();
+  const isMember = user?.role === 'MEMBER';
   const [profile, setProfile] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [session] = useState(readSession);
@@ -64,12 +67,16 @@ export default function Profile() {
 
   const fetchProfileData = useCallback(async (id, signal) => {
     try {
-      // ดึงข้อมูลโปรไฟล์ ประวัติยืม จอง และค่าปรับพร้อมกัน
+      // Staff can view their profile and loan/fine history, but the self-reservation API is MEMBER-only.
+      const reservationsRequest = isMember
+        ? api.get('/api/v1/reservations/self?page=0&size=50&sort=reservedAt,desc', { signal })
+        : Promise.resolve({ data: { content: [] } });
+
       const [profileRes, loansRes, finesRes, reservationsRes] = await Promise.all([
         api.get(`/api/v1/members/${id}`, { signal }),
         api.get(`/api/v1/members/${id}/loans`, { signal }),
         api.get(`/api/v1/members/${id}/fines?status=UNPAID`, { signal }),
-        api.get('/api/v1/reservations/self?page=0&size=50&sort=reservedAt,desc', { signal })
+        reservationsRequest
       ]);
       if (signal?.aborted) return;
 
@@ -92,7 +99,7 @@ export default function Profile() {
     } finally {
       if (!signal?.aborted) setIsLoading(false);
     }
-  }, []);
+  }, [isMember]);
 
   useEffect(() => {
     if (!userId) return undefined;
@@ -159,9 +166,11 @@ export default function Profile() {
                 <p className="text-blue-100">{profile.email}</p>
               </div>
               <div className="text-right">
-                <span className="px-3 py-1 text-sm font-bold text-blue-700 bg-white rounded-full">
-                  {t('ระดับสมาชิก', 'Tier')}: {enumLabel(profile.memberTier)}
-                </span>
+                {isMember && (
+                  <span className="px-3 py-1 text-sm font-bold text-blue-700 bg-white rounded-full">
+                    {t('ระดับสมาชิก', 'Tier')}: {enumLabel(profile.memberTier)}
+                  </span>
+                )}
                 <p className="mt-2 text-sm text-blue-200">{t('สิทธิ์', 'Role')}: {enumLabel(profile.role)}</p>
               </div>
             </div>
@@ -320,57 +329,59 @@ export default function Profile() {
           )}
         </div>
 
-        <div className="p-6 bg-white border shadow-xs rounded-xl">
-          <h2 className="mb-4 text-xl font-bold text-gray-800">{t('รายการจองหนังสือ', 'My reservations')}</h2>
-          {reservationAction.message && (
-            <p className="mb-4 text-sm text-teal-800" role="status">{reservationAction.message}</p>
-          )}
-          {reservations.length === 0 ? (
-            <p className="py-4 text-center text-gray-500">{t('ยังไม่มีรายการจองหนังสือ', 'No reservations yet.')}</p>
-          ) : (
-            <div className="space-y-3">
-              {reservations.map((reservation) => {
-                const canCancel = reservation.status === 'WAITING' || reservation.status === 'READY';
-                const reservedDate = reservation.reservedAt
-                  ? new Date(reservation.reservedAt).toLocaleString(language === 'th' ? 'th-TH' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
-                  : '-';
-                const expiresDate = reservation.expiresAt
-                  ? new Date(reservation.expiresAt).toLocaleString(language === 'th' ? 'th-TH' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
-                  : null;
-                return (
-                  <article key={reservation.id} className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-gray-200 p-4">
-                    <div className="min-w-0">
-                      <h3 className="font-semibold text-gray-900">{reservation.bookTitle}</h3>
-                      <p className="mt-1 text-sm text-gray-600">
-                        {t('จองเมื่อ', 'Reserved')}: {reservedDate}
-                        {reservation.status === 'WAITING' && reservation.queuePosition && (
-                          <> · {t('ลำดับคิว', 'Queue position')}: {reservation.queuePosition}</>
+        {isMember && (
+          <div className="p-6 bg-white border shadow-xs rounded-xl">
+            <h2 className="mb-4 text-xl font-bold text-gray-800">{t('รายการจองหนังสือ', 'My reservations')}</h2>
+            {reservationAction.message && (
+              <p className="mb-4 text-sm text-teal-800" role="status">{reservationAction.message}</p>
+            )}
+            {reservations.length === 0 ? (
+              <p className="py-4 text-center text-gray-500">{t('ยังไม่มีรายการจองหนังสือ', 'No reservations yet.')}</p>
+            ) : (
+              <div className="space-y-3">
+                {reservations.map((reservation) => {
+                  const canCancel = reservation.status === 'WAITING' || reservation.status === 'READY';
+                  const reservedDate = reservation.reservedAt
+                    ? new Date(reservation.reservedAt).toLocaleString(language === 'th' ? 'th-TH' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
+                    : '-';
+                  const expiresDate = reservation.expiresAt
+                    ? new Date(reservation.expiresAt).toLocaleString(language === 'th' ? 'th-TH' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })
+                    : null;
+                  return (
+                    <article key={reservation.id} className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-gray-200 p-4">
+                      <div className="min-w-0">
+                        <h3 className="font-semibold text-gray-900">{reservation.bookTitle}</h3>
+                        <p className="mt-1 text-sm text-gray-600">
+                          {t('จองเมื่อ', 'Reserved')}: {reservedDate}
+                          {reservation.status === 'WAITING' && reservation.queuePosition && (
+                            <> · {t('ลำดับคิว', 'Queue position')}: {reservation.queuePosition}</>
+                          )}
+                          {expiresDate && <> · {t('รับหนังสือก่อน', 'Pick up by')}: {expiresDate}</>}
+                        </p>
+                        {reservation.reservedBarcode && (
+                          <p className="mt-1 text-sm text-gray-600">{t('บาร์โค้ด', 'Barcode')}: {reservation.reservedBarcode}</p>
                         )}
-                        {expiresDate && <> · {t('รับหนังสือก่อน', 'Pick up by')}: {expiresDate}</>}
-                      </p>
-                      {reservation.reservedBarcode && (
-                        <p className="mt-1 text-sm text-gray-600">{t('บาร์โค้ด', 'Barcode')}: {reservation.reservedBarcode}</p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="rounded-full bg-teal-50 px-3 py-1 text-sm font-medium text-teal-800">{enumLabel(reservation.status)}</span>
-                      {canCancel && (
-                        <button
-                          type="button"
-                          className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60"
-                          onClick={() => handleCancelReservation(reservation)}
-                          disabled={reservationAction.id === reservation.id}
-                        >
-                          {reservationAction.id === reservation.id ? t('กำลังยกเลิก…', 'Cancelling…') : t('ยกเลิก', 'Cancel')}
-                        </button>
-                      )}
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="rounded-full bg-teal-50 px-3 py-1 text-sm font-medium text-teal-800">{enumLabel(reservation.status)}</span>
+                        {canCancel && (
+                          <button
+                            type="button"
+                            className="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-wait disabled:opacity-60"
+                            onClick={() => handleCancelReservation(reservation)}
+                            disabled={reservationAction.id === reservation.id}
+                          >
+                            {reservationAction.id === reservation.id ? t('กำลังยกเลิก…', 'Cancelling…') : t('ยกเลิก', 'Cancel')}
+                          </button>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
     </main>
