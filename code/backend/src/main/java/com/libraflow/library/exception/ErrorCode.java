@@ -93,6 +93,11 @@ public enum ErrorCode {
     DUPLICATE_RESERVATION(
             HttpStatus.CONFLICT,
             "จองหนังสือเล่มนี้ซ้ำไม่ได้"
+    ),
+
+    RESERVATION_NOT_CANCELLABLE(
+            HttpStatus.CONFLICT,
+            "ยกเลิกได้เฉพาะรายการจองที่ยัง WAITING หรือ READY"
     );
 
     private final HttpStatus status;

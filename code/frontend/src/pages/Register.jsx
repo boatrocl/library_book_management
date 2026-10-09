@@ -1,6 +1,6 @@
 import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AuthContext } from '../context/AuthContext';
+import { AuthContext } from '../context/AuthContextValue';
 import api from '../api';
 
 export default function Register() {
@@ -81,7 +81,7 @@ export default function Register() {
               placeholder="ตั้งชื่อผู้ใช้งาน"
               value={formData.username}
               onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
@@ -93,7 +93,7 @@ export default function Register() {
               placeholder="รหัสผ่านอย่างน้อย 6 ตัวอักษร"
               value={formData.password}
               onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
@@ -105,7 +105,7 @@ export default function Register() {
               placeholder="your@email.com"
               value={formData.email}
               onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
@@ -117,7 +117,7 @@ export default function Register() {
               placeholder="ชื่อจริง"
               value={formData.firstName}
               onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
@@ -129,7 +129,7 @@ export default function Register() {
               placeholder="นามสกุล"
               value={formData.lastName}
               onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               required
             />
           </div>
@@ -141,7 +141,7 @@ export default function Register() {
               placeholder="08X-XXX-XXXX (ไม่บังคับ)"
               value={formData.phoneNumber}
               onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500"
             />
           </div>
           <div>
@@ -151,7 +151,7 @@ export default function Register() {
               placeholder="ที่อยู่ปัจจุบัน (ไม่บังคับ)"
               value={formData.address}
               onChange={handleChange}
-              className="w-full px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+              className="w-full px-4 py-2 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 resize-none"
               rows="2"
             ></textarea>
           </div>

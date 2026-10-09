@@ -45,9 +45,26 @@ class LoanPolicyUtilTest {
         }
 
         @Test
-        @DisplayName("MEMBER ต้องเป็น STUDENT")
+        @DisplayName("MEMBER ใช้ member_tier ที่บันทึกไว้")
         void resolveMemberTier_member_shouldReturnStudent() {
             when(mockUser.getRole()).thenReturn(UserRole.MEMBER);
+            when(mockUser.getMemberTier()).thenReturn("STUDENT");
+            assertThat(LoanPolicyUtil.resolveMemberTier(mockUser)).isEqualTo(MemberTier.STUDENT);
+        }
+
+        @Test
+        @DisplayName("MEMBER ที่เป็น EXTERNAL ต้องใช้ข้อมูล member_tier")
+        void resolveMemberTier_externalMember_shouldReturnExternal() {
+            when(mockUser.getRole()).thenReturn(UserRole.MEMBER);
+            when(mockUser.getMemberTier()).thenReturn("EXTERNAL");
+            assertThat(LoanPolicyUtil.resolveMemberTier(mockUser)).isEqualTo(MemberTier.EXTERNAL);
+        }
+
+        @Test
+        @DisplayName("member_tier ที่ไม่ถูกต้องต้อง fallback เป็น STUDENT")
+        void resolveMemberTier_invalidTier_shouldReturnStudent() {
+            when(mockUser.getRole()).thenReturn(UserRole.MEMBER);
+            when(mockUser.getMemberTier()).thenReturn("UNKNOWN");
             assertThat(LoanPolicyUtil.resolveMemberTier(mockUser)).isEqualTo(MemberTier.STUDENT);
         }
 

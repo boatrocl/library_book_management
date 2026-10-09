@@ -106,7 +106,7 @@ public class BookCopy {
         this.acquiredAt = acquiredAt;
     }
 
-    /** ตัวเล่มจะยืมได้ต่อเมื่ออยู่ในสถานะ AVAILABLE เท่านั้น (BR-04) */
+    /** ตรวจสถานะ AVAILABLE โดยตรง; สิทธิ์ยืมตัวเล่ม RESERVED ของเจ้าของคิวตรวจใน CopyAvailabilityRule */
     public boolean isAvailable() {
         return status == BookCopyStatus.AVAILABLE;
     }

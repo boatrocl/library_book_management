@@ -1,32 +1,37 @@
-import { useState, useEffect, useContext } from 'react';
-import { AuthContext } from '../context/AuthContext';
+import { useCallback, useContext, useEffect, useState } from 'react';
+import { AuthContext } from '../context/AuthContextValue';
 import api from '../api';
 
 
 export default function UserManagement() {
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   const { user: currentUser } = useContext(AuthContext);
 
-  const fetchUsers = async () => {
-    setLoading(true);
+  const fetchUsers = useCallback(async (signal) => {
     try {
       // ดึงข้อมูลผู้ใช้ทั้งหมด (อาจปรับเปลี่ยน endpoint ตาม API ของจริงที่มี)
-      const response = await api.get('/api/v1/users');
+      const response = await api.get('/api/v1/users', { signal });
+      if (signal?.aborted) return;
       setUsers(response.data.content || response.data || []);
     } catch (error) {
+      if (signal?.aborted) return;
       console.error("Fetch users error:", error);
       setMessage({ type: 'error', text: 'ไม่สามารถดึงข้อมูลผู้ใช้งานได้' });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (!controller.signal.aborted) return fetchUsers(controller.signal);
+    });
+    return () => controller.abort();
+  }, [fetchUsers]);
 
   const handleStatusChange = async (id, currentStatus) => {
     const newStatus = currentStatus === 'ACTIVE' ? 'SUSPENDED' : 'ACTIVE';
@@ -36,7 +41,8 @@ export default function UserManagement() {
       // ส่งคำขอเปลี่ยนสถานะ
       await api.patch(`/api/v1/users/${id}/status`, { status: newStatus });
       setMessage({ type: 'success', text: `อัปเดตสถานะผู้ใช้รหัส ${id} สำเร็จ` });
-      fetchUsers();
+      setLoading(true);
+      await fetchUsers();
     } catch (error) {
       console.error("Update status error:", error);
       setMessage({ type: 'error', text: 'เกิดข้อผิดพลาดในการเปลี่ยนสถานะ' });
@@ -50,7 +56,8 @@ export default function UserManagement() {
       // ส่งคำขอเปลี่ยน Role
       await api.patch(`/api/v1/users/${id}/role`, { role: newRole });
       setMessage({ type: 'success', text: `ปรับสิทธิ์ผู้ใช้รหัส ${id} สำเร็จ` });
-      fetchUsers();
+      setLoading(true);
+      await fetchUsers();
     } catch (error) {
       console.error("Update role error:", error);
       setMessage({ type: 'error', text: 'เกิดข้อผิดพลาดในการปรับสิทธิ์' });
@@ -68,7 +75,7 @@ export default function UserManagement() {
           </div>
         )}
 
-        <div className="overflow-hidden bg-white border shadow-sm rounded-xl">
+        <div className="overflow-hidden bg-white border shadow-xs rounded-xl">
           <div className="p-4 border-b bg-gray-50">
             <h2 className="text-lg font-bold text-gray-800">รายชื่อผู้ใช้งานในระบบ</h2>
           </div>
@@ -110,7 +117,7 @@ export default function UserManagement() {
                       <td className="p-4 text-sm text-right space-x-2 flex justify-end items-center">
                         <select
                           value={u.role}
-                          disabled={u.username === currentUser.username} //ถ้าเป็นตัวเองจะถูกล็อกทันที
+                          disabled={u.username === currentUser?.username} // ป้องกันแก้ role ของบัญชีที่ล็อกอินอยู่
                           onChange={(e) => handleRoleChange(u.id, e.target.value)}
                           className="px-2 py-1 text-sm border rounded-md focus:ring-blue-500 bg-gray-50"
                         >

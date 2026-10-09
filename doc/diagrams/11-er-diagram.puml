@@ -1,15 +1,10 @@
 @startuml 11-er-diagram
-title ER Diagram / Database Schema — LibraFlow (PostgreSQL)
+title ER Diagram — LibraFlow database (V1–V9)
 
 skinparam defaultFontName "Tahoma"
 skinparam defaultFontSize 12
 skinparam shadowing false
 skinparam linetype ortho
-skinparam class {
-  BackgroundColor #FDFDFD
-  BorderColor #34495E
-  ArrowColor #2E4053
-}
 hide circle
 hide methods
 
@@ -17,24 +12,21 @@ entity "users" as users {
   * id : BIGSERIAL <<PK>>
   --
   * username : VARCHAR(50) <<UK>>
-  * email : VARCHAR(120) <<UK>>
-  * password : VARCHAR(255)
-  * role : VARCHAR(20)
-  * status : VARCHAR(20)
-  * created_at : TIMESTAMP
-  updated_at : TIMESTAMP
+  * password_hash : VARCHAR(255)
+  * email : VARCHAR(100) <<UK>>
+  is_active : BOOLEAN = TRUE
+  created_at : TIMESTAMP = CURRENT_TIMESTAMP
+  * role : VARCHAR(20) = MEMBER
+  member_tier : VARCHAR(20) = STUDENT
 }
 
 entity "user_profiles" as user_profiles {
-  * id : BIGSERIAL <<PK>>
+  * user_id : BIGINT <<PK, FK>>
   --
-  * user_id : BIGINT <<FK>> <<UK>>
-  * full_name : VARCHAR(120)
-  phone : VARCHAR(20)
-  address : VARCHAR(255)
-  birth_date : DATE
-  * member_tier : VARCHAR(20)
-  * joined_at : DATE
+  * first_name : VARCHAR(100)
+  * last_name : VARCHAR(100)
+  phone_number : VARCHAR(20)
+  address : TEXT
 }
 
 entity "categories" as categories {
@@ -54,7 +46,7 @@ entity "publishers" as publishers {
 entity "authors" as authors {
   * id : BIGSERIAL <<PK>>
   --
-  * full_name : VARCHAR(120)
+  * full_name : VARCHAR(120) <<IDX>>
   nationality : VARCHAR(60)
   biography : TEXT
 }
@@ -63,17 +55,17 @@ entity "books" as books {
   * id : BIGSERIAL <<PK>>
   --
   * isbn : VARCHAR(20) <<UK>>
-  * title : VARCHAR(200)
+  * title : VARCHAR(200) <<IDX>>
   publish_year : INT
   price : NUMERIC(10,2)
-  * category_id : BIGINT <<FK>>
-  * publisher_id : BIGINT <<FK>>
-  * created_at : TIMESTAMP
+  * category_id : BIGINT <<FK, IDX>>
+  * publisher_id : BIGINT <<FK, IDX>>
+  * created_at : TIMESTAMP = now()
 }
 
 entity "book_authors" as book_authors {
-  * book_id : BIGINT <<PK>> <<FK>>
-  * author_id : BIGINT <<PK>> <<FK>>
+  * book_id : BIGINT <<PK, FK>>
+  * author_id : BIGINT <<PK, FK>>
 }
 
 entity "book_copies" as book_copies {
@@ -81,7 +73,7 @@ entity "book_copies" as book_copies {
   --
   * barcode : VARCHAR(30) <<UK>>
   * book_id : BIGINT <<FK>>
-  * status : VARCHAR(20)
+  * status : VARCHAR(20) <<CHECK>>
   shelf_location : VARCHAR(30)
   * acquired_at : DATE
 }
@@ -90,77 +82,74 @@ entity "loans" as loans {
   * id : BIGSERIAL <<PK>>
   --
   * loan_code : VARCHAR(20) <<UK>>
-  * user_id : BIGINT <<FK>>
+  * user_id : BIGINT <<FK, IDX>>
   librarian_id : BIGINT <<FK>>
-  * loan_date : TIMESTAMP
-  * status : VARCHAR(20)
+  * loan_date : TIMESTAMP = CURRENT_TIMESTAMP
+  * status : VARCHAR(20) <<CHECK, IDX>>
 }
 
 entity "loan_items" as loan_items {
   * id : BIGSERIAL <<PK>>
   --
-  * loan_id : BIGINT <<FK>>
-  * book_copy_id : BIGINT <<FK>>
-  * due_date : DATE
+  * loan_id : BIGINT <<FK, IDX>>
+  * book_copy_id : BIGINT <<FK, IDX>>
+  * due_date : DATE <<IDX>>
   returned_at : DATE
-  * renew_count : SMALLINT
+  * renew_count : SMALLINT = 0 <<CHECK 0..2>>
 }
 
 entity "fines" as fines {
   * id : BIGSERIAL <<PK>>
   --
-  * loan_item_id : BIGINT <<FK>> <<UK>>
+  * loan_item_id : BIGINT <<UK, FK in V8>>
   * amount : NUMERIC(10,2)
   * overdue_days : INT
   * status : VARCHAR(20)
-  * created_at : TIMESTAMP
+  * created_at : TIMESTAMP = CURRENT_TIMESTAMP
   paid_at : TIMESTAMP
 }
 
 entity "reservations" as reservations {
   * id : BIGSERIAL <<PK>>
   --
-  * user_id : BIGINT <<FK>>
-  * book_id : BIGINT <<FK>>
-  * reserved_at : TIMESTAMP
+  * user_id : BIGINT <<FK in V8, IDX>>
+  * book_id : BIGINT <<FK in V8, IDX>>
+  reserved_copy_id : BIGINT <<FK in V9, IDX>>
+  * reserved_at : TIMESTAMP = CURRENT_TIMESTAMP
   expires_at : TIMESTAMP
-  * status : VARCHAR(20)
+  * status : VARCHAR(20) <<READY requires copy and expiry>>
 }
 
-' ---------- Relationships ----------
-users ||--|| user_profiles : "One-to-One"
-users ||--o{ loans : "One-to-Many"
-users ||--o{ reservations : "One-to-Many"
-categories ||--o{ books : "One-to-Many"
-publishers ||--o{ books : "One-to-Many"
-books ||--o{ book_copies : "One-to-Many"
-books ||--o{ reservations : "One-to-Many"
+users ||--|| user_profiles : "PK is also FK"
+users ||--o{ loans : "borrower"
+users |o--o{ loans : "librarian"
+users ||--o{ reservations
+categories ||--o{ books
+publishers ||--o{ books
+books ||--o{ book_copies
+books ||--o{ reservations
+book_copies |o--o{ reservations : held copy
 books ||--o{ book_authors
 authors ||--o{ book_authors
-loans ||--o{ loan_items : "One-to-Many"
+loans ||--o{ loan_items
 book_copies ||--o{ loan_items
-loan_items ||--o| fines : "One-to-One"
+loan_items ||--o| fines
 
 note bottom of book_authors
-  <b>Many-to-Many</b> (คะแนนพิเศษ)
-  books <-> authors
+  Many-to-Many: books and authors
   Composite PK (book_id, author_id)
 end note
 
 note bottom of fines
-  One-to-One บังคับด้วย
-  UNIQUE constraint บน loan_item_id
+  V5 adds UNIQUE on loan_item_id.
+  V8 adds the foreign key to loan_items.
 end note
 
-note top of users
-  <b>Index:</b> idx_users_email, idx_users_role
-  <b>Cascade:</b> user -> user_profile = ALL + orphanRemoval
-end note
-
-note top of books
-  <b>Index:</b> idx_books_title, idx_books_category_id
-  <b>Fetch:</b> ManyToOne ทั้งหมดเป็น LAZY (กัน N+1)
-  <b>Cascade:</b> ไม่ cascade ไป category/publisher
+note bottom of reservations
+  V5 already has indexes and a partial unique index for
+  one WAITING or READY reservation per user and book.
+  V8 adds user_id and book_id foreign keys. V9 links a READY
+  reservation to a physical copy and limits one READY row per copy.
 end note
 
 @enduml

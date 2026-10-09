@@ -21,7 +21,11 @@ public class Reservation {
     @JoinColumn(name = "book_id", nullable = false)
     private Book book;
 
-    @Column(name = "reserved_at", insertable = false, updatable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reserved_copy_id")
+    private BookCopy reservedCopy;
+
+    @Column(name = "reserved_at", nullable = false)
     private LocalDateTime reservedAt;
 
     @Column(name = "expires_at")
@@ -38,6 +42,7 @@ public class Reservation {
     public Reservation(User user, Book book) {
         this.user = user;
         this.book = book;
+        this.reservedAt = LocalDateTime.now();
         this.status = ReservationStatus.WAITING;
     }
 
@@ -53,6 +58,10 @@ public class Reservation {
         return book;
     }
 
+    public BookCopy getReservedCopy() {
+        return reservedCopy;
+    }
+
     public LocalDateTime getReservedAt() {
         return reservedAt;
     }
@@ -65,8 +74,9 @@ public class Reservation {
         return status;
     }
 
-    public void markAsReady(LocalDateTime expiresAt) {
+    public void markAsReady(BookCopy reservedCopy, LocalDateTime expiresAt) {
         this.status = ReservationStatus.READY;
+        this.reservedCopy = reservedCopy;
         this.expiresAt = expiresAt;
     }
 

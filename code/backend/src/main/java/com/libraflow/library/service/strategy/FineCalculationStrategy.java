@@ -1,5 +1,7 @@
 package com.libraflow.library.service.strategy;
 
+import com.libraflow.library.domain.enums.MemberTier;
+
 import java.math.BigDecimal;
 
 /**
@@ -15,9 +17,6 @@ public interface FineCalculationStrategy {
      */
     BigDecimal calculateFine(int overdueDays);
 
-    /**
-     * ระบุว่า Strategy นี้ใช้สำหรับ Role หรือเงื่อนไขไหน
-     * @return ชื่อของประเภทที่รองรับ
-     */
-    String getApplicableUserRole();
+    /** ระบุประเภทสมาชิกที่ Strategy นี้ใช้คำนวณ */
+    MemberTier getApplicableMemberTier();
 }

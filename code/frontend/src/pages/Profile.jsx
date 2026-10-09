@@ -1,13 +1,39 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import api from '../api';
+
+function readSession() {
+  const token = localStorage.getItem('token');
+  if (!token) return { userId: null, error: 'กรุณาเข้าสู่ระบบ' };
+
+  try {
+    const decoded = jwtDecode(token);
+    if (decoded.exp && decoded.exp * 1000 <= Date.now()) {
+      localStorage.removeItem('token');
+      return { userId: null, error: 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่' };
+    }
+
+    const userId = decoded.id || decoded.userId || decoded.sub;
+    return userId
+      ? { userId, error: '' }
+      : { userId: null, error: 'เซสชันไม่ถูกต้อง กรุณาล็อกอินใหม่' };
+  } catch (error) {
+    console.error('Token ไม่ถูกต้อง:', error);
+    localStorage.removeItem('token');
+    return { userId: null, error: 'เซสชันไม่ถูกต้อง กรุณาล็อกอินใหม่' };
+  }
+}
 
 export default function Profile() {
   const [profile, setProfile] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [message, setMessage] = useState({ type: '', text: '' });
-  const [userId, setUserId] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [session] = useState(readSession);
+  const { userId } = session;
+  const [message, setMessage] = useState(() => ({
+    type: session.error ? 'error' : '',
+    text: session.error
+  }));
+  const [isLoading, setIsLoading] = useState(Boolean(userId));
   
   // State ใหม่สำหรับเก็บข้อมูลการยืมและค่าปรับ
   const [loans, setLoans] = useState([]);
@@ -20,41 +46,15 @@ export default function Profile() {
     address: ''
   });
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      try {
-        const decoded = jwtDecode(token);
-        const currentUserId = decoded.id || decoded.userId || decoded.sub;
-        setUserId(currentUserId);
-        
-        if (!currentUserId) setIsLoading(false);
-      } catch (error) {
-        console.error("Token ไม่ถูกต้อง:", error);
-        setMessage({ type: 'error', text: 'เซสชันไม่ถูกต้อง กรุณาล็อกอินใหม่' });
-        setIsLoading(false);
-      }
-    } else {
-      setMessage({ type: 'error', text: 'กรุณาเข้าสู่ระบบ' });
-      setIsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (userId) {
-      fetchProfileData(userId);
-    }
-  }, [userId]);
-
-  const fetchProfileData = async (id) => {
-    setIsLoading(true);
+  const fetchProfileData = useCallback(async (id, signal) => {
     try {
       // ดึงข้อมูล 3 ส่วนพร้อมกันด้วย Promise.all เพื่อความรวดเร็ว
       const [profileRes, loansRes, finesRes] = await Promise.all([
-        api.get(`/api/v1/members/${id}`),
-        api.get(`/api/v1/members/${id}/loans`),
-        api.get(`/api/v1/members/${id}/fines?status=UNPAID`)
+        api.get(`/api/v1/members/${id}`, { signal }),
+        api.get(`/api/v1/members/${id}/loans`, { signal }),
+        api.get(`/api/v1/members/${id}/fines?status=UNPAID`, { signal })
       ]);
+      if (signal?.aborted) return;
 
       setProfile(profileRes.data);
       setFormData({
@@ -68,12 +68,23 @@ export default function Profile() {
       setLoans(loansRes.data.content || loansRes.data || []);
       setFines(finesRes.data.content || finesRes.data || []);
     } catch (error) {
+      if (signal?.aborted) return;
       console.error("ดึงข้อมูลล้มเหลว:", error);
       setMessage({ type: 'error', text: `ไม่สามารถดึงข้อมูลโปรไฟล์ได้ (ID: ${id})` });
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) setIsLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return undefined;
+
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (!controller.signal.aborted) return fetchProfileData(userId, controller.signal);
+    });
+    return () => controller.abort();
+  }, [fetchProfileData, userId]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -94,7 +105,7 @@ export default function Profile() {
 
   if (!profile) return (
     <div className="flex justify-center min-h-screen p-8 bg-gray-50">
-      <div className="w-full max-w-3xl p-4 mt-10 text-red-800 bg-red-100 border border-red-200 rounded-md shadow-sm h-fit">
+      <div className="w-full max-w-3xl p-4 mt-10 text-red-800 bg-red-100 border border-red-200 rounded-md shadow-xs h-fit">
         {message.text}
       </div>
     </div>
@@ -108,7 +119,7 @@ export default function Profile() {
       <div className="max-w-4xl mx-auto space-y-6">
         
         {/* กล่อง 1: ข้อมูลโปรไฟล์หลัก (ของเดิม) */}
-        <div className="overflow-hidden bg-white border shadow-sm rounded-xl">
+        <div className="overflow-hidden bg-white border shadow-xs rounded-xl">
           <div className="p-6 text-white bg-blue-700">
             <div className="flex items-center justify-between">
               <div>
@@ -140,7 +151,7 @@ export default function Profile() {
                     disabled={!isEditing}
                     value={formData.firstName}
                     onChange={(e) => setFormData({...formData, firstName: e.target.value})}
-                    className="w-full px-4 py-2 bg-gray-50 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:text-gray-500"
+                    className="w-full px-4 py-2 bg-gray-50 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 disabled:text-gray-500"
                     required 
                   />
                 </div>
@@ -151,7 +162,7 @@ export default function Profile() {
                     disabled={!isEditing}
                     value={formData.lastName}
                     onChange={(e) => setFormData({...formData, lastName: e.target.value})}
-                    className="w-full px-4 py-2 bg-gray-50 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:text-gray-500"
+                    className="w-full px-4 py-2 bg-gray-50 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 disabled:text-gray-500"
                     required 
                   />
                 </div>
@@ -164,7 +175,7 @@ export default function Profile() {
                   disabled={!isEditing}
                   value={formData.phoneNumber}
                   onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
-                  className="w-full px-4 py-2 bg-gray-50 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:text-gray-500"
+                  className="w-full px-4 py-2 bg-gray-50 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 disabled:text-gray-500"
                 />
               </div>
 
@@ -175,7 +186,7 @@ export default function Profile() {
                   rows="3"
                   value={formData.address}
                   onChange={(e) => setFormData({...formData, address: e.target.value})}
-                  className="w-full px-4 py-2 bg-gray-50 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:text-gray-500"
+                  className="w-full px-4 py-2 bg-gray-50 border rounded-md focus:outline-hidden focus:ring-2 focus:ring-blue-500 disabled:text-gray-500"
                 ></textarea>
               </div>
 
@@ -220,7 +231,7 @@ export default function Profile() {
 
         {/* กล่อง 2: แจ้งเตือนค่าปรับ (โผล่มาเฉพาะตอนมีค่าปรับค้างชำระ) */}
         {fines.length > 0 && (
-          <div className="p-6 bg-white border border-red-200 shadow-sm rounded-xl">
+          <div className="p-6 bg-white border border-red-200 shadow-xs rounded-xl">
             <h2 className="mb-4 text-xl font-bold text-red-700">ค่าปรับค้างชำระ (รวม: {totalFines} บาท)</h2>
             <ul className="space-y-2">
               {fines.map(fine => (
@@ -235,7 +246,7 @@ export default function Profile() {
         )}
 
         {/* กล่อง 3: ประวัติการยืม */}
-        <div className="p-6 bg-white border shadow-sm rounded-xl">
+        <div className="p-6 bg-white border shadow-xs rounded-xl">
           <h2 className="mb-4 text-xl font-bold text-gray-800">ประวัติการยืมหนังสือ</h2>
           {loans.length === 0 ? (
             <p className="py-4 text-center text-gray-500">ยังไม่มีประวัติการยืมหนังสือ</p>

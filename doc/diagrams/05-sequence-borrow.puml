@@ -16,6 +16,7 @@ actor "บรรณารักษ์" as LIB
 participant "LoanController" as C
 participant "LoanServiceImpl" as S
 participant "BookCopyRepository" as CR
+participant "ReservationRepository" as RR
 collections "BorrowRule chain\n(Chain of Responsibility)" as R
 participant "LoanRepository" as LR
 participant "LoanMapper" as M
@@ -34,7 +35,14 @@ DB --> CR : rows
 CR --> S : List<BookCopy>
 deactivate CR
 
-S -> S : สร้าง BorrowContext(member, copies)
+loop สำหรับ copy สถานะ RESERVED
+  S -> RR : find READY reservation\nby memberId + reservedCopyId + expiresAt
+  RR -> DB : SELECT reservation ที่ยังไม่หมดอายุ
+  DB --> RR : Reservation หรือไม่พบ
+  RR --> S : reservation ของเจ้าของคิว (ถ้ามี)
+end
+
+S -> S : สร้าง BorrowContext(member, copies, reservations)
 
 group ตรวจสอบสิทธิ์ตามลำดับกฎ
   S -> R : check(ctx)
@@ -55,17 +63,17 @@ else ผ่านทุกกฎ
   R --> S : OK
   S -> S : คำนวณ dueDate ตาม MemberTier (BR-05)
   S -> S : สร้าง Loan + LoanItem ทั้งหมด
+  S -> S : ตั้ง BookCopy เป็น ON_LOAN
+  opt copy ถูกกันให้ผู้ยืม
+    S -> RR : mark reservation FULFILLED
+    RR -> DB : UPDATE reservations SET status='FULFILLED'
+  end
   S -> LR : save(loan)
   activate LR
-  LR -> DB : INSERT INTO loans\nINSERT INTO loan_items
+  LR -> DB : INSERT INTO loans\nINSERT INTO loan_items\nUPDATE book_copies SET status='ON_LOAN'
   DB --> LR : generated ids
   LR --> S : Loan (persisted)
   deactivate LR
-
-  S -> CR : updateStatus(copyIds, ON_LOAN)
-  activate CR
-  CR -> DB : UPDATE book_copies SET status='ON_LOAN'
-  deactivate CR
 
   S -> M : toResponse(loan)
   activate M

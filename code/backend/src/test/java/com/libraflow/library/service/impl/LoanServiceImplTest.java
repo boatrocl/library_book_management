@@ -4,9 +4,11 @@ import com.libraflow.library.domain.entity.Book;
 import com.libraflow.library.domain.entity.BookCopy;
 import com.libraflow.library.domain.entity.Loan;
 import com.libraflow.library.domain.entity.LoanItem;
+import com.libraflow.library.domain.entity.Reservation;
 import com.libraflow.library.domain.entity.User;
 import com.libraflow.library.domain.enums.BookCopyStatus;
 import com.libraflow.library.domain.enums.LoanStatus;
+import com.libraflow.library.domain.enums.MemberTier;
 import com.libraflow.library.domain.enums.UserRole;
 import com.libraflow.library.dto.request.BorrowRequest;
 import com.libraflow.library.dto.response.LoanItemResponse;
@@ -23,7 +25,9 @@ import com.libraflow.library.pattern.state.LoanState;
 import com.libraflow.library.pattern.state.LoanStateFactory;
 import com.libraflow.library.repository.BookCopyRepository;
 import com.libraflow.library.repository.LoanRepository;
+import com.libraflow.library.repository.ReservationRepository;
 import com.libraflow.library.repository.UserRepository;
+import com.libraflow.library.service.FineService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -49,6 +53,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -76,6 +81,9 @@ class LoanServiceImplTest {
     private UserRepository userRepository;
 
     @Mock
+    private ReservationRepository reservationRepository;
+
+    @Mock
     private BorrowRule rule1;
 
     @Mock
@@ -89,6 +97,9 @@ class LoanServiceImplTest {
 
     @Mock
     private LoanMapper mapper;
+
+    @Mock
+    private FineService fineService;
 
     @Mock
     private User mockUser;
@@ -114,10 +125,12 @@ class LoanServiceImplTest {
                 loanRepository,
                 copyRepository,
                 userRepository,
+                reservationRepository,
                 rules,
                 stateFactory,
                 publisher,
-                mapper
+                mapper,
+                fineService
         );
     }
 
@@ -173,6 +186,41 @@ class LoanServiceImplTest {
             verify(mockCopy2).setStatus(BookCopyStatus.ON_LOAN);
 
             verify(loanRepository).save(any(Loan.class));
+        }
+
+        @Test
+        @DisplayName("เจ้าของคิว READY ยืมตัวเล่มที่กันไว้ได้และปิดรายการจอง")
+        void borrow_reservedCopyForReservationOwner_shouldFulfillReservation() {
+            BorrowRequest request = new BorrowRequest(1L, List.of("BC-READY"));
+            Reservation reservation = new Reservation(mockUser, mockBook);
+            reservation.markAsReady(mockCopy1, LocalDateTime.now().plusHours(12));
+
+            when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
+            when(mockUser.getId()).thenReturn(1L);
+            when(mockUser.getUsername()).thenReturn("somchai");
+            when(mockUser.getRole()).thenReturn(UserRole.MEMBER);
+            when(copyRepository.findByBarcodeIn(request.barcodes())).thenReturn(List.of(mockCopy1));
+            when(mockCopy1.getId()).thenReturn(22L);
+            when(mockCopy1.getStatus()).thenReturn(BookCopyStatus.RESERVED);
+            when(reservationRepository.findByUserIdAndReservedCopyIdAndStatusAndExpiresAtAfter(
+                    eq(1L), eq(22L), eq(com.libraflow.library.domain.enums.ReservationStatus.READY), any()))
+                    .thenReturn(Optional.of(reservation));
+            when(loanRepository.countActiveLoanItemsByUserId(1L)).thenReturn(0L);
+            when(rule1.order()).thenReturn(1);
+            when(rule2.order()).thenReturn(2);
+            when(loanRepository.existsByLoanCode(anyString())).thenReturn(false);
+            when(loanRepository.save(any(Loan.class))).thenAnswer(invocation -> invocation.getArgument(0));
+            when(mapper.toResponse(any(Loan.class), eq("somchai"), eq("STUDENT")))
+                    .thenReturn(createDummyResponse(101L));
+
+            loanService.borrow(request);
+
+            ArgumentCaptor<BorrowContext> contextCaptor = ArgumentCaptor.forClass(BorrowContext.class);
+            verify(rule1).check(contextCaptor.capture());
+            assertThat(contextCaptor.getValue().isCopyReservedForMember(22L)).isTrue();
+            assertThat(reservation.getStatus()).isEqualTo(com.libraflow.library.domain.enums.ReservationStatus.FULFILLED);
+            verify(reservationRepository).save(reservation);
+            verify(mockCopy1).setStatus(BookCopyStatus.ON_LOAN);
         }
 
         @Test
@@ -277,6 +325,35 @@ class LoanServiceImplTest {
             assertThat(event.getMemberId()).isEqualTo(1L);
 
             verify(loanRepository).save(loan);
+            verify(fineService, never()).generateFine(any(), anyInt(), any());
+        }
+
+        @Test
+        @DisplayName("คืนเกินกำหนด: สร้างค่าปรับตามจำนวนวันที่ช้าและประเภทสมาชิก")
+        void returnBook_overdue_shouldGenerateFineForMemberTier() {
+            Loan loan = new Loan("LN-002", mockUser, null, LocalDateTime.now(), LoanStatus.OVERDUE);
+            LoanItem item = new LoanItem(loan, mockCopy1, LocalDate.now().minusDays(4));
+            loan.addItem(item);
+
+            when(loanRepository.findByIdWithDetails(11L)).thenReturn(Optional.of(loan));
+            when(stateFactory.stateOf(loan)).thenReturn(mockState);
+            when(mockUser.getRole()).thenReturn(UserRole.MEMBER);
+            when(mockUser.getMemberTier()).thenReturn("EXTERNAL");
+            when(mockCopy1.getBook()).thenReturn(mockBook);
+            when(mockBook.getId()).thenReturn(50L);
+            when(mockCopy1.getId()).thenReturn(500L);
+            when(mockUser.getId()).thenReturn(1L);
+            doAnswer(invocation -> {
+                item.setReturnedAt(LocalDate.now());
+                loan.setStatus(LoanStatus.RETURNED);
+                return null;
+            }).when(mockState).onReturn(loan, item);
+            when(loanRepository.save(loan)).thenReturn(loan);
+            when(mapper.toResponse(loan)).thenReturn(createDummyResponse(11L));
+
+            loanService.returnBook(11L);
+
+            verify(fineService).generateFine(item, 4, MemberTier.EXTERNAL);
         }
 
         @Test

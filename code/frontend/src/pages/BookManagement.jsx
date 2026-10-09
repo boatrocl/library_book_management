@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
 
 export default function BookManagement() {
   const [books, setBooks] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState({ type: '', text: '' });
 
   const navigate = useNavigate();
@@ -22,23 +22,28 @@ export default function BookManagement() {
     authorIds: '' // รับเป็น string เช่น "1, 2" แล้วแปลงเป็น array ตอนส่ง
   });
 
-  const fetchBooks = async () => {
-    setLoading(true);
+  const fetchBooks = useCallback(async (signal) => {
     try {
       // ดึงข้อมูลหนังสือทั้งหมด (สเปครองรับ Pagination แต่เพื่อความง่ายในหน้าจัดการเราจะดึงหน้าแรกมาแสดงก่อน)
-      const response = await api.get('/api/v1/books?size=50');
+      const response = await api.get('/api/v1/books?size=50', { signal });
+      if (signal?.aborted) return;
       setBooks(response.data.content || []);
     } catch (error) {
+      if (signal?.aborted) return;
       console.error("Fetch books error:", error);
       setMessage({ type: 'error', text: 'ไม่สามารถดึงข้อมูลหนังสือได้' });
     } finally {
-      setLoading(false);
+      if (!signal?.aborted) setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchBooks();
-  }, []);
+    const controller = new AbortController();
+    void Promise.resolve().then(() => {
+      if (!controller.signal.aborted) return fetchBooks(controller.signal);
+    });
+    return () => controller.abort();
+  }, [fetchBooks]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -89,7 +94,8 @@ export default function BookManagement() {
         setMessage({ type: 'success', text: 'เพิ่มหนังสือใหม่สำเร็จ' });
       }
       setIsModalOpen(false);
-      fetchBooks(); // รีเฟรชตาราง
+      setLoading(true);
+      await fetchBooks(); // รีเฟรชตาราง
     } catch (error) {
       console.error("Submit error:", error);
       setMessage({ 
@@ -105,7 +111,8 @@ export default function BookManagement() {
     try {
       await api.delete(`/api/v1/books/${id}`);
       setMessage({ type: 'success', text: 'ลบหนังสือสำเร็จ' });
-      fetchBooks();
+      setLoading(true);
+      await fetchBooks();
     } catch (error) {
       console.error("Delete error:", error);
       setMessage({ 
@@ -138,7 +145,7 @@ export default function BookManagement() {
         )}
 
         {/* ตารางแสดงหนังสือ */}
-        <div className="overflow-hidden bg-white border shadow-sm rounded-xl">
+        <div className="overflow-hidden bg-white border shadow-xs rounded-xl">
           {loading ? (
             <div className="py-10 text-center text-gray-500">กำลังโหลดข้อมูล...</div>
           ) : (

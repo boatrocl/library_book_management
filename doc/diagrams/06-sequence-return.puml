@@ -1,5 +1,5 @@
 @startuml 06-sequence-return
-title Sequence Diagram #2 — บันทึกการคืน + คิดค่าปรับ + แจ้งคิวจอง\n(PATCH /api/v1/loans/{id}/return)
+title Sequence Diagram #2 — คืนหนังสือ คิดค่าปรับ และเตรียมคิวจอง\n(PATCH /api/v1/loans/{id}/return)
 
 skinparam defaultFontName "Tahoma"
 skinparam defaultFontSize 12
@@ -15,75 +15,99 @@ autonumber
 actor "บรรณารักษ์" as LIB
 participant "LoanController" as C
 participant "LoanServiceImpl" as S
+participant "LoanRepository" as LR
 participant "LoanStateFactory" as SF
 participant "LoanState\n(State Pattern)" as ST
-participant "FineStrategyResolver" as FR
+participant "FineServiceImpl" as F
 participant "FineCalculationStrategy\n(Strategy Pattern)" as FS
-participant "FineRepository" as FRP
+participant "FineRepository" as FR
 participant "ApplicationEventPublisher" as PUB
 participant "ReservationNotificationListener\n(Observer)" as NL
+participant "ReservationRepository" as RR
+participant "BookCopyRepository" as BCR
 database "PostgreSQL" as DB
 
 LIB -> C : PATCH /api/v1/loans/{id}/return
 activate C
 C -> S : returnBook(loanId)
 activate S
+S -> LR : findByIdWithDetails(loanId)
+LR -> DB : SELECT Loan พร้อม LoanItems
+DB --> LR : Loan พร้อม LoanItems
+LR --> S : Loan
 
-S -> DB : SELECT loan + loan_items (JOIN FETCH)
-DB --> S : Loan
+loop แต่ละ LoanItem ที่ยังไม่คืน
+  S -> SF : stateOf(loan)
+  SF --> S : ActiveState หรือ OverdueState
+  S -> ST : onReturn(loan, item)
+  ST --> S : เปลี่ยนสถานะรายการเป็น RETURNED
 
-S -> SF : stateOf(loan)
-activate SF
-SF --> S : ActiveState หรือ OverdueState
-deactivate SF
+  alt overdueDays > 0
+    S -> F : generateFine(item, overdueDays, memberTier)
+    activate F
+    F -> FS : เลือกกลยุทธ์ตาม MemberTier
+    F -> FS : calculateFine(overdueDays)
+    activate FS
+    FS -> FS : คำนวณจำนวนวัน x อัตรา\nและใช้เพดาน STAFF ตาม BR-07
+    FS --> F : amount
+    deactivate FS
+    F -> FR : save(Fine)
+    FR -> DB : INSERT INTO fines
+    DB --> FR : Fine ที่บันทึกแล้ว
+    FR --> F : Fine
+    F --> S : Fine
+    deactivate F
+  else คืนตรงเวลา
+    S -> S : ไม่สร้างค่าปรับ
+  end
 
-S -> ST : onReturn(loan, item)
-activate ST
-ST -> ST : ตรวจว่าเปลี่ยนสถานะได้
-ST --> S : สถานะ -> RETURNED
-deactivate ST
-
-alt คืนเกินกำหนด (returnedAt > dueDate)
-  S -> FR : resolve(member.memberTier)
-  activate FR
-  FR --> S : strategy ที่ supports(tier)
-  deactivate FR
-
-  S -> FS : calculate(loanItem, today)
-  activate FS
-  FS -> FS : overdueDays x rate\n(ใช้เพดานถ้ามี — BR-07)
-  FS --> S : BigDecimal amount
-  deactivate FS
-
-  S -> FRP : save(new Fine(item, amount, UNPAID))
-  FRP -> DB : INSERT INTO fines
-else คืนตรงเวลา
-  S -> S : ไม่สร้าง Fine
+  S -> S : ตั้งสถานะ BookCopy เป็น AVAILABLE
+  S -> PUB : publishEvent(BookReturnedEvent)
 end
 
-S -> DB : UPDATE book_copies SET status='AVAILABLE'
-S -> DB : UPDATE loans SET status='RETURNED'
-
-S -> PUB : publishEvent(BookReturnedEvent)
-activate PUB
-note right of PUB
-  @TransactionalEventListener
-  phase = AFTER_COMMIT
-  กันการส่งอีเมลแล้ว rollback
+S -> LR : save(loan)
+LR -> DB : บันทึก Loan และ LoanItems
+DB --> LR : บันทึกสำเร็จ
+LR --> S : Loan ที่บันทึกแล้ว
+note over S,DB
+  หลัง transaction commit เท่านั้น
+  listener จึงเริ่มทำงาน (AFTER_COMMIT)
 end note
-PUB -> NL : onBookReturned(event)
+
+PUB -> NL : onBookCopyAvailable(event)
 activate NL
-NL -> DB : SELECT reservation คิวแรก\nWHERE book_id = ? AND status='WAITING'\nORDER BY reserved_at LIMIT 1
-DB --> NL : Reservation
-NL -> DB : UPDATE reservations SET status='READY',\nexpires_at = now() + 48h
-NL -> NL : ส่งอีเมลแจ้งสมาชิก (BR-10)
+NL -> BCR : findById(copyId)
+BCR -> DB : SELECT BookCopy
+DB --> BCR : BookCopy (AVAILABLE)
+BCR --> NL : copy
+NL -> RR : findFirstByBookIdAndStatusOrderByReservedAtAsc(\nbookId, WAITING)
+RR -> DB : SELECT คิว WAITING ลำดับแรก
+DB --> RR : Reservation หรือไม่พบ
+RR --> NL : ผลการค้นหา
+opt พบรายการจอง
+  NL -> NL : markAsReady(now + 48 ชั่วโมง)
+  NL -> NL : ผูก reservation กับ BookCopy
+  NL -> RR : save(reservation)
+  RR -> DB : UPDATE reservations SET status='READY',\nexpires_at = now() + 48h
+  NL -> BCR : save(copy with status RESERVED)
+  BCR -> DB : UPDATE book_copies SET status='RESERVED'
+  NL -> NL : เขียน log แจ้งเตือนจำลอง
+  note right of NL
+    ยังไม่ได้เชื่อมผู้ให้บริการอีเมลหรือ SMS
+  end note
+end
 NL --> PUB : done
 deactivate NL
-deactivate PUB
 
 S --> C : LoanResponse
 deactivate S
 C --> LIB : 200 OK
 deactivate C
+
+note bottom
+  BR-08: การจัด LOST และค่าทดแทนราคาเต็มทำใน LoanScheduler\n
+  ไม่ได้อยู่ในเส้นทาง return นี้ การยกเลิก/หมดอายุคิวจะคืนตัวเล่ม\n
+  และส่ง event เพื่อให้คิว WAITING ถัดไปได้รับตัวเล่ม
+end note
 
 @enduml

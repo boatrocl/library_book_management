@@ -41,8 +41,13 @@ Authentication: `Authorization: Bearer <JWT>`
 | Method | Endpoint | Success | Error | สิทธิ์ |
 |---|---|---|---|---|
 | GET | `/api/v1/reservations?status=&page=&size=` | 200 | | LIBRARIAN |
-| POST | `/api/v1/reservations` | 201 | 400, 409 | MEMBER |
-| DELETE | `/api/v1/reservations/{id}` | 204 | 404 | MEMBER (เจ้าของ) |
+| POST | `/api/v1/reservations` | 201 | 400, 403, 409 | MEMBER (ตนเอง), LIBRARIAN, ADMIN |
+| DELETE | `/api/v1/reservations/{id}` | 204 | 403, 404, 409 | MEMBER (เจ้าของ), LIBRARIAN, ADMIN |
+
+`GET` returns a paginated `PageResponse<ReservationResponse>` and may filter by `status`.
+When status is `READY`, the response includes `reservedCopyId`, `reservedBarcode`, and `expiresAt`.
+Only the reservation owner may borrow that `RESERVED` copy before `expiresAt`; cancellation or
+automatic expiry releases the copy and advances the queue. Email/SMS delivery is not wired yet.
 
 ### Fines
 | Method | Endpoint | Success | Error | สิทธิ์ |
@@ -179,6 +184,7 @@ Authentication: `Authorization: Bearer <JWT>`
 | `RENEW_LIMIT_REACHED` | 409 | ต่ออายุครบจำนวนครั้งแล้ว | BR-06 |
 | `RENEW_BLOCKED_BY_RESERVATION` | 409 | มีคนจองคิวรออยู่ ต่ออายุไม่ได้ | BR-06 |
 | `DUPLICATE_RESERVATION` | 409 | จองหนังสือเล่มเดิมซ้ำ | BR-09 |
+| `RESERVATION_NOT_CANCELLABLE` | 409 | ยกเลิกได้เฉพาะ WAITING หรือ READY |
 | `BOOK_IN_USE` | 409 | ลบหนังสือไม่ได้เพราะมีตัวเล่มถูกยืม | BR-11 |
 | `ACCESS_DENIED` | 403 | ไม่มีสิทธิ์เข้าถึง | |
 | `INTERNAL_ERROR` | 500 | ข้อผิดพลาดที่ไม่คาดคิด | |
