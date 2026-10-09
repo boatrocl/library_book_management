@@ -12,6 +12,7 @@ import com.libraflow.library.dto.response.ReservationResponse;
 import com.libraflow.library.pattern.observer.BookCopyAvailableEvent;
 import com.libraflow.library.repository.BookCopyRepository;
 import com.libraflow.library.repository.BookRepository;
+import com.libraflow.library.repository.LoanRepository;
 import com.libraflow.library.repository.ReservationRepository;
 import com.libraflow.library.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -38,6 +39,7 @@ class ReservationServiceImplTest {
     @Mock private UserRepository userRepository;
     @Mock private BookRepository bookRepository;
     @Mock private BookCopyRepository bookCopyRepository;
+    @Mock private LoanRepository loanRepository;
     @Mock private ApplicationEventPublisher publisher;
 
     @Test
@@ -56,7 +58,7 @@ class ReservationServiceImplTest {
                 .thenReturn(List.of(reservation));
 
         ReservationServiceImpl service = new ReservationServiceImpl(
-                reservationRepository, userRepository, bookRepository, bookCopyRepository, publisher);
+                reservationRepository, userRepository, bookRepository, bookCopyRepository, loanRepository, publisher);
 
         int expiredCount = service.expireReadyReservations(now);
 
@@ -80,7 +82,7 @@ class ReservationServiceImplTest {
                 .thenReturn(true);
 
         ReservationServiceImpl service = new ReservationServiceImpl(
-                reservationRepository, userRepository, bookRepository, bookCopyRepository, publisher);
+                reservationRepository, userRepository, bookRepository, bookCopyRepository, loanRepository, publisher);
 
         BusinessException error = assertThrows(BusinessException.class,
                 () -> service.createReservation(3L, 7L, "member", false));
@@ -99,7 +101,7 @@ class ReservationServiceImplTest {
         when(bookCopyRepository.countByBookIdAndStatus(7L, BookCopyStatus.AVAILABLE)).thenReturn(1L);
 
         ReservationServiceImpl service = new ReservationServiceImpl(
-                reservationRepository, userRepository, bookRepository, bookCopyRepository, publisher);
+                reservationRepository, userRepository, bookRepository, bookCopyRepository, loanRepository, publisher);
 
         BusinessException error = assertThrows(BusinessException.class,
                 () -> service.createReservation(3L, 7L, "member", false));
@@ -126,7 +128,7 @@ class ReservationServiceImplTest {
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
         ReservationServiceImpl service = new ReservationServiceImpl(
-                reservationRepository, userRepository, bookRepository, bookCopyRepository, publisher);
+                reservationRepository, userRepository, bookRepository, bookCopyRepository, loanRepository, publisher);
 
         ReservationResponse response = service.createReservationForMember("member", 7L);
 
@@ -144,7 +146,7 @@ class ReservationServiceImplTest {
         when(reservationRepository.findById(9L)).thenReturn(Optional.of(reservation));
 
         ReservationServiceImpl service = new ReservationServiceImpl(
-                reservationRepository, userRepository, bookRepository, bookCopyRepository, publisher);
+                reservationRepository, userRepository, bookRepository, bookCopyRepository, loanRepository, publisher);
 
         BusinessException error = assertThrows(BusinessException.class,
                 () -> service.cancelReservation(9L, "another-member", false));

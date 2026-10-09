@@ -2131,3 +2131,12 @@ summary:focus-visible {
     transition-duration: .01ms !important;
   }
 }
+.book-management-modal-backdrop {
+  background: rgba(16, 35, 45, .38);
+  backdrop-filter: blur(2px);
+}
+
+.book-management-modal {
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+}

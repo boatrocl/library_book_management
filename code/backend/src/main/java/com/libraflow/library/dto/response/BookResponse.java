@@ -9,6 +9,7 @@ import java.util.List;
  * สังเกตว่าเราส่ง categoryName / publisherName / authors เป็นชื่อ ไม่ใช่ object ทั้งก้อน
  * เพราะหน้าจอรายการหนังสือต้องการแค่ชื่อไปแสดง การส่ง entity ทั้งก้อนจะพ่วง field
  * ที่ไม่ได้ใช้ (เช่น biography ของผู้แต่งซึ่งเป็น TEXT ยาว ๆ) ไปด้วยโดยเปล่าประโยชน์
+ * ส่ง ID ของความสัมพันธ์แยกต่างหาก เพื่อให้ฟอร์มแก้ไขส่ง reference เดิมกลับได้
  */
 public record BookResponse(
         Long id,
@@ -17,9 +18,28 @@ public record BookResponse(
         Integer publishYear,
         BigDecimal price,
         String categoryName,
+        Long categoryId,
         String publisherName,
+        Long publisherId,
         List<String> authors,
+        List<Long> authorIds,
         long availableCopies,
         long totalCopies
 ) {
+    /** Backward-compatible constructor for response fixtures that only need display fields. */
+    public BookResponse(
+            Long id,
+            String isbn,
+            String title,
+            Integer publishYear,
+            BigDecimal price,
+            String categoryName,
+            String publisherName,
+            List<String> authors,
+            long availableCopies,
+            long totalCopies
+    ) {
+        this(id, isbn, title, publishYear, price, categoryName, null,
+                publisherName, null, authors, List.of(), availableCopies, totalCopies);
+    }
 }

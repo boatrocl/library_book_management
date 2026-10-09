@@ -14,6 +14,7 @@ import com.libraflow.library.exception.ResourceNotFoundException;
 import com.libraflow.library.pattern.observer.BookCopyAvailableEvent;
 import com.libraflow.library.repository.BookCopyRepository;
 import com.libraflow.library.repository.BookRepository;
+import com.libraflow.library.repository.LoanRepository;
 import com.libraflow.library.repository.ReservationRepository;
 import com.libraflow.library.repository.UserRepository;
 import com.libraflow.library.service.ReservationService;
@@ -36,6 +37,7 @@ public class ReservationServiceImpl implements ReservationService {
     private final UserRepository userRepository;
     private final BookRepository bookRepository;
     private final BookCopyRepository bookCopyRepository;
+    private final LoanRepository loanRepository;
     private final ApplicationEventPublisher publisher;
 
     public ReservationServiceImpl(
@@ -43,11 +45,13 @@ public class ReservationServiceImpl implements ReservationService {
             UserRepository userRepository,
             BookRepository bookRepository,
             BookCopyRepository bookCopyRepository,
+            LoanRepository loanRepository,
             ApplicationEventPublisher publisher) {
         this.reservationRepository = reservationRepository;
         this.userRepository = userRepository;
         this.bookRepository = bookRepository;
         this.bookCopyRepository = bookCopyRepository;
+        this.loanRepository = loanRepository;
         this.publisher = publisher;
     }
 
@@ -66,6 +70,10 @@ public class ReservationServiceImpl implements ReservationService {
 
         Book book = bookRepository.findById(bookId)
                 .orElseThrow(() -> new ResourceNotFoundException("ไม่พบหนังสือ id: " + bookId));
+
+        if (loanRepository.existsActiveLoanByUserIdAndBookId(userId, bookId)) {
+            throw new BusinessException(ErrorCode.BOOK_ALREADY_ON_LOAN);
+        }
 
         if (reservationRepository.existsByUserIdAndBookIdAndStatusIn(
                 userId, bookId, List.of(ReservationStatus.WAITING, ReservationStatus.READY))) {
