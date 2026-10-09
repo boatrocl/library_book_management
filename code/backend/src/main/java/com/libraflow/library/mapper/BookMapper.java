@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * แปลงข้อมูลระหว่าง Entity กับ DTO
@@ -26,6 +27,11 @@ public class BookMapper {
                 .map(Author::getFullName)
                 .sorted(Comparator.naturalOrder())
                 .toList();
+        List<Long> authorIds = book.getAuthors().stream()
+                .map(Author::getId)
+                .filter(Objects::nonNull)
+                .sorted()
+                .toList();
 
         return new BookResponse(
                 book.getId(),
@@ -34,8 +40,11 @@ public class BookMapper {
                 book.getPublishYear(),
                 book.getPrice(),
                 book.getCategory().getName(),
+                book.getCategory().getId(),
                 book.getPublisher().getName(),
+                book.getPublisher().getId(),
                 authorNames,
+                authorIds,
                 availableCopies,
                 totalCopies);
     }

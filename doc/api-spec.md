@@ -154,8 +154,11 @@ Report endpoints select CSV/PDF from the route; they do not accept a `format` qu
       "publishYear": 2008,
       "price": 1650.00,
       "categoryName": "Software Engineering",
+      "categoryId": 1,
       "publisherName": "Prentice Hall",
+      "publisherId": 1,
       "authors": ["Robert C. Martin"],
+      "authorIds": [1],
       "availableCopies": 3,
       "totalCopies": 5
     }
