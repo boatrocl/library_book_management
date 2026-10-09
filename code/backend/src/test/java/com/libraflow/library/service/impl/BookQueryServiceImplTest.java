@@ -28,6 +28,7 @@ import org.springframework.data.domain.Pageable;
 
 import com.libraflow.library.domain.entity.Book;
 import com.libraflow.library.domain.entity.BookCopy;
+import com.libraflow.library.domain.enums.BookAvailabilityFilter;
 import com.libraflow.library.domain.enums.BookCopyStatus;
 import com.libraflow.library.dto.response.BookCopyResponse;
 import com.libraflow.library.dto.response.BookResponse;
@@ -139,12 +140,12 @@ class BookQueryServiceImplTest {
   void searchShouldPassEmptyKeywordWhenKeywordIsBlank(String keyword) {
 
     Pageable pageable = PageRequest.of(0, 10);
-    when(bookRepository.search("", null, pageable)).thenReturn(Page.empty(pageable));
+    when(bookRepository.search("", null, "ALL", pageable)).thenReturn(Page.empty(pageable));
 
-    service.search(keyword, null, pageable);
+    service.search(keyword, null, null, pageable);
 
     // ถ้า service ส่ง null ไปจริง จะเกิด error lower(bytea) บน PostgreSQL
-    verify(bookRepository).search("", null, pageable);
+    verify(bookRepository).search("", null, "ALL", pageable);
   }
 
   @Test
@@ -152,11 +153,35 @@ class BookQueryServiceImplTest {
   void searchShouldTrimKeywordBeforeQuerying() {
 
     Pageable pageable = PageRequest.of(0, 10);
-    when(bookRepository.search("clean", null, pageable)).thenReturn(Page.empty(pageable));
+    when(bookRepository.search("clean", null, "ALL", pageable)).thenReturn(Page.empty(pageable));
 
-    service.search("  clean  ", null, pageable);
+    service.search("  clean  ", null, null, pageable);
 
-    verify(bookRepository).search("clean", null, pageable);
+    verify(bookRepository).search("clean", null, "ALL", pageable);
+  }
+
+  @Test
+  @DisplayName("search เมื่อไม่ได้ส่ง availability ต้องใช้ ALL (ไม่กรองตามความพร้อมให้ยืม)")
+  void searchShouldDefaultAvailabilityToAllWhenNull() {
+
+    Pageable pageable = PageRequest.of(0, 10);
+    when(bookRepository.search("clean", null, "ALL", pageable)).thenReturn(Page.empty(pageable));
+
+    service.search("clean", null, null, pageable);
+
+    verify(bookRepository).search("clean", null, "ALL", pageable);
+  }
+
+  @Test
+  @DisplayName("search ต้องส่งชื่อ enum ของ availability ที่เลือกให้ repository เป็น String")
+  void searchShouldPassAvailabilityNameToRepository() {
+
+    Pageable pageable = PageRequest.of(0, 10);
+    when(bookRepository.search("clean", 7L, "AVAILABLE", pageable)).thenReturn(Page.empty(pageable));
+
+    service.search("clean", 7L, BookAvailabilityFilter.AVAILABLE, pageable);
+
+    verify(bookRepository).search("clean", 7L, "AVAILABLE", pageable);
   }
 
   @Test
@@ -164,9 +189,9 @@ class BookQueryServiceImplTest {
   void searchShouldNotCountCopiesWhenPageIsEmpty() {
 
     Pageable pageable = PageRequest.of(0, 10);
-    when(bookRepository.search("clean", null, pageable)).thenReturn(Page.empty(pageable));
+    when(bookRepository.search("clean", null, "ALL", pageable)).thenReturn(Page.empty(pageable));
 
-    PageResponse<BookResponse> result = service.search("clean", null, pageable);
+    PageResponse<BookResponse> result = service.search("clean", null, null, pageable);
 
     assertThat(result.content()).isEmpty();
     verify(bookCopyRepository, never()).countCopiesByBookIds(org.mockito.ArgumentMatchers.anyCollection());
@@ -180,13 +205,13 @@ class BookQueryServiceImplTest {
     Book book = bookWithId(1L);
     BookResponse expected = responseOf(1L);
 
-    when(bookRepository.search("clean", null, pageable))
+    when(bookRepository.search("clean", null, "ALL", pageable))
         .thenReturn(new PageImpl<>(List.of(book), pageable, 1));
     // หนังสือเล่มนี้ยังไม่มีตัวเล่มเลย จึงไม่มีแถวกลับมา
     when(bookCopyRepository.countCopiesByBookIds(List.of(1L))).thenReturn(List.of());
     when(bookMapper.toResponse(book, 0L, 0L)).thenReturn(expected);
 
-    PageResponse<BookResponse> result = service.search("clean", null, pageable);
+    PageResponse<BookResponse> result = service.search("clean", null, null, pageable);
 
     assertThat(result.content()).containsExactly(expected);
   }
@@ -200,7 +225,7 @@ class BookQueryServiceImplTest {
     Book book2 = bookWithId(2L);
     Book book3 = bookWithId(3L);
 
-    when(bookRepository.search("clean", null, pageable))
+    when(bookRepository.search("clean", null, "ALL", pageable))
         .thenReturn(new PageImpl<>(List.of(book1, book2, book3), pageable, 3));
     // BookCopyCount เรียงเป็น (bookId, totalCopies, availableCopies)
     when(bookCopyRepository.countCopiesByBookIds(List.of(1L, 2L, 3L))).thenReturn(List.of(
@@ -208,7 +233,7 @@ class BookQueryServiceImplTest {
         new BookCopyCount(2L, 4L, 4L),
         new BookCopyCount(3L, 2L, 0L)));
 
-    service.search("clean", null, pageable);
+    service.search("clean", null, null, pageable);
 
     // หัวใจของเทส: นับครั้งเดียวทั้งหน้า และไม่มีการนับทีละเล่ม
     verify(bookCopyRepository, times(1)).countCopiesByBookIds(List.of(1L, 2L, 3L));
