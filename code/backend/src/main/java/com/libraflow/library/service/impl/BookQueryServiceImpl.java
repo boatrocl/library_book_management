@@ -2,6 +2,7 @@ package com.libraflow.library.service.impl;
 
 import com.libraflow.library.domain.entity.Book;
 import com.libraflow.library.domain.entity.BookCopy;
+import com.libraflow.library.domain.enums.BookAvailabilityFilter;
 import com.libraflow.library.dto.response.BookCopyResponse;
 import com.libraflow.library.dto.response.BookResponse;
 import com.libraflow.library.dto.response.PageResponse;
@@ -53,6 +54,7 @@ public class BookQueryServiceImpl implements BookQueryService {
     public PageResponse<BookResponse> search(
             String keyword,
             Long categoryId,
+            BookAvailabilityFilter availability,
             Pageable pageable
     ) {
         /*
@@ -76,6 +78,7 @@ public class BookQueryServiceImpl implements BookQueryService {
                 bookRepository.search(
                         normalizedKeyword,
                         categoryId,
+                        availability == null ? BookAvailabilityFilter.ALL : availability,
                         pageable
                 );
 

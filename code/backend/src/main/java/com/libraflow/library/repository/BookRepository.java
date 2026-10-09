@@ -1,6 +1,7 @@
 package com.libraflow.library.repository;
 
 import com.libraflow.library.domain.entity.Book;
+import com.libraflow.library.domain.enums.BookAvailabilityFilter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -13,11 +14,10 @@ import java.util.Optional;
 public interface BookRepository extends JpaRepository<Book, Long> {
 
     /**
-     * ค้นหาหนังสือตาม UC02 — รองรับทั้งคำค้นและหมวดหมู่ และเว้นว่างได้ทั้งคู่
+     * ค้นหาหนังสือตาม UC02 — รองรับชื่อเรื่อง ISBN ผู้แต่ง และหมวดหมู่
      *
-     * เงื่อนไข ":keyword IS NULL OR ..." ทำให้พารามิเตอร์ที่เป็น null หมายถึง
-     * "ไม่กรองด้วยเงื่อนไขนี้" จึงใช้ query เดียวครอบทั้ง 4 กรณี
-     * (ไม่กรองเลย / กรองคำค้น / กรองหมวด / กรองทั้งสอง) แทนการเขียนแยกหลายเมธอด
+     * BookQueryService แปลงคำค้นว่างเป็น empty string เพื่อให้ query เดียวรองรับ
+     * ทั้งกรณีไม่ค้น ค้นคำ และกรองหมวดพร้อมคำค้น โดยไม่ต้องแยกหลายเมธอด
      *
      * Spring Data จะยิงสอง query ให้อัตโนมัติเมื่อ return เป็น Page คือ
      * query ดึงข้อมูลพร้อม LIMIT/OFFSET และ countQuery นับจำนวนทั้งหมด
@@ -35,11 +35,34 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @EntityGraph(attributePaths = {"category", "publisher"})
     @Query("""
             SELECT b FROM Book b
-            WHERE (:keyword IS NULL OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%')))
+            WHERE (:keyword = ''
+                   OR LOWER(b.title) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR LOWER(b.isbn) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   OR EXISTS (
+                       SELECT a.id FROM Book authorBook JOIN authorBook.authors a
+                       WHERE authorBook.id = b.id
+                         AND LOWER(a.fullName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+                   ))
               AND (:categoryId IS NULL OR b.category.id = :categoryId)
+              AND (
+                   :availability = com.libraflow.library.domain.enums.BookAvailabilityFilter.ALL
+                   OR (:availability = com.libraflow.library.domain.enums.BookAvailabilityFilter.AVAILABLE
+                       AND EXISTS (
+                           SELECT c.id FROM BookCopy c
+                           WHERE c.book = b
+                             AND c.status = com.libraflow.library.domain.enums.BookCopyStatus.AVAILABLE
+                       ))
+                   OR (:availability = com.libraflow.library.domain.enums.BookAvailabilityFilter.UNAVAILABLE
+                       AND NOT EXISTS (
+                           SELECT c.id FROM BookCopy c
+                           WHERE c.book = b
+                             AND c.status = com.libraflow.library.domain.enums.BookCopyStatus.AVAILABLE
+                       ))
+              )
             """)
     Page<Book> search(@Param("keyword") String keyword,
                       @Param("categoryId") Long categoryId,
+                      @Param("availability") BookAvailabilityFilter availability,
                       Pageable pageable);
 
     /** ใช้ตรวจ ISBN ซ้ำก่อนสร้างหนังสือใหม่ เพื่อตอบ 409 ISBN_ALREADY_EXISTS */
