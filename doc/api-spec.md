@@ -68,7 +68,7 @@ automatic expiry releases the copy and advances the queue. Email/SMS delivery is
 }
 ```
 
-Response เป็น `201 Created` พร้อมรายการจองสถานะ `WAITING`; หากไม่ยอมรับกฎ request จะตอบ `400`, หากมีตัวเล่มว่างหรือมีรายการจองที่ยัง active อยู่จะตอบ `409 Conflict`.
+Response เป็น `201 Created` พร้อมรายการจองสถานะ `WAITING`; หากไม่ยอมรับกฎ request จะตอบ `400`, หากมีตัวเล่มว่าง, มีรายการจองที่ยัง active อยู่, หรือสมาชิกกำลังยืมชื่อนี้อยู่โดยยังไม่คืน จะตอบ `409 Conflict`.
 
 ### Fines
 | Method | Endpoint | Success | Error | สิทธิ์ |
@@ -91,7 +91,7 @@ Report endpoints select CSV/PDF from the route; they do not accept a `format` qu
 
 ### POST /api/v1/loans/self — สมาชิกยืมหนังสือจากแคตตาล็อก
 
-สมาชิกส่งเฉพาะรหัสหนังสือ ระบบอ่าน username จาก JWT, เลือกตัวเล่ม `AVAILABLE` โดยล็อกแถวไว้ระหว่าง transaction และตรวจ BR-01..BR-04 เหมือนการยืมที่เคาน์เตอร์
+สมาชิกส่งเฉพาะรหัสหนังสือ ระบบอ่าน username จาก JWT, เลือกตัวเล่ม `AVAILABLE` โดยล็อกแถวไว้ระหว่าง transaction และตรวจ BR-01..BR-04, BR-09 เหมือนการยืมที่เคาน์เตอร์ สมาชิกยืมชื่อหนังสือที่ยังมีรายการยืมของตนซึ่งไม่คืน หรือยืมชื่อซ้ำในคำขอเดียวไม่ได้
 
 **Request**
 ```json
@@ -101,7 +101,7 @@ Report endpoints select CSV/PDF from the route; they do not accept a `format` qu
 }
 ```
 
-คำขอต้องส่ง `termsAccepted: true`; หากไม่ยอมรับกฎจะตอบ `400 Bad Request`. Response เป็น `201 Created` พร้อม LoanResponse และ `Location: /api/v1/loans/{id}`. หากไม่มีตัวเล่มว่างหรือสมาชิกติดกฎทางธุรกิจ จะตอบ `409 Conflict`.
+คำขอต้องส่ง `termsAccepted: true`; หากไม่ยอมรับกฎจะตอบ `400 Bad Request`. Response เป็น `201 Created` พร้อม LoanResponse และ `Location: /api/v1/loans/{id}`. หากไม่มีตัวเล่มว่างหรือสมาชิกติดกฎทางธุรกิจ รวมถึงมีรายการยืมชื่อเดียวกันที่ยังไม่คืน จะตอบ `409 Conflict` (`BOOK_ALREADY_ON_LOAN`).
 
 ### POST /api/v1/loans — บรรณารักษ์บันทึกการยืมที่เคาน์เตอร์
 
@@ -221,6 +221,7 @@ Report endpoints select CSV/PDF from the route; they do not accept a `format` qu
 | `UNPAID_FINE_EXCEEDED` | 409 | ค่าปรับค้างชำระเกินเกณฑ์ | BR-02 |
 | `LOAN_QUOTA_EXCEEDED` | 409 | ยืมครบโควต้าแล้ว | BR-03 |
 | `COPY_NOT_AVAILABLE` | 409 | ตัวเล่มไม่พร้อมให้ยืม | BR-04 |
+| `BOOK_ALREADY_ON_LOAN` | 409 | สมาชิกมีรายการยืมชื่อหนังสือนี้ที่ยังไม่คืน หรือยืมชื่อซ้ำในคำขอเดียว | BR-09 |
 | `RENEW_LIMIT_REACHED` | 409 | ต่ออายุครบจำนวนครั้งแล้ว | BR-06 |
 | `RENEW_BLOCKED_BY_RESERVATION` | 409 | มีคนจองคิวรออยู่ ต่ออายุไม่ได้ | BR-06 |
 | `DUPLICATE_RESERVATION` | 409 | จองหนังสือเล่มเดิมซ้ำ | BR-09 |

@@ -89,7 +89,7 @@ UC04 ..> UC02 : <<extend>>
 
 note right of UC17
   ใช้ Chain of Responsibility
-  BR-01 → BR-02 → BR-03 → BR-04
+  BR-01 → BR-02 → BR-03 → BR-04 → BR-09
 end note
 
 note right of UC18

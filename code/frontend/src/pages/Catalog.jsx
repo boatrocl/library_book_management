@@ -80,6 +80,7 @@ const COPY = {
     reservationErrors: {
       DUPLICATE_RESERVATION: 'คุณมีรายการจองหนังสือเล่มนี้อยู่แล้ว',
       BOOK_COPIES_AVAILABLE: 'ยังมีหนังสือพร้อมให้ยืม กรุณายืมผ่านปุ่มด้านบน',
+      BOOK_ALREADY_ON_LOAN: 'คุณกำลังยืมหนังสือชื่อนี้อยู่ กรุณาคืนก่อนจองอีกครั้ง',
     },
     borrowError: 'ยืมหนังสือไม่สำเร็จ กรุณาลองอีกครั้ง',
     borrowErrors: {
@@ -87,6 +88,7 @@ const COPY = {
       UNPAID_FINE_EXCEEDED: 'มีค่าปรับค้างชำระเกินกำหนด กรุณาติดต่อบรรณารักษ์',
       LOAN_QUOTA_EXCEEDED: 'คุณยืมหนังสือครบโควต้าแล้ว',
       COPY_NOT_AVAILABLE: 'หนังสือเล่มนี้เพิ่งถูกยืมไป กรุณาเลือกเล่มอื่น',
+      BOOK_ALREADY_ON_LOAN: 'คุณกำลังยืมหนังสือชื่อนี้อยู่ กรุณาคืนก่อนยืมซ้ำ',
     },
     signInToBorrow: 'เข้าสู่ระบบเพื่อยืม',
     signInToReserve: 'เข้าสู่ระบบเพื่อจองคิว',
@@ -170,6 +172,7 @@ const COPY = {
     reservationErrors: {
       DUPLICATE_RESERVATION: 'You already have an active reservation for this book.',
       BOOK_COPIES_AVAILABLE: 'A copy is available. Please borrow it instead.',
+      BOOK_ALREADY_ON_LOAN: 'You already have an active loan for this title. Return it before reserving again.',
     },
     borrowError: 'Could not borrow this book. Please try again.',
     borrowErrors: {
@@ -177,6 +180,7 @@ const COPY = {
       UNPAID_FINE_EXCEEDED: 'Your unpaid fines exceed the borrowing limit. Contact a librarian.',
       LOAN_QUOTA_EXCEEDED: 'You have reached your borrowing limit.',
       COPY_NOT_AVAILABLE: 'This book was just borrowed. Please choose another book.',
+      BOOK_ALREADY_ON_LOAN: 'You already have an active loan for this title. Return it before borrowing again.',
     },
     signInToBorrow: 'Sign in to borrow',
     signInToReserve: 'Sign in to reserve',
