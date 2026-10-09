@@ -1,7 +1,6 @@
 package com.libraflow.library.repository;
 
 import com.libraflow.library.domain.entity.Book;
-import com.libraflow.library.domain.enums.BookAvailabilityFilter;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -45,14 +44,14 @@ public interface BookRepository extends JpaRepository<Book, Long> {
                    ))
               AND (:categoryId IS NULL OR b.category.id = :categoryId)
               AND (
-                   :availability = com.libraflow.library.domain.enums.BookAvailabilityFilter.ALL
-                   OR (:availability = com.libraflow.library.domain.enums.BookAvailabilityFilter.AVAILABLE
+                   :availability = 'ALL'
+                   OR (:availability = 'AVAILABLE'
                        AND EXISTS (
                            SELECT c.id FROM BookCopy c
                            WHERE c.book = b
                              AND c.status = com.libraflow.library.domain.enums.BookCopyStatus.AVAILABLE
                        ))
-                   OR (:availability = com.libraflow.library.domain.enums.BookAvailabilityFilter.UNAVAILABLE
+                   OR (:availability = 'UNAVAILABLE'
                        AND NOT EXISTS (
                            SELECT c.id FROM BookCopy c
                            WHERE c.book = b
@@ -62,7 +61,7 @@ public interface BookRepository extends JpaRepository<Book, Long> {
             """)
     Page<Book> search(@Param("keyword") String keyword,
                       @Param("categoryId") Long categoryId,
-                      @Param("availability") BookAvailabilityFilter availability,
+                      @Param("availability") String availability,
                       Pageable pageable);
 
     /** ใช้ตรวจ ISBN ซ้ำก่อนสร้างหนังสือใหม่ เพื่อตอบ 409 ISBN_ALREADY_EXISTS */

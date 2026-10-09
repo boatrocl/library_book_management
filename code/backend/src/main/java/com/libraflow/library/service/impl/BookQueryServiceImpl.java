@@ -74,11 +74,14 @@ public class BookQueryServiceImpl implements BookQueryService {
                         ? ""
                         : keyword.trim();
 
+        BookAvailabilityFilter normalizedAvailability =
+                availability == null ? BookAvailabilityFilter.ALL : availability;
+
         Page<Book> page =
                 bookRepository.search(
                         normalizedKeyword,
                         categoryId,
-                        availability == null ? BookAvailabilityFilter.ALL : availability,
+                        normalizedAvailability.name(),
                         pageable
                 );
 
