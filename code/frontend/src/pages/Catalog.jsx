@@ -1,4 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import BookCard from '../components/BookCard';
 import BookDetailsDialog from '../components/BookDetailsDialog';
@@ -118,6 +119,7 @@ function BookOpenIcon({ className = '' }) {
 
 export default function Catalog() {
   const { language } = useContext(LanguageContext);
+  const [searchParams, setSearchParams] = useSearchParams();
   const text = COPY[language] || COPY.th;
   const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -127,7 +129,7 @@ export default function Catalog() {
   const [loadedRequest, setLoadedRequest] = useState(null);
   const [searchInput, setSearchInput] = useState('');
   const [keyword, setKeyword] = useState('');
-  const [categoryId, setCategoryId] = useState('');
+  const categoryId = searchParams.get('categoryId') || '';
   const [availability, setAvailability] = useState('ALL');
   const [sort, setSort] = useState('id,desc');
   const [hasError, setHasError] = useState(false);
@@ -201,13 +203,13 @@ export default function Catalog() {
   function clearFilters() {
     setSearchInput('');
     setKeyword('');
-    setCategoryId('');
+    setSearchParams({}, { replace: true });
     setAvailability('ALL');
     setPage(0);
   }
 
   function chooseCategory(nextCategoryId) {
-    setCategoryId(nextCategoryId);
+    setSearchParams(nextCategoryId ? { categoryId: nextCategoryId } : {}, { replace: true });
     setPage(0);
   }
 
@@ -323,7 +325,7 @@ export default function Catalog() {
           </div>
         </aside>
 
-        <div className="catalog-results">
+        <div className="catalog-results" id="books">
           <div className="catalog-results__topline">
             <div>
               <h2>{text.recommended}</h2>
@@ -414,6 +416,7 @@ export default function Catalog() {
         <span>LibraFlow</span>
         <span className="catalog-footer__dot">·</span>
         <span>{text.footer}</span>
+        <Link to="/about">เกี่ยวกับ LibraFlow</Link>
       </footer>
 
       {selectedBook && <BookDetailsDialog book={selectedBook} onClose={() => setSelectedBook(null)} />}
