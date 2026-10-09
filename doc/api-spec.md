@@ -125,6 +125,7 @@ Report endpoints select CSV/PDF from the route; they do not accept a `format` qu
   "items": [
     {
       "id": 901,
+      "bookId": 18,
       "barcode": "LIB-00231",
       "bookTitle": "Clean Code",
       "dueDate": "2026-09-19",
@@ -132,12 +133,26 @@ Report endpoints select CSV/PDF from the route; they do not accept a `format` qu
     },
     {
       "id": 902,
+      "bookId": 22,
       "barcode": "LIB-00842",
       "bookTitle": "Design Patterns",
       "dueDate": "2026-09-19",
       "returnedAt": null
     }
   ]
+}
+```
+
+### GET /api/v1/book-references — รายการรหัสอ้างอิงสำหรับจัดการหนังสือ
+
+ต้องเข้าสู่ระบบ และคืนรายการหมวดหมู่ สำนักพิมพ์ และผู้แต่งจากฐานข้อมูลปัจจุบัน โดยแต่ละตัวเลือกมี `id` และ `name`; หน้าแก้ไขหนังสือใช้ข้อมูลนี้แสดงความหมายของ ID โดยไม่ hardcode ค่า
+
+**Response 200 OK**
+```json
+{
+  "categories": [{ "id": 3, "name": "Software Engineering" }],
+  "publishers": [{ "id": 7, "name": "Example Press" }],
+  "authors": [{ "id": 11, "name": "A. Writer" }]
 }
 ```
 

@@ -26,6 +26,14 @@ function readSession() {
   }
 }
 
+function formatDate(value, language) {
+  if (!value) return '-';
+  const datePart = String(value).slice(0, 10);
+  const date = new Date(`${datePart}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(language === 'th' ? 'th-TH' : 'en-US', { dateStyle: 'medium' }).format(date);
+}
+
 export default function Profile() {
   const { user } = useContext(AuthContext);
   const { language, t, enumLabel } = useLanguage();
@@ -47,6 +55,10 @@ export default function Profile() {
   const [fines, setFines] = useState([]);
   const [reservations, setReservations] = useState([]);
   const [reservationAction, setReservationAction] = useState({ id: null, message: '' });
+  const [selectedLoanDetails, setSelectedLoanDetails] = useState(null);
+  const [selectedBook, setSelectedBook] = useState(null);
+  const [bookDetailsLoading, setBookDetailsLoading] = useState(false);
+  const [bookDetailsError, setBookDetailsError] = useState('');
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -110,6 +122,28 @@ export default function Profile() {
     });
     return () => controller.abort();
   }, [fetchProfileData, userId]);
+
+  useEffect(() => {
+    const bookId = selectedLoanDetails?.item?.bookId;
+    if (!bookId) return undefined;
+
+    const controller = new AbortController();
+    api.get(`/api/v1/books/${bookId}`, { signal: controller.signal })
+      .then((response) => {
+        if (!controller.signal.aborted) setSelectedBook(response.data);
+      })
+      .catch((error) => {
+        if (!controller.signal.aborted) {
+          console.error('Could not load loan book details:', error);
+          setBookDetailsError(t('ไม่สามารถโหลดรายละเอียดหนังสือได้', 'Could not load book details.'));
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setBookDetailsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [selectedLoanDetails?.item?.bookId, t]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -308,12 +342,28 @@ export default function Profile() {
                       <td className="p-3 text-sm text-gray-800">{loan.loanCode || `LN-${loan.id}`}</td>
                       <td className="p-3 text-sm text-gray-800">
                         {/* ดึงชื่อหนังสือจาก array items มาต่อกันด้วยลูกน้ำ */}
-                        {loan.items && loan.items.length > 0 
-                          ? loan.items.map(item => item.bookTitle).join(', ') 
-                          : '-'}
+                        {loan.items?.length > 0 ? (
+                          <div className="flex flex-col items-start gap-1">
+                            {loan.items.map((item) => (
+                              <button
+                                key={item.id}
+                                type="button"
+                                className="text-left font-medium text-teal-800 underline decoration-teal-300 underline-offset-2 hover:text-teal-950 focus:outline-none focus:ring-2 focus:ring-teal-600"
+                                onClick={() => {
+                                  setSelectedBook(null);
+                                  setBookDetailsError(item.bookId ? '' : t('ไม่พบรหัสหนังสือสำหรับโหลดรายละเอียด', 'Book ID is unavailable, so details cannot be loaded.'));
+                                  setBookDetailsLoading(Boolean(item.bookId));
+                                  setSelectedLoanDetails({ loan, item });
+                                }}
+                              >
+                                {item.bookTitle || t('ดูรายละเอียดหนังสือ', 'View book details')}
+                              </button>
+                            ))}
+                          </div>
+                        ) : '-'}
                       </td>
                       <td className="p-3 text-sm text-gray-600">
-                        {loan.loanDate ? new Date(loan.loanDate).toLocaleDateString(language === 'th' ? 'th-TH' : 'en-US') : '-'}
+                        {formatDate(loan.loanDate, language)}
                       </td>
                       <td className="p-3 text-sm">
                         <span className={`px-2 py-1 text-xs font-semibold rounded-full 
@@ -328,6 +378,97 @@ export default function Profile() {
             </div>
           )}
         </div>
+
+        {selectedLoanDetails && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/55 p-4"
+            role="presentation"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) setSelectedLoanDetails(null);
+            }}
+          >
+            <section
+              className="max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl sm:p-8"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="loan-book-details-title"
+            >
+              <div className="flex items-start justify-between gap-4 border-b pb-4">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-teal-700">{t('รายละเอียดหนังสือและรายการยืม', 'Book and loan item details')}</p>
+                  <h2 id="loan-book-details-title" className="mt-1 text-2xl font-bold text-slate-900">
+                    {selectedBook?.title || selectedLoanDetails.item.bookTitle || t('กำลังโหลดรายละเอียด…', 'Loading details…')}
+                  </h2>
+                </div>
+                <button
+                  type="button"
+                  className="rounded-full p-2 text-xl leading-none text-slate-600 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-teal-600"
+                  aria-label={t('ปิดรายละเอียด', 'Close details')}
+                  onClick={() => setSelectedLoanDetails(null)}
+                >
+                  ×
+                </button>
+              </div>
+
+              {bookDetailsLoading && <p className="py-6 text-slate-600" role="status">{t('กำลังโหลดข้อมูลหนังสือ…', 'Loading book information…')}</p>}
+              {bookDetailsError && <p className="mt-5 rounded-lg bg-red-50 p-3 text-sm text-red-800" role="alert">{bookDetailsError}</p>}
+              {!bookDetailsLoading && selectedBook && (
+                <>
+                  <h3 className="mb-3 mt-6 text-lg font-semibold text-slate-900">{t('ข้อมูลหนังสือ', 'Book information')}</h3>
+                  <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    {[
+                      [t('รหัสหนังสือ', 'Book ID'), selectedBook.id],
+                      ['ISBN', selectedBook.isbn],
+                      [t('ชื่อหนังสือ', 'Title'), selectedBook.title],
+                      [t('ผู้แต่ง', 'Authors'), selectedBook.authors?.join(', ') || '-'],
+                      [t('หมวดหมู่', 'Category'), selectedBook.categoryName || '-'],
+                      [t('รหัสหมวดหมู่', 'Category ID'), selectedBook.categoryId ?? '-'],
+                      [t('สำนักพิมพ์', 'Publisher'), selectedBook.publisherName || '-'],
+                      [t('รหัสสำนักพิมพ์', 'Publisher ID'), selectedBook.publisherId ?? '-'],
+                      [t('ปีที่พิมพ์', 'Publication year'), selectedBook.publishYear ?? '-'],
+                      [t('ราคา', 'Price'), selectedBook.price ?? '-'],
+                      [t('จำนวนตัวเล่ม', 'Total copies'), selectedBook.totalCopies ?? '-'],
+                      [t('พร้อมให้ยืม', 'Available copies'), selectedBook.availableCopies ?? '-'],
+                    ].map(([label, value]) => (
+                      <div key={label} className="rounded-lg bg-slate-50 p-3">
+                        <dt className="text-xs font-medium text-slate-500">{label}</dt>
+                        <dd className="mt-1 break-words font-semibold text-slate-900">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </>
+              )}
+
+              <h3 className="mb-3 mt-6 border-t pt-5 text-lg font-semibold text-slate-900">{t('ข้อมูลการยืม', 'Loan item')}</h3>
+              <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="rounded-lg bg-amber-50 p-3">
+                  <dt className="text-xs font-medium text-slate-500">{t('รหัสใบยืม', 'Loan ID')}</dt>
+                  <dd className="mt-1 font-semibold text-slate-900">{selectedLoanDetails.loan.loanCode || `LN-${selectedLoanDetails.loan.id}`}</dd>
+                </div>
+                <div className="rounded-lg bg-amber-50 p-3">
+                  <dt className="text-xs font-medium text-slate-500">{t('บาร์โค้ดตัวเล่ม', 'Copy barcode')}</dt>
+                  <dd className="mt-1 font-semibold text-slate-900">{selectedLoanDetails.item.barcode || '-'}</dd>
+                </div>
+                <div className="rounded-lg bg-amber-50 p-3">
+                  <dt className="text-xs font-medium text-slate-500">{t('วันที่ยืม', 'Loan date')}</dt>
+                  <dd className="mt-1 font-semibold text-slate-900">{formatDate(selectedLoanDetails.loan.loanDate, language)}</dd>
+                </div>
+                <div className="rounded-lg bg-amber-50 p-3">
+                  <dt className="text-xs font-medium text-slate-500">{t('กำหนดคืน', 'Due date')}</dt>
+                  <dd className="mt-1 font-semibold text-slate-900">{formatDate(selectedLoanDetails.item.dueDate, language)}</dd>
+                </div>
+                <div className="rounded-lg bg-amber-50 p-3">
+                  <dt className="text-xs font-medium text-slate-500">{t('วันที่คืนจริง', 'Returned on')}</dt>
+                  <dd className="mt-1 font-semibold text-slate-900">{formatDate(selectedLoanDetails.item.returnedAt, language)}</dd>
+                </div>
+                <div className="rounded-lg bg-amber-50 p-3">
+                  <dt className="text-xs font-medium text-slate-500">{t('สถานะใบยืม', 'Loan status')}</dt>
+                  <dd className="mt-1 font-semibold text-slate-900">{enumLabel(selectedLoanDetails.loan.status)}</dd>
+                </div>
+              </dl>
+            </section>
+          </div>
+        )}
 
         {isMember && (
           <div className="p-6 bg-white border shadow-xs rounded-xl">

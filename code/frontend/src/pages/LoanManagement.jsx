@@ -3,6 +3,13 @@ import { AuthContext } from '../context/AuthContextValue';
 import { useLanguage } from '../context/LanguageContext';
 import api from '../api';
 
+function formatDate(value, language) {
+  if (!value) return '-';
+  const date = new Date(`${String(value).slice(0, 10)}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(language === 'th' ? 'th-TH' : 'en-US', { dateStyle: 'medium' }).format(date);
+}
+
 export default function LoanManagement() {
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -164,6 +171,7 @@ export default function LoanManagement() {
                     <th className="p-4 text-sm font-semibold text-gray-700">{t('รหัสใบยืม', 'Loan ID')}</th>
                     <th className="p-4 text-sm font-semibold text-gray-700">{t('ผู้ยืม', 'Member')}</th>
                     <th className="p-4 text-sm font-semibold text-gray-700">{t('วันที่ยืม', 'Loan date')}</th>
+                    <th className="p-4 text-sm font-semibold text-gray-700">{t('หนังสือและกำหนดคืน', 'Books and due dates')}</th>
                     <th className="p-4 text-sm font-semibold text-gray-700">{t('สถานะ', 'Status')}</th>
                     <th className="p-4 text-sm font-semibold text-right text-gray-700">{t('จัดการ', 'Actions')}</th>
                   </tr>
@@ -173,7 +181,22 @@ export default function LoanManagement() {
                     <tr key={loan.id} className="border-b hover:bg-gray-50">
                       <td className="p-4 text-sm font-medium text-gray-800">{loan.loanCode}</td>
                       <td className="p-4 text-sm text-gray-600">{loan.memberName} ({enumLabel(loan.memberTier)})</td>
-                      <td className="p-4 text-sm text-gray-600">{new Date(loan.loanDate).toLocaleDateString(language === 'th' ? 'th-TH' : 'en-US')}</td>
+                      <td className="p-4 text-sm text-gray-600">{formatDate(loan.loanDate, language)}</td>
+                      <td className="min-w-56 p-4 text-sm text-gray-700">
+                        {loan.items?.length ? (
+                          <ul className="space-y-2">
+                            {loan.items.map((item) => (
+                              <li key={item.id} className="border-l-2 border-teal-200 pl-3">
+                                <span className="block font-medium text-slate-800">{item.bookTitle || item.barcode}</span>
+                                <span className="text-xs text-slate-600">
+                                  {t('กำหนดคืน', 'Due')}: {formatDate(item.dueDate, language)}
+                                  {item.returnedAt && <> · {t('คืนแล้ว', 'Returned')}: {formatDate(item.returnedAt, language)}</>}
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : <span className="text-slate-500">-</span>}
+                      </td>
                       <td className="p-4 text-sm">
                         <span className={`px-2 py-1 text-xs font-bold rounded-full ${
                           loan.status === 'ACTIVE' ? 'bg-blue-100 text-blue-800' :
@@ -218,7 +241,7 @@ export default function LoanManagement() {
                   ))}
                   {loans.length === 0 && (
                     <tr>
-                      <td colSpan="5" className="p-6 text-center text-gray-500">{t('ไม่มีข้อมูลใบยืมในระบบ', 'No loans found.')}</td>
+                      <td colSpan="6" className="p-6 text-center text-gray-500">{t('ไม่มีข้อมูลใบยืมในระบบ', 'No loans found.')}</td>
                     </tr>
                   )}
                 </tbody>
