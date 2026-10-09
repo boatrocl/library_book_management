@@ -8,9 +8,14 @@ import java.time.LocalDate;
  */
 public record LoanItemResponse(
         Long id,
+        Long bookId,
         String barcode,
         String bookTitle,
         LocalDate dueDate,
         LocalDate returnedAt
 ) {
+    /** Keeps source compatibility for older response fixtures. */
+    public LoanItemResponse(Long id, String barcode, String bookTitle, LocalDate dueDate, LocalDate returnedAt) {
+        this(id, null, barcode, bookTitle, dueDate, returnedAt);
+    }
 }

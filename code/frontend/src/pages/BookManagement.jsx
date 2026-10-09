@@ -16,6 +16,9 @@ export default function BookManagement() {
   const [editingId, setEditingId] = useState(null);
   const [formError, setFormError] = useState('');
   const [formFieldErrors, setFormFieldErrors] = useState([]);
+  const [referenceOptions, setReferenceOptions] = useState({ categories: [], publishers: [], authors: [] });
+  const [referencesLoading, setReferencesLoading] = useState(false);
+  const [referencesError, setReferencesError] = useState('');
   const [formData, setFormData] = useState({
     isbn: '',
     title: '',
@@ -23,7 +26,7 @@ export default function BookManagement() {
     price: '',
     categoryId: '',
     publisherId: '',
-    authorIds: '' // รับเป็น string เช่น "1, 2" แล้วแปลงเป็น array ตอนส่ง
+    authorIds: []
   });
 
   const fetchBooks = useCallback(async (signal) => {
@@ -49,6 +52,24 @@ export default function BookManagement() {
     return () => controller.abort();
   }, [fetchBooks]);
 
+  const loadReferenceOptions = useCallback(async () => {
+    setReferencesLoading(true);
+    setReferencesError('');
+    try {
+      const response = await api.get('/api/v1/book-references');
+      setReferenceOptions({
+        categories: response.data.categories || [],
+        publishers: response.data.publishers || [],
+        authors: response.data.authors || [],
+      });
+    } catch (error) {
+      console.error('Fetch book reference options error:', error);
+      setReferencesError(t('โหลดรายการหมวดหมู่ สำนักพิมพ์ และผู้แต่งไม่สำเร็จ', 'Could not load categories, publishers, and authors.'));
+    } finally {
+      setReferencesLoading(false);
+    }
+  }, [t]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormError('');
@@ -69,13 +90,14 @@ export default function BookManagement() {
         price: book.price || '',
         categoryId: book.categoryId ?? '',
         publisherId: book.publisherId ?? '',
-        authorIds: Array.isArray(book.authorIds) ? book.authorIds.join(', ') : ''
+        authorIds: Array.isArray(book.authorIds) ? book.authorIds.map(String) : []
       });
     } else {
       setEditingId(null);
-      setFormData({ isbn: '', title: '', publishYear: '', price: '', categoryId: '', publisherId: '', authorIds: '' });
+      setFormData({ isbn: '', title: '', publishYear: '', price: '', categoryId: '', publisherId: '', authorIds: [] });
     }
     setIsModalOpen(true);
+    void loadReferenceOptions();
   };
 
   const handleSubmit = async (e) => {
@@ -84,15 +106,25 @@ export default function BookManagement() {
     setFormError('');
     setFormFieldErrors([]);
 
+    const categoryId = Number(formData.categoryId);
+    const publisherId = Number(formData.publisherId);
+    const authorIds = formData.authorIds.map(Number);
+    const idsAreValid = [categoryId, publisherId, ...authorIds]
+      .every((id) => Number.isSafeInteger(id) && id > 0);
+    if (!idsAreValid || authorIds.length === 0) {
+      setFormError(t('กรุณาเลือกหมวดหมู่ สำนักพิมพ์ และผู้แต่งจากรายการที่มีอยู่', 'Choose a category, publisher, and at least one author from the available options.'));
+      return;
+    }
+
     // จัดเตรียม Payload ให้ตรงกับ CreateBookRequest / UpdateBookRequest
     const payload = {
       isbn: formData.isbn,
       title: formData.title,
       publishYear: parseInt(formData.publishYear),
       price: parseFloat(formData.price),
-      categoryId: parseInt(formData.categoryId),
-      publisherId: parseInt(formData.publisherId),
-      authorIds: formData.authorIds.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id))
+      categoryId,
+      publisherId,
+      authorIds,
     };
 
     try {
@@ -133,6 +165,20 @@ export default function BookManagement() {
       });
     }
   };
+
+  const handleAuthorToggle = (authorId) => {
+    setFormError('');
+    setFormFieldErrors([]);
+    setFormData((current) => ({
+      ...current,
+      authorIds: current.authorIds.includes(String(authorId))
+        ? current.authorIds.filter((id) => id !== String(authorId))
+        : [...current.authorIds, String(authorId)],
+    }));
+  };
+
+  const currentBook = books.find((book) => book.id === editingId);
+  const hasReference = (options, id) => options.some((option) => String(option.id) === String(id));
 
   return (
     <main className="lf-workspace-page">
@@ -245,24 +291,54 @@ export default function BookManagement() {
                       <input type="number" name="price" value={formData.price} onChange={handleInputChange} required min="0" step="0.01" className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500" />
                     </div>
                     <div>
-                      <label className="block mb-1 text-sm font-medium text-gray-700">{t('รหัสหมวดหมู่ (Category ID)', 'Category ID')}</label>
-                      <input type="number" name="categoryId" value={formData.categoryId} onChange={handleInputChange} required className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500" />
-                      <p className="mt-1 text-xs text-gray-500">{t('ID นี้อ้างอิงหมวดหมู่ที่หนังสือสังกัด ใช้รหัสหมวดหมู่ที่มีอยู่ในระบบ', 'This ID points to the book’s category. Use an existing category ID.')}</p>
+                      <label htmlFor="book-category-id" className="block mb-1 text-sm font-medium text-gray-700">{t('หมวดหมู่', 'Category')}</label>
+                      <select id="book-category-id" name="categoryId" value={formData.categoryId} onChange={handleInputChange} required disabled={referencesLoading || Boolean(referencesError)} className="w-full rounded-md border px-3 py-2 focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100">
+                        <option value="">{t('เลือกหมวดหมู่', 'Select a category')}</option>
+                        {formData.categoryId && !hasReference(referenceOptions.categories, formData.categoryId) && (
+                          <option value={formData.categoryId}>#{formData.categoryId} — {currentBook?.categoryName || t('ไม่พบชื่อหมวดหมู่', 'Unknown category')}</option>
+                        )}
+                        {referenceOptions.categories.map((category) => <option key={category.id} value={category.id}>#{category.id} — {category.name}</option>)}
+                      </select>
                     </div>
                     <div>
-                      <label className="block mb-1 text-sm font-medium text-gray-700">{t('รหัสสำนักพิมพ์ (Publisher ID)', 'Publisher ID')}</label>
-                      <input type="number" name="publisherId" value={formData.publisherId} onChange={handleInputChange} required className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500" />
-                      <p className="mt-1 text-xs text-gray-500">{t('ID นี้อ้างอิงสำนักพิมพ์ ใช้รหัสของสำนักพิมพ์ที่มีอยู่ในระบบ', 'This ID points to the publisher. Use an existing publisher ID.')}</p>
+                      <label htmlFor="book-publisher-id" className="block mb-1 text-sm font-medium text-gray-700">{t('สำนักพิมพ์', 'Publisher')}</label>
+                      <select id="book-publisher-id" name="publisherId" value={formData.publisherId} onChange={handleInputChange} required disabled={referencesLoading || Boolean(referencesError)} className="w-full rounded-md border px-3 py-2 focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100">
+                        <option value="">{t('เลือกสำนักพิมพ์', 'Select a publisher')}</option>
+                        {formData.publisherId && !hasReference(referenceOptions.publishers, formData.publisherId) && (
+                          <option value={formData.publisherId}>#{formData.publisherId} — {currentBook?.publisherName || t('ไม่พบชื่อสำนักพิมพ์', 'Unknown publisher')}</option>
+                        )}
+                        {referenceOptions.publishers.map((publisher) => <option key={publisher.id} value={publisher.id}>#{publisher.id} — {publisher.name}</option>)}
+                      </select>
                     </div>
                   </div>
                   <div>
-                    <label className="block mb-1 text-sm font-medium text-gray-700">{t('รหัสผู้แต่ง (Author IDs - คั่นด้วยลูกน้ำ เช่น 1, 2)', 'Author IDs (comma-separated, e.g. 1, 2)')}</label>
-                    <input type="text" name="authorIds" value={formData.authorIds} onChange={handleInputChange} required className="w-full px-3 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="1, 3, 5" />
-                    <p className="mt-1 text-xs text-gray-500">{t('กรอกรหัสผู้แต่ง ไม่ใช่ชื่อผู้แต่ง หากมีหลายคนให้คั่นแต่ละรหัสด้วยลูกน้ำ', 'Enter author IDs, not names. Separate multiple IDs with commas.')}</p>
+                    <fieldset disabled={referencesLoading || Boolean(referencesError)}>
+                      <legend className="mb-1 text-sm font-medium text-gray-700">{t('ผู้แต่ง', 'Authors')}</legend>
+                      <div className="max-h-44 space-y-1 overflow-y-auto rounded-md border border-gray-200 p-3">
+                        {formData.authorIds.filter((id) => !hasReference(referenceOptions.authors, id)).map((id) => (
+                          <label key={`missing-${id}`} className="flex items-center gap-2 text-sm text-gray-700">
+                            <input type="checkbox" checked onChange={() => handleAuthorToggle(id)} />
+                            <span>#{id} — {t('ไม่พบชื่อผู้แต่ง', 'Unknown author')}</span>
+                          </label>
+                        ))}
+                        {referenceOptions.authors.map((author) => (
+                          <label key={author.id} className="flex items-center gap-2 text-sm text-gray-700">
+                            <input type="checkbox" checked={formData.authorIds.includes(String(author.id))} onChange={() => handleAuthorToggle(author.id)} />
+                            <span>#{author.id} — {author.name}</span>
+                          </label>
+                        ))}
+                        {!referencesLoading && !referencesError && referenceOptions.authors.length === 0 && formData.authorIds.length === 0 && (
+                          <p className="text-sm text-gray-500">{t('ยังไม่มีผู้แต่งในระบบ', 'No authors are available.')}</p>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500">{t('เลือกผู้แต่งได้มากกว่าหนึ่งคน รายการนี้โหลดจากข้อมูลปัจจุบันในระบบ', 'Select one or more authors. Options reflect the current database records.')}</p>
+                    </fieldset>
                   </div>
+                  {referencesLoading && <p className="text-sm text-gray-600" role="status">{t('กำลังโหลดข้อมูลอ้างอิง…', 'Loading reference data…')}</p>}
+                  {referencesError && <p className="rounded-md bg-red-50 p-3 text-sm text-red-800" role="alert">{referencesError}</p>}
                   <div className="flex justify-end pt-4 space-x-3 border-t">
                     <button type="button" onClick={() => { setIsModalOpen(false); setFormError(''); setFormFieldErrors([]); }} className="px-4 py-2 font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200">{t('ยกเลิก', 'Cancel')}</button>
-                    <button type="submit" className="px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700">{t('บันทึกข้อมูล', 'Save')}</button>
+                    <button type="submit" disabled={referencesLoading || Boolean(referencesError)} className="px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">{t('บันทึกข้อมูล', 'Save')}</button>
                   </div>
                 </form>
               </div>

@@ -48,6 +48,7 @@ public class LoanMapper {
     public LoanItemResponse toItemResponse(LoanItem item) {
         return new LoanItemResponse(
                 item.getId(),
+                item.getBookCopy().getBook().getId(),
                 item.getBookCopy().getBarcode(),
                 item.getBookCopy().getBook().getTitle(),
                 item.getDueDate(),
