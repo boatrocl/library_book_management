@@ -1,7 +1,7 @@
 # Data Dictionary — LibraFlow
 
 อ้างอิง schema จาก Flyway migrations ใน `code/backend/src/main/resources/db/migration/`
-ณ เวอร์ชัน V9. เอกสารนี้อธิบาย schema ที่โค้ดจะสร้างเมื่อรัน migration ครบ
+ณ เวอร์ชัน V10. เอกสารนี้อธิบาย schema ที่โค้ดจะสร้างเมื่อรัน migration ครบ
 การ deploy จริงต้องตรวจสอบผล Flyway บนฐานข้อมูลเป้าหมายอีกครั้ง
 
 สัญลักษณ์: `PK` primary key, `FK` foreign key, `UK` unique, `IDX` index,
@@ -17,10 +17,11 @@
 | V3.1 | `V3_1__add_role_and_auth_seed.sql` | เพิ่ม `users.role`, role check และบัญชี seed ที่ใช้ BCrypt |
 | V4 | `V4__init_loan.sql` | `loans`, `loan_items` |
 | V5 | `V5__init_fine_reservation.sql` | `fines`, `reservations`; ยังไม่มี FK ของสองตารางนี้ |
-| V6 | ไม่มีไฟล์ | เวอร์ชันนี้ขาดอยู่ใน repository ปัจจุบัน ไม่ควรสร้างย้อนหลังหลัง V7–V9 |
+| V6 | ไม่มีไฟล์ | เวอร์ชันนี้ขาดอยู่ใน repository ปัจจุบัน ไม่ควรสร้างย้อนหลังหลัง V7–V10 |
 | V7 | `V7__add_tier_to_users.sql` | เพิ่ม `users.member_tier` โดย default `STUDENT` |
 | V8 | `V8__add_fine_reservation_foreign_keys.sql` | เพิ่ม FK จาก fines และ reservations พร้อมตรวจข้อมูลกำพร้าก่อน |
 | V9 | `V9__reserve_book_copy_for_ready_reservations.sql` | เพิ่ม `reservations.reserved_copy_id`; คิว READY เก่าที่ไม่มีตัวเล่มจะกลับเป็น WAITING |
+| V10 | `V10__tighten_user_indexes_and_fine_status.sql` | ลบ index username/email ที่ซ้ำกับ unique constraints และเพิ่ม CHECK ของ `fines.status` |
 
 ## Tables
 
@@ -37,7 +38,7 @@
 | `role` | VARCHAR(20) | NN | DEFAULT `MEMBER`; CHECK `ADMIN`, `LIBRARIAN`, `MEMBER` | สิทธิ์ในระบบ |
 | `member_tier` | VARCHAR(20) | nullable | DEFAULT `STUDENT` | ประเภทสมาชิก: `STUDENT`, `STAFF`, `EXTERNAL` |
 
-V3 สร้าง index `idx_users_username` และ `idx_users_email` เพิ่มจาก unique indexes ที่ฐานข้อมูลสร้างให้อัตโนมัติ จึงซ้ำหน้าที่กันและควรทบทวนใน migration ภายหลัง
+V3 เคยสร้าง index `idx_users_username` และ `idx_users_email` เพิ่มจาก unique indexes ที่ฐานข้อมูลสร้างให้อัตโนมัติ; V10 ลบ index ที่ซ้ำ โดย unique constraints ยังคงบังคับความไม่ซ้ำและมี index รองรับ
 
 ### 2. `user_profiles`
 
@@ -139,7 +140,7 @@ Index: `idx_copies_book_status` (`book_id`, `status`)
 | `loan_item_id` | BIGINT | NN | UK; V8 FK → `loan_items.id` | รายการยืมที่เกิดค่าปรับ; จำกัดหนึ่งค่าปรับต่อรายการ |
 | `amount` | NUMERIC(10,2) | NN | | จำนวนเงิน |
 | `overdue_days` | INT | NN | | จำนวนวันที่เกินกำหนด |
-| `status` | VARCHAR(20) | NN | | `UNPAID`, `PAID`, `WAIVED` ตาม enum ในแอป; migration ยังไม่มี CHECK constraint |
+| `status` | VARCHAR(20) | NN | V10 CHECK `UNPAID`, `PAID`, `WAIVED` | สถานะค่าปรับตาม enum ในแอป |
 | `created_at` | TIMESTAMP | NN | DEFAULT CURRENT_TIMESTAMP | เวลาสร้างค่าปรับ |
 | `paid_at` | TIMESTAMP | nullable | | เวลาชำระหรือยกเว้น |
 
@@ -182,4 +183,5 @@ Partial unique index `uk_reservation_active` จำกัดคู่ (`user_id`
 - V8 จะหยุดพร้อมข้อความอธิบายถ้าพบ orphan rows ก่อนเพิ่ม FK ต้องสำรองและตรวจข้อมูลจริงก่อน deploy
 - V5 ไม่มี FK ของ fines/reservations; V8 เพิ่ม FK หลัก และ V9 เพิ่ม FK ของตัวเล่มที่กันให้คิว
 - V9 เปลี่ยน READY เก่าที่ไม่มีตัวเล่มกลับเป็น WAITING เพื่อป้องกันการยืมตัวเล่มที่ไม่ได้กันจริง
+- V10 ลบ index ที่ซ้ำกับ unique constraints ของ `users.username` และ `users.email`; เพิ่ม/validate CHECK ของ `fines.status` หลังตรวจค่าที่มีอยู่
 - การมี migration ใน Git ไม่ยืนยันว่า Render/Neon ได้รัน migration นั้นแล้ว

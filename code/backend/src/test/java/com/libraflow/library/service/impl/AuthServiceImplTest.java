@@ -1,12 +1,15 @@
 package com.libraflow.library.service.impl;
 
 import com.libraflow.library.domain.entity.User;
+import com.libraflow.library.domain.entity.UserProfile;
 import com.libraflow.library.domain.enums.UserRole;
 import com.libraflow.library.dto.request.LoginRequest;
+import com.libraflow.library.dto.request.RegisterRequest;
 import com.libraflow.library.dto.response.AuthResponse;
 import com.libraflow.library.exception.BusinessException;
 import com.libraflow.library.exception.ErrorCode;
 import com.libraflow.library.repository.UserRepository;
+import com.libraflow.library.repository.UserProfileRepository;
 import com.libraflow.library.security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,8 +20,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Optional;
 
+import org.mockito.ArgumentCaptor;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -28,10 +34,10 @@ import static org.mockito.Mockito.when;
 class AuthServiceImplTest {
 
     @Mock
-    private jakarta.persistence.EntityManager entityManager;
+    private UserRepository userRepository;
 
     @Mock
-    private UserRepository userRepository;
+    private UserProfileRepository userProfileRepository;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -46,7 +52,7 @@ class AuthServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        authService = new AuthServiceImpl(userRepository, passwordEncoder, jwtService, entityManager);
+        authService = new AuthServiceImpl(userRepository, userProfileRepository, passwordEncoder, jwtService);
     }
 
     @Test
@@ -259,5 +265,46 @@ class AuthServiceImplTest {
                 passwordEncoder,
                 jwtService
         );
+    }
+
+    @Test
+    void register_shouldSaveProfileThroughRepositoryAndReturnJwt() {
+        RegisterRequest request = new RegisterRequest(
+                "member01",
+                "Member@123",
+                "member01@example.com",
+                "Ada",
+                "Lovelace",
+                "0812345678",
+                "Library Road"
+        );
+        when(passwordEncoder.encode("Member@123")).thenReturn("encoded-password");
+        when(userRepository.save(any(User.class))).thenReturn(user);
+        when(userProfileRepository.save(any(UserProfile.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(user.getUsername()).thenReturn("member01");
+        when(user.getRole()).thenReturn(UserRole.MEMBER);
+        when(jwtService.generateToken(user)).thenReturn("member-jwt");
+        when(jwtService.getExpirationMs()).thenReturn(3_600_000L);
+
+        AuthResponse response = authService.register(request);
+
+        assertEquals("member-jwt", response.token());
+        assertEquals("member01", response.username());
+        assertEquals("MEMBER", response.role());
+
+        ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
+        verify(userRepository).save(userCaptor.capture());
+        assertEquals("encoded-password", userCaptor.getValue().getPasswordHash());
+        assertEquals(UserRole.MEMBER, userCaptor.getValue().getRole());
+
+        ArgumentCaptor<UserProfile> profileCaptor = ArgumentCaptor.forClass(UserProfile.class);
+        verify(userProfileRepository).save(profileCaptor.capture());
+        UserProfile savedProfile = profileCaptor.getValue();
+        assertEquals(user, savedProfile.getUser());
+        assertEquals("Ada", savedProfile.getFirstName());
+        assertEquals("Lovelace", savedProfile.getLastName());
+        assertEquals("0812345678", savedProfile.getPhoneNumber());
+        assertEquals("Library Road", savedProfile.getAddress());
     }
 }

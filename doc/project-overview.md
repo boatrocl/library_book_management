@@ -120,7 +120,7 @@ com.libraflow.library
 │                        PdfReportGenerator
 ├── repository/          Spring Data repositories and projections
 ├── security/            SecurityConfig, JWT authentication and authorization
-└── service/              Service interfaces, LoanScheduler, ReservationScheduler
+└── service/              Service interfaces, ReportService, LoanScheduler, ReservationScheduler
     ├── impl/             Service implementations
     ├── strategy/         FineCalculationStrategy and 3 MemberTier strategies
     ├── report/           ReportGenerator and fine/reservation reports

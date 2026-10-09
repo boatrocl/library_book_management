@@ -22,7 +22,7 @@ Class Diagram อยู่ที่ [`diagrams/04-class-diagram.puml`](diagrams/
 | Strategy | คำนวณค่าปรับตามประเภทสมาชิก โดยแยกอัตราออกจาก service | `service/strategy/FineCalculationStrategy.java`; `StudentFineStrategy`, `StaffFineStrategy`, `ExternalFineStrategy`; `FineServiceImpl` เลือกตาม `MemberTier` |
 | State | จำกัดการคืนและต่ออายุตามสถานะใบยืม | `pattern/state/LoanState.java`; `ActiveState`, `OverdueState`, `ReturnedState`, `LostState`; `LoanStateFactory` |
 | Observer | กันตัวเล่มให้ผู้จองคิวแรกเมื่อมีตัวเล่มพร้อม | `LoanServiceImpl` ส่ง `BookReturnedEvent` (เป็น `BookCopyAvailableEvent`); `ReservationNotificationListener` รับหลัง commit แล้วผูก copy กับคิวแรก เปลี่ยนสถานะเป็น READY/RESERVED |
-| Template Method | ใช้ขั้นตอนรายงานร่วมกัน แต่ render เป็น CSV หรือ PDF | `pattern/template/AbstractReportGenerator`; `CsvReportGenerator`; `PdfReportGenerator`; `ReportController` เลือก generator ตาม format |
+| Template Method | ใช้ขั้นตอนรายงานร่วมกัน แต่ render เป็น CSV หรือ PDF | `pattern/template/AbstractReportGenerator`; `CsvReportGenerator`; `PdfReportGenerator`; `ReportServiceImpl` เลือก generator ตามประเภทรายงาน ส่วน `ReportController` จัดการ HTTP |
 
 ### อัตราค่าปรับที่ใช้งาน
 
@@ -46,7 +46,7 @@ Class Diagram อยู่ที่ [`diagrams/04-class-diagram.puml`](diagrams/
 
 ใน `service/report/ReportGenerator.java` ยังมี implementation ตัวอย่างอีกชุด
 (`FineReportGenerator`, `ReservationReportGenerator`) ซึ่ง `ReportController` ไม่ได้เรียก
-เส้นทางที่ API ใช้จริงคือ `pattern/template/AbstractReportGenerator` กับ CSV/PDF
+เส้นทางที่ API ใช้จริงคือ `ReportController` → `ReportService` → `pattern/template/AbstractReportGenerator` กับ CSV/PDF
 จึงไม่ควรอ้างคลาสตัวอย่างชุดแรกว่าเป็นตัวสร้างรายงาน production
 
 ## ข้อจำกัดที่ยังต้องตรวจ

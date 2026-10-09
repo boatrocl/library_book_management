@@ -10,7 +10,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public abstract class AbstractReportGenerator {
+public abstract class AbstractReportGenerator implements ReportFileGenerator {
 
     protected final LoanRepository loanRepository;
     private final TransactionTemplate transactionTemplate;
@@ -21,6 +21,7 @@ public abstract class AbstractReportGenerator {
     }
 
     // นำ final กลับมาเพื่อล็อกโครงสร้าง Template Method ไว้ตามเดิม
+    @Override
     public final byte[] generate(ReportRequest req) {
         
         // จำกัดขอบเขตเปิด/ปิด Database Connection ให้อยู่เฉพาะช่วงดึงและแปลงข้อมูล (Lazy Load ทำงานได้อย่างปลอดภัยในบล็อกนี้)
