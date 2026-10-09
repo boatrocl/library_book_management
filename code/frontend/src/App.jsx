@@ -14,6 +14,8 @@ import FineManagement from './pages/FineManagement';
 import ReportManagement from './pages/ReportManagement';
 import UserManagement from './pages/UserManagement';
 import Register from './pages/Register';
+import Categories from './pages/Categories';
+import About from './pages/About';
 
 // อัปเกรด Guard ให้รับพารามิเตอร์ allowedRoles เพื่อเช็กสิทธิ์
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -45,6 +47,8 @@ function AppContent() {
         <Route path="/login" element={<Login />} />
         {/* เพิ่ม Route สำหรับหน้าสมัครสมาชิกที่นี่ */}
         <Route path="/register" element={<Register />} />
+        <Route path="/categories" element={<Categories />} />
+        <Route path="/about" element={<About />} />
 
         <Route path="/" element={<Catalog />} />
 
