@@ -264,6 +264,7 @@ summary:focus-visible {
   min-width: 0;
   gap: 7px;
   overflow-x: auto;
+  overflow-y: hidden;
   border-bottom: 1px solid var(--lf-line);
   scrollbar-width: thin;
 }
