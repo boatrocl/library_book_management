@@ -1,7 +1,8 @@
 import { useContext, useState } from 'react';
-import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContextValue';
-import { LanguageContext } from '../context/LanguageContext';
+import { useLanguage } from '../context/LanguageContext';
+import LanguageToggle from './LanguageToggle';
 
 function BrandMark() {
   return (
@@ -21,12 +22,10 @@ function linkClass({ isActive }) {
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, logout } = useContext(AuthContext);
-  const { language, setLanguage } = useContext(LanguageContext);
+  const { t } = useLanguage();
   const [menuOpen, setMenuOpen] = useState(false);
   const canManage = user && ['LIBRARIAN', 'ADMIN'].includes(user.role);
-  const isCatalog = location.pathname === '/';
 
   function handleLogout() {
     logout();
@@ -41,7 +40,7 @@ export default function Navbar() {
   return (
     <header className="site-header">
       <div className="site-header__inner">
-        <Link to="/" className="brand" aria-label="LibraFlow หน้าหลัก" onClick={closeMenu}>
+        <Link to="/" className="brand" aria-label={t('LibraFlow หน้าหลัก', 'LibraFlow home')} onClick={closeMenu}>
           <BrandMark />
           <span className="brand__wordmark">LibraFlow</span>
         </Link>
@@ -49,7 +48,7 @@ export default function Navbar() {
         <button
           className={`mobile-menu-button${menuOpen ? ' is-open' : ''}`}
           type="button"
-          aria-label={menuOpen ? 'ปิดเมนู' : 'เปิดเมนู'}
+          aria-label={menuOpen ? t('ปิดเมนู', 'Close menu') : t('เปิดเมนู', 'Open menu')}
           aria-expanded={menuOpen}
           aria-controls="primary-navigation"
           onClick={() => setMenuOpen((open) => !open)}
@@ -58,51 +57,36 @@ export default function Navbar() {
         </button>
 
         <div className={`site-header__content${menuOpen ? ' is-open' : ''}`} id="primary-navigation">
-          <nav className="site-nav" aria-label="เมนูหลัก">
-            <NavLink to="/" end className={linkClass} onClick={closeMenu}>{language === 'th' ? 'แคตตาล็อก' : 'Catalog'}</NavLink>
-            <NavLink to="/categories" className={linkClass} onClick={closeMenu}>{language === 'th' ? 'หมวดหมู่' : 'Categories'}</NavLink>
-            <NavLink to="/about" className={linkClass} onClick={closeMenu}>{language === 'th' ? 'เกี่ยวกับเรา' : 'About'}</NavLink>
-            {user && <NavLink to="/profile" className={linkClass} onClick={closeMenu}>โปรไฟล์ส่วนตัว</NavLink>}
+          <nav className="site-nav" aria-label={t('เมนูหลัก', 'Main navigation')}>
+            <NavLink to="/" end className={linkClass} onClick={closeMenu}>{t('แคตตาล็อก', 'Catalog')}</NavLink>
+            <NavLink to="/categories" className={linkClass} onClick={closeMenu}>{t('หมวดหมู่', 'Categories')}</NavLink>
+            <NavLink to="/about" className={linkClass} onClick={closeMenu}>{t('เกี่ยวกับเรา', 'About')}</NavLink>
+            {user && <NavLink to="/profile" className={linkClass} onClick={closeMenu}>{t('โปรไฟล์ส่วนตัว', 'My profile')}</NavLink>}
             {canManage && (
               <details className="management-menu">
-                <summary>จัดการระบบ <span aria-hidden="true">⌄</span></summary>
+                <summary>{t('จัดการระบบ', 'Management')} <span aria-hidden="true">⌄</span></summary>
                 <div className="management-menu__panel">
-                  <NavLink to="/admin/books" className={linkClass} onClick={closeMenu}>จัดการหนังสือ</NavLink>
-                  <NavLink to="/admin/loans" className={linkClass} onClick={closeMenu}>จัดการใบยืม</NavLink>
-                  <NavLink to="/admin/fines" className={linkClass} onClick={closeMenu}>จัดการค่าปรับ</NavLink>
-                  <NavLink to="/admin/reports" className={linkClass} onClick={closeMenu}>ออกรายงาน</NavLink>
-                  {user.role === 'ADMIN' && <NavLink to="/admin/users" className={linkClass} onClick={closeMenu}>จัดการผู้ใช้งาน</NavLink>}
+                  <NavLink to="/admin/books" className={linkClass} onClick={closeMenu}>{t('จัดการหนังสือ', 'Manage books')}</NavLink>
+                  <NavLink to="/admin/loans" className={linkClass} onClick={closeMenu}>{t('จัดการการยืม-คืน', 'Manage loans and returns')}</NavLink>
+                  <NavLink to="/admin/fines" className={linkClass} onClick={closeMenu}>{t('จัดการค่าปรับ', 'Manage fines')}</NavLink>
+                  <NavLink to="/admin/reports" className={linkClass} onClick={closeMenu}>{t('ออกรายงาน', 'Reports')}</NavLink>
+                  {user.role === 'ADMIN' && <NavLink to="/admin/users" className={linkClass} onClick={closeMenu}>{t('จัดการผู้ใช้งาน', 'Manage users')}</NavLink>}
                 </div>
               </details>
             )}
           </nav>
 
           <div className="site-header__account">
-            {isCatalog && (
-              <div className="language-toggle" role="group" aria-label="Select language">
-                <button
-                  className={`language-toggle__option${language === 'th' ? ' is-active' : ''}`}
-                  type="button"
-                  aria-pressed={language === 'th'}
-                  onClick={() => setLanguage('th')}
-                >TH</button>
-                <button
-                  className={`language-toggle__option${language === 'en' ? ' is-active' : ''}`}
-                  type="button"
-                  aria-pressed={language === 'en'}
-                  onClick={() => setLanguage('en')}
-                >EN</button>
-              </div>
-            )}
+            <LanguageToggle />
             {user ? (
               <>
-                <span className="account-greeting"><span className="account-greeting__dot" />สวัสดี, {user.username}</span>
-                <button className="button button--outline site-header__logout" type="button" onClick={handleLogout}>ออกจากระบบ</button>
+                <span className="account-greeting"><span className="account-greeting__dot" />{t(`สวัสดี, ${user.username}`, `Hello, ${user.username}`)}</span>
+                <button className="button button--outline site-header__logout" type="button" onClick={handleLogout}>{t('ออกจากระบบ', 'Sign out')}</button>
               </>
             ) : (
               <Link className="button button--primary site-header__login" to="/login" onClick={closeMenu}>
                 <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.7" /><path d="M5.5 20c.6-3.7 2.8-5.6 6.5-5.6s5.9 1.9 6.5 5.6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" /></svg>
-                {language === 'th' ? 'เข้าสู่ระบบ' : 'Sign in'}
+                {t('เข้าสู่ระบบ', 'Sign in')}
               </Link>
             )}
           </div>

@@ -1,37 +1,41 @@
 import { useCallback, useEffect, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import api from '../api';
+import { useLanguage } from '../context/LanguageContext';
 
 function readSession() {
   const token = localStorage.getItem('token');
-  if (!token) return { userId: null, error: 'กรุณาเข้าสู่ระบบ' };
+  if (!token) return { userId: null, errorKey: 'loginRequired' };
 
   try {
     const decoded = jwtDecode(token);
     if (decoded.exp && decoded.exp * 1000 <= Date.now()) {
       localStorage.removeItem('token');
-      return { userId: null, error: 'เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่' };
+      return { userId: null, errorKey: 'sessionExpired' };
     }
 
     const userId = decoded.id || decoded.userId || decoded.sub;
     return userId
       ? { userId, error: '' }
-      : { userId: null, error: 'เซสชันไม่ถูกต้อง กรุณาล็อกอินใหม่' };
+      : { userId: null, errorKey: 'invalidSession' };
   } catch (error) {
     console.error('Token ไม่ถูกต้อง:', error);
     localStorage.removeItem('token');
-    return { userId: null, error: 'เซสชันไม่ถูกต้อง กรุณาล็อกอินใหม่' };
+    return { userId: null, errorKey: 'invalidSession' };
   }
 }
 
 export default function Profile() {
+  const { language, t, enumLabel } = useLanguage();
   const [profile, setProfile] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [session] = useState(readSession);
   const { userId } = session;
   const [message, setMessage] = useState(() => ({
-    type: session.error ? 'error' : '',
-    text: session.error
+    type: session.errorKey ? 'error' : '',
+    key: session.errorKey || '',
+    th: '',
+    en: '',
   }));
   const [isLoading, setIsLoading] = useState(Boolean(userId));
   
@@ -45,6 +49,16 @@ export default function Profile() {
     phoneNumber: '',
     address: ''
   });
+
+  const messageText = (currentMessage) => {
+    if (currentMessage.th || currentMessage.en) return t(currentMessage.th, currentMessage.en);
+    const sessionMessages = {
+      loginRequired: t('กรุณาเข้าสู่ระบบ', 'Please sign in.'),
+      sessionExpired: t('เซสชันหมดอายุ กรุณาเข้าสู่ระบบใหม่', 'Your session has expired. Please sign in again.'),
+      invalidSession: t('เซสชันไม่ถูกต้อง กรุณาล็อกอินใหม่', 'Your session is invalid. Please sign in again.'),
+    };
+    return sessionMessages[currentMessage.key] || '';
+  };
 
   const fetchProfileData = useCallback(async (id, signal) => {
     try {
@@ -70,7 +84,7 @@ export default function Profile() {
     } catch (error) {
       if (signal?.aborted) return;
       console.error("ดึงข้อมูลล้มเหลว:", error);
-      setMessage({ type: 'error', text: `ไม่สามารถดึงข้อมูลโปรไฟล์ได้ (ID: ${id})` });
+      setMessage({ type: 'error', th: `ไม่สามารถดึงข้อมูลโปรไฟล์ได้ (ID: ${id})`, en: `Could not load profile (ID: ${id}).` });
     } finally {
       if (!signal?.aborted) setIsLoading(false);
     }
@@ -88,25 +102,25 @@ export default function Profile() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage({ type: '', text: '' });
+    setMessage({ type: '', th: '', en: '', key: '' });
     
     try {
       const response = await api.put(`/api/v1/members/${userId}`, formData);
       setProfile(response.data); 
       setIsEditing(false);
-      setMessage({ type: 'success', text: 'บันทึกข้อมูลเรียบร้อยแล้ว!' });
+      setMessage({ type: 'success', th: 'บันทึกข้อมูลเรียบร้อยแล้ว!', en: 'Profile saved successfully.' });
     } catch (error) {
       console.error("อัปเดตข้อมูลล้มเหลว", error);
-      setMessage({ type: 'error', text: 'กรุณาตรวจสอบข้อมูลอีกครั้ง' });
+      setMessage({ type: 'error', th: 'กรุณาตรวจสอบข้อมูลอีกครั้ง', en: 'Please check the information and try again.' });
     }
   };
 
-  if (isLoading) return <main className="lf-workspace-page"><div className="lf-workspace-content lf-workspace-content--narrow"><div className="lf-loading-card">กำลังโหลดข้อมูล...</div></div></main>;
+  if (isLoading) return <main className="lf-workspace-page"><div className="lf-workspace-content lf-workspace-content--narrow"><div className="lf-loading-card">{t('กำลังโหลดข้อมูล...', 'Loading profile...')}</div></div></main>;
 
   if (!profile) return (
     <main className="lf-workspace-page">
       <div className="lf-workspace-content lf-workspace-content--narrow">
-        <div className="lf-form-message lf-form-message--error" role="alert">{message.text}</div>
+        <div className="lf-form-message lf-form-message--error" role="alert">{messageText(message)}</div>
       </div>
     </main>
   );
@@ -128,24 +142,24 @@ export default function Profile() {
               </div>
               <div className="text-right">
                 <span className="px-3 py-1 text-sm font-bold text-blue-700 bg-white rounded-full">
-                  Tier: {profile.memberTier}
+                  {t('ระดับสมาชิก', 'Tier')}: {enumLabel(profile.memberTier)}
                 </span>
-                <p className="mt-2 text-sm text-blue-200">Role: {profile.role}</p>
+                <p className="mt-2 text-sm text-blue-200">{t('สิทธิ์', 'Role')}: {enumLabel(profile.role)}</p>
               </div>
             </div>
           </div>
 
           <div className="p-8">
-            {message.text && (
+            {(message.th || message.en || message.key) && (
               <div className={`p-4 mb-6 text-sm rounded-md ${message.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                {message.text}
+                {messageText(message)}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700">ชื่อจริง</label>
+                  <label className="block mb-1 text-sm font-medium text-gray-700">{t('ชื่อจริง', 'First name')}</label>
                   <input 
                     type="text" 
                     disabled={!isEditing}
@@ -156,7 +170,7 @@ export default function Profile() {
                   />
                 </div>
                 <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700">นามสกุล</label>
+                  <label className="block mb-1 text-sm font-medium text-gray-700">{t('นามสกุล', 'Last name')}</label>
                   <input 
                     type="text" 
                     disabled={!isEditing}
@@ -169,7 +183,7 @@ export default function Profile() {
               </div>
 
               <div>
-                <label className="block mb-1 text-sm font-medium text-gray-700">เบอร์โทรศัพท์</label>
+                <label className="block mb-1 text-sm font-medium text-gray-700">{t('เบอร์โทรศัพท์', 'Phone number')}</label>
                 <input 
                   type="text" 
                   disabled={!isEditing}
@@ -180,7 +194,7 @@ export default function Profile() {
               </div>
 
               <div>
-                <label className="block mb-1 text-sm font-medium text-gray-700">ที่อยู่</label>
+                <label className="block mb-1 text-sm font-medium text-gray-700">{t('ที่อยู่', 'Address')}</label>
                 <textarea 
                   disabled={!isEditing}
                   rows="3"
@@ -197,7 +211,7 @@ export default function Profile() {
                     onClick={() => setIsEditing(true)}
                     className="px-6 py-2 font-bold text-white transition bg-blue-600 rounded-md hover:bg-blue-700"
                   >
-                    แก้ไขข้อมูล
+                    {t('แก้ไขข้อมูล', 'Edit profile')}
                   </button>
                 ) : (
                   <>
@@ -214,13 +228,13 @@ export default function Profile() {
                       }}
                       className="px-6 py-2 font-bold text-gray-700 transition bg-gray-200 rounded-md hover:bg-gray-300"
                     >
-                      ยกเลิก
+                      {t('ยกเลิก', 'Cancel')}
                     </button>
                     <button 
                       type="submit" 
                       className="px-6 py-2 font-bold text-white transition bg-green-600 rounded-md hover:bg-green-700"
                     >
-                      บันทึกข้อมูล
+                      {t('บันทึกข้อมูล', 'Save changes')}
                     </button>
                   </>
                 )}
@@ -232,33 +246,33 @@ export default function Profile() {
         {/* กล่อง 2: แจ้งเตือนค่าปรับ (โผล่มาเฉพาะตอนมีค่าปรับค้างชำระ) */}
         {fines.length > 0 && (
           <div className="p-6 bg-white border border-red-200 shadow-xs rounded-xl">
-            <h2 className="mb-4 text-xl font-bold text-red-700">ค่าปรับค้างชำระ (รวม: {totalFines} บาท)</h2>
+            <h2 className="mb-4 text-xl font-bold text-red-700">{t('ค่าปรับค้างชำระ (รวม:', 'Outstanding fines (total:')} {totalFines.toLocaleString(language === 'th' ? 'th-TH' : 'en-US')} {t('บาท)', 'THB)')}</h2>
             <ul className="space-y-2">
               {fines.map(fine => (
                 <li key={fine.id} className="flex justify-between p-3 rounded-md bg-red-50">
-                  <span className="text-red-800">{fine.reason || 'ค่าปรับส่งหนังสือล่าช้า'}</span>
-                  <span className="font-bold text-red-700">{fine.amount} บาท</span>
+                  <span className="text-red-800">{fine.reason || t('ค่าปรับส่งหนังสือล่าช้า', 'Overdue return fine')}</span>
+                  <span className="font-bold text-red-700">{fine.amount?.toLocaleString(language === 'th' ? 'th-TH' : 'en-US')} {t('บาท', 'THB')}</span>
                 </li>
               ))}
             </ul>
-            <p className="mt-4 text-sm text-gray-600">* กรุณาติดต่อบรรณารักษ์เพื่อชำระค่าปรับ การมียอดค้างชำระจะทำให้คุณไม่สามารถยืมหนังสือเพิ่มได้</p>
+            <p className="mt-4 text-sm text-gray-600">* {t('กรุณาติดต่อบรรณารักษ์เพื่อชำระค่าปรับ การมียอดค้างชำระจะทำให้คุณไม่สามารถยืมหนังสือเพิ่มได้', 'Contact a librarian to pay your fines. Unpaid fines prevent you from borrowing more books.')}</p>
           </div>
         )}
 
         {/* กล่อง 3: ประวัติการยืม */}
         <div className="p-6 bg-white border shadow-xs rounded-xl">
-          <h2 className="mb-4 text-xl font-bold text-gray-800">ประวัติการยืมหนังสือ</h2>
+          <h2 className="mb-4 text-xl font-bold text-gray-800">{t('ประวัติการยืมหนังสือ', 'Loan history')}</h2>
           {loans.length === 0 ? (
-            <p className="py-4 text-center text-gray-500">ยังไม่มีประวัติการยืมหนังสือ</p>
+            <p className="py-4 text-center text-gray-500">{t('ยังไม่มีประวัติการยืมหนังสือ', 'No loan history yet.')}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
                   <tr className="bg-gray-100 border-b">
-                    <th className="p-3 text-sm font-semibold text-gray-700">รหัสใบยืม</th>
-                    <th className="p-3 text-sm font-semibold text-gray-700">หนังสือ</th>
-                    <th className="p-3 text-sm font-semibold text-gray-700">วันที่ยืม</th>
-                    <th className="p-3 text-sm font-semibold text-gray-700">สถานะ</th>
+                    <th className="p-3 text-sm font-semibold text-gray-700">{t('รหัสใบยืม', 'Loan ID')}</th>
+                    <th className="p-3 text-sm font-semibold text-gray-700">{t('หนังสือ', 'Books')}</th>
+                    <th className="p-3 text-sm font-semibold text-gray-700">{t('วันที่ยืม', 'Loan date')}</th>
+                    <th className="p-3 text-sm font-semibold text-gray-700">{t('สถานะ', 'Status')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -272,12 +286,12 @@ export default function Profile() {
                           : '-'}
                       </td>
                       <td className="p-3 text-sm text-gray-600">
-                        {loan.loanDate ? new Date(loan.loanDate).toLocaleDateString('th-TH') : '-'}
+                        {loan.loanDate ? new Date(loan.loanDate).toLocaleDateString(language === 'th' ? 'th-TH' : 'en-US') : '-'}
                       </td>
                       <td className="p-3 text-sm">
                         <span className={`px-2 py-1 text-xs font-semibold rounded-full 
                           ${loan.status === 'ACTIVE' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'}`}>
-                          {loan.status}
+                          {enumLabel(loan.status)}
                         </span>
                       </td>
                     </tr>

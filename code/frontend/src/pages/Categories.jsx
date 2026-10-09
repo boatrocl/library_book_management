@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
+import { useLanguage } from '../context/LanguageContext';
 
 const ART_VARIANTS = ['books', 'globe', 'light', 'leaf', 'screen', 'heart', 'briefcase', 'mountain'];
 
 export default function Categories() {
+  const { t, categoryName } = useLanguage();
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -34,10 +36,10 @@ export default function Categories() {
     <main className="lf-public-page lf-categories-page">
       <section className="lf-public-hero" aria-labelledby="categories-heading">
         <div className="lf-public-hero__copy">
-          <p className="lf-eyebrow">เลือกเรื่องราวที่สนใจ</p>
-          <h1 id="categories-heading">หมวดหมู่หนังสือ</h1>
-          <p>สำรวจหนังสือหลากหลายแนว แล้วเริ่มต้นอ่านเรื่องถัดไปที่เหมาะกับคุณ</p>
-          <Link className="button button--primary" to="/#books">ดูหนังสือทั้งหมด <span aria-hidden="true">→</span></Link>
+          <p className="lf-eyebrow">{t('เลือกเรื่องราวที่สนใจ', 'Find your next story')}</p>
+          <h1 id="categories-heading">{t('หมวดหมู่หนังสือ', 'Book categories')}</h1>
+          <p>{t('สำรวจหนังสือหลากหลายแนว แล้วเริ่มต้นอ่านเรื่องถัดไปที่เหมาะกับคุณ', 'Explore a range of subjects and find a book for your next reading journey.')}</p>
+          <Link className="button button--primary" to="/#books">{t('ดูหนังสือทั้งหมด', 'Browse all books')} <span aria-hidden="true">→</span></Link>
         </div>
         <div className="lf-public-hero__art" aria-hidden="true">
           <img src="/libraflow-hero.svg" alt="" />
@@ -47,28 +49,28 @@ export default function Categories() {
       <section className="lf-page-section" aria-labelledby="category-grid-heading">
         <div className="lf-section-heading">
           <div>
-            <p className="lf-eyebrow">ชั้นหนังสือของเรา</p>
-            <h2 id="category-grid-heading">เลือกหมวดหมู่ที่ใช่</h2>
+            <p className="lf-eyebrow">{t('ชั้นหนังสือของเรา', 'Our shelves')}</p>
+            <h2 id="category-grid-heading">{t('เลือกหมวดหมู่ที่ใช่', 'Choose a category')}</h2>
           </div>
-          {!isLoading && !hasError && <span className="lf-count-pill">{categories.length} หมวดหมู่</span>}
+          {!isLoading && !hasError && <span className="lf-count-pill">{t(`${categories.length.toLocaleString('th-TH')} หมวดหมู่`, `${categories.length.toLocaleString('en-US')} categories`)}</span>}
         </div>
 
         {isLoading ? (
-          <div className="lf-category-grid" aria-label="กำลังโหลดหมวดหมู่" aria-busy="true">
+          <div className="lf-category-grid" aria-label={t('กำลังโหลดหมวดหมู่', 'Loading categories')} aria-busy="true">
             {Array.from({ length: 6 }, (_, index) => <div className="lf-category-skeleton" key={index} />)}
           </div>
         ) : hasError ? (
           <div className="lf-empty-state" role="alert">
             <span className="lf-empty-state__icon" aria-hidden="true">!</span>
-            <h3>โหลดหมวดหมู่ไม่สำเร็จ</h3>
-            <p>ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง</p>
-            <button className="button button--primary" type="button" onClick={() => setRetry((value) => value + 1)}>ลองอีกครั้ง</button>
+            <h3>{t('โหลดหมวดหมู่ไม่สำเร็จ', 'Could not load categories')}</h3>
+            <p>{t('ตรวจสอบการเชื่อมต่อแล้วลองอีกครั้ง', 'Check your connection and try again.')}</p>
+            <button className="button button--primary" type="button" onClick={() => setRetry((value) => value + 1)}>{t('ลองอีกครั้ง', 'Try again')}</button>
           </div>
         ) : categories.length === 0 ? (
           <div className="lf-empty-state">
             <span className="lf-empty-state__icon" aria-hidden="true">▤</span>
-            <h3>ยังไม่มีหมวดหมู่ในระบบ</h3>
-            <p>กลับมาดูอีกครั้งเมื่อมีการเพิ่มหมวดหมู่หนังสือ</p>
+            <h3>{t('ยังไม่มีหมวดหมู่ในระบบ', 'No categories yet')}</h3>
+            <p>{t('กลับมาดูอีกครั้งเมื่อมีการเพิ่มหมวดหมู่หนังสือ', 'Check back after book categories have been added.')}</p>
           </div>
         ) : (
           <div className="lf-category-grid">
@@ -84,8 +86,8 @@ export default function Categories() {
                   <span className="lf-category-card__book lf-category-card__book--three" />
                   <span className="lf-category-card__spark">✦</span>
                 </span>
-                <span className="lf-category-card__name">{category.name}</span>
-                <span className="lf-category-card__action">เลือกหมวดหมู่นี้ <span aria-hidden="true">›</span></span>
+                <span className="lf-category-card__name">{categoryName(category.name)}</span>
+                <span className="lf-category-card__action">{t('เลือกหมวดหมู่นี้', 'Browse this category')} <span aria-hidden="true">›</span></span>
               </Link>
             ))}
           </div>

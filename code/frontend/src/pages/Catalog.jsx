@@ -1,9 +1,9 @@
-import { useContext, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../api';
 import BookCard from '../components/BookCard';
 import BookDetailsDialog from '../components/BookDetailsDialog';
-import { LanguageContext } from '../context/LanguageContext';
+import { useLanguage } from '../context/LanguageContext';
 
 const PAGE_SIZE = 8;
 
@@ -15,6 +15,7 @@ const COPY = {
     searchHint: 'ค้นหาจากชื่อหนังสือ ผู้แต่ง หรือหมายเลข ISBN',
     filters: 'ตัวกรอง',
     categories: 'หมวดหมู่',
+    category: 'หมวดหมู่',
     allCategories: 'ทั้งหมด',
     status: 'สถานะหนังสือ',
     allStatuses: 'ทุกสถานะ',
@@ -48,6 +49,19 @@ const COPY = {
     yearUnknown: 'ไม่ระบุปีพิมพ์',
     copiesUnavailable: 'ครบทุกเล่ม',
     copiesAvailable: (amount) => `ว่าง ${amount} เล่ม`,
+    newBook: 'หนังสือเล่มใหม่',
+    bookTitleUnknown: 'ไม่ระบุชื่อหนังสือ',
+    closeDetails: 'ปิดรายละเอียด',
+    detailsHeading: 'รายละเอียดหนังสือ',
+    unknown: 'ไม่ระบุ',
+    publisher: 'สำนักพิมพ์',
+    year: 'ปีที่พิมพ์',
+    isbn: 'ISBN',
+    totalCopies: 'จำนวนตัวเล่ม',
+    availableCopies: 'พร้อมให้ยืม',
+    copiesCount: (amount) => `${amount.toLocaleString('th-TH')} เล่ม`,
+    readingRoom: 'มุมอ่านหนังสือ',
+    library: 'ห้องสมุด LibraFlow',
   },
   en: {
     heroTitle: 'Find the book that feels right for you',
@@ -56,6 +70,7 @@ const COPY = {
     searchHint: 'Search by book title, author, or ISBN',
     filters: 'Filters',
     categories: 'Categories',
+    category: 'Category',
     allCategories: 'All books',
     status: 'Availability',
     allStatuses: 'All statuses',
@@ -89,6 +104,19 @@ const COPY = {
     yearUnknown: 'Year not listed',
     copiesUnavailable: 'All copies on loan',
     copiesAvailable: (amount) => `${amount} available`,
+    newBook: 'New book',
+    bookTitleUnknown: 'Untitled book',
+    closeDetails: 'Close details',
+    detailsHeading: 'Book details',
+    unknown: 'Not listed',
+    publisher: 'Publisher',
+    year: 'Published',
+    isbn: 'ISBN',
+    totalCopies: 'Total copies',
+    availableCopies: 'Available to borrow',
+    copiesCount: (amount) => `${amount.toLocaleString('en-US')} copies`,
+    readingRoom: 'Reading Room',
+    library: 'LibraFlow Library',
   },
 };
 
@@ -118,9 +146,9 @@ function BookOpenIcon({ className = '' }) {
 }
 
 export default function Catalog() {
-  const { language } = useContext(LanguageContext);
+  const { language, categoryName, t } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
-  const text = COPY[language] || COPY.th;
+  const text = { ...(COPY[language] || COPY.th), categoryName };
   const [books, setBooks] = useState([]);
   const [categories, setCategories] = useState([]);
   const [page, setPage] = useState(0);
@@ -280,7 +308,7 @@ export default function Catalog() {
                   onClick={() => chooseCategory(String(category.id))}
                 >
                   <span className="category-checkbox" aria-hidden="true">{categoryId === String(category.id) ? '✓' : ''}</span>
-                  <span>{category.name}</span>
+                <span>{categoryName(category.name)}</span>
                 </button>
               ))}
               {categories.length === 0 && <p className="category-empty">{text.allCategories}</p>}
@@ -347,7 +375,7 @@ export default function Catalog() {
           {(keyword || categoryId || availability !== 'ALL') && (
             <div className="active-filters">
               {keyword && <span className="filter-pill">{keyword}</span>}
-              {categoryId && <span className="filter-pill">{categories.find((item) => String(item.id) === categoryId)?.name || text.categories}</span>}
+              {categoryId && <span className="filter-pill">{categoryName(categories.find((item) => String(item.id) === categoryId)?.name) || text.categories}</span>}
               {availability !== 'ALL' && <span className="filter-pill">{availability === 'AVAILABLE' ? text.available : text.unavailable}</span>}
               <button type="button" onClick={clearFilters}>{text.clear}</button>
             </div>
@@ -416,10 +444,10 @@ export default function Catalog() {
         <span>LibraFlow</span>
         <span className="catalog-footer__dot">·</span>
         <span>{text.footer}</span>
-        <Link to="/about">เกี่ยวกับ LibraFlow</Link>
+        <Link to="/about">{t('เกี่ยวกับ LibraFlow', 'About LibraFlow')}</Link>
       </footer>
 
-      {selectedBook && <BookDetailsDialog book={selectedBook} onClose={() => setSelectedBook(null)} />}
+      {selectedBook && <BookDetailsDialog book={selectedBook} labels={text} categoryName={categoryName} onClose={() => setSelectedBook(null)} />}
     </main>
   );
 }

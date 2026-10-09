@@ -176,6 +176,12 @@
   margin-bottom: 36px;
 }
 
+.lf-auth-card__locale {
+  display: flex;
+  justify-content: flex-end;
+  margin: -8px 0 18px;
+}
+
 .lf-auth-card__heading {
   margin-bottom: 26px;
 }
