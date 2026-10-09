@@ -14,7 +14,9 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.BatchSize;
-import org.hibernate.annotations.CreationTimestamp;
+import jakarta.persistence.EntityListeners;
+import org.springframework.data.annotation.CreatedDate;
+import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -28,6 +30,7 @@ import java.util.Set;
  */
 @Entity
 @Table(name = "books")
+@EntityListeners(AuditingEntityListener.class)
 public class Book {
 
     @Id
@@ -52,7 +55,7 @@ public class Book {
     private BigDecimal price;
 
     /** updatable = false กันไม่ให้วันที่สร้างถูกแก้ภายหลังผ่าน UPDATE */
-    @CreationTimestamp
+    @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
