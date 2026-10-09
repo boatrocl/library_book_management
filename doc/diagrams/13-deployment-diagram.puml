@@ -1,5 +1,5 @@
 @startuml 13-deployment-diagram
-title Deployment Diagram — LibraFlow
+title Intended deployment topology — LibraFlow
 
 skinparam defaultFontName "Tahoma"
 skinparam defaultFontSize 12
@@ -13,56 +13,57 @@ skinparam cloud {
   BorderColor #85929E
 }
 
-node "เครื่องผู้ใช้" as CLIENT {
-  artifact "Web Browser\n(Chrome / Edge / Safari)" as BROWSER
+node "ผู้ใช้" as CLIENT {
+  artifact "Web Browser" as BROWSER
 }
 
 cloud "Vercel" as VERCEL {
-  node "Static Hosting / CDN" as VNODE {
-    artifact "React Production Build\n(dist/)" as FE
-  }
+  artifact "React SPA\nhttps://library-book-management-alpha.vercel.app" as FRONTEND
 }
 
 cloud "Render" as RENDER {
-  node "Docker Container\n(Linux, 512MB)" as RNODE {
-    artifact "libraflow-api.jar" as API
-    artifact "JRE 17 (eclipse-temurin)" as JRE
-    note right of API
-      Port 8080
-      Spring Profile = prod
-      Flyway migrate on startup
-    end note
-  }
+  artifact "Spring Boot API\nhttps://library-book-management-ybt2.onrender.com" as BACKEND
 }
 
-cloud "Neon (Serverless Postgres)" as NEON {
-  database "libraflow_db\nPostgreSQL 16" as DB
+cloud "Neon" as NEON {
+  database "PostgreSQL\nDatabase: libraflow" as DB
+  artifact "Branch shown in supplied screenshot: production" as NEON_BRANCH
 }
 
 cloud "GitHub" as GITHUB {
-  node "GitHub Actions Runner" as CI {
-    artifact "ci-cd.yml\nBuild -> Test -> Docker -> Deploy" as PIPE
+  artifact "Repository branches\nmain = production\ndevelop = integration/test" as REPO
+  node "GitHub Actions" as CI {
+    artifact "Backend: Maven clean verify\nFrontend: npm ci, lint, build, audit" as CHECKS
   }
-  artifact "Git Repository\nmain / develop / ชื่อ_รหัส_section" as REPO
 }
 
-cloud "SMTP Provider" as SMTP {
-  artifact "Mail Relay" as MAIL
-}
+BROWSER --> FRONTEND : HTTPS 443
+BROWSER --> BACKEND : HTTPS 443 / REST + JWT
+BACKEND --> DB : JDBC over TLS
+NEON_BRANCH -- DB
+REPO --> CI : push / pull request
 
-BROWSER --> FE : HTTPS 443\n(โหลดหน้าเว็บ)
-BROWSER --> API : HTTPS 443\nREST + JWT
-API --> DB : TLS 5432\nJDBC
-API --> MAIL : SMTP 587\n(Observer: แจ้งคิวจอง)
+note right of REPO
+  Intended release flow:
+  personal branch -> PR -> develop -> review -> main
+  develop is the test/integration branch.
+end note
 
-REPO --> PIPE : push / pull request
-PIPE --> RNODE : deploy container image
-PIPE --> VNODE : deploy static build
+note bottom of RENDER
+  Configure production Render service to track main.
+  The connected branch and deployed commit are not
+  verifiable from the public service URL.
+end note
 
-note bottom of RNODE
-  Dockerfile: multi-stage build
-  Stage 1 maven:3.9-eclipse-temurin-17 -> mvn package
-  Stage 2 eclipse-temurin:17-jre -> COPY *.jar
+note bottom of DB
+  Render DB_URL selects the Neon branch/database.
+  Neon having a branch called production does not
+  prove that Render connects to that branch.
+end note
+
+note bottom of CI
+  CI validates code; this workflow does not deploy.
+  Verify Render and Vercel Git settings in their dashboards.
 end note
 
 @enduml

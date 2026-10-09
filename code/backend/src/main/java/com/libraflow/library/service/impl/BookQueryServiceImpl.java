@@ -2,6 +2,7 @@ package com.libraflow.library.service.impl;
 
 import com.libraflow.library.domain.entity.Book;
 import com.libraflow.library.domain.entity.BookCopy;
+import com.libraflow.library.domain.enums.BookAvailabilityFilter;
 import com.libraflow.library.dto.response.BookCopyResponse;
 import com.libraflow.library.dto.response.BookResponse;
 import com.libraflow.library.dto.response.PageResponse;
@@ -27,9 +28,9 @@ import java.util.function.Function;
  * dirty checking (การเทียบ snapshot ของ entity ตอน flush) ทำให้อ่านเร็วขึ้นและกัน
  * การเผลอเขียนข้อมูลในเมธอดที่ควรอ่านอย่างเดียว
  *
- * SOLID - D: field ทุกตัวเป็น private final ชนิด interface และรับผ่าน constructor
- * ตัวเดียว ไม่มี @Autowired บน field ที่ไหนในโปรเจคนี้ ผลคือใน unit test
- * สามารถ @Mock repository แล้วส่งเข้า constructor ได้เลยโดยไม่ต้องยก Spring Context
+ * SOLID - D: repositories เป็น interface และ mapper เป็น utility ที่รับผ่าน constructor
+ * ไม่มี field injection; ใน unit test สามารถ @Mock repositories แล้วส่งเข้า constructor
+ * ได้โดยไม่ต้องยก Spring Context
  */
 @Service
 @Transactional(readOnly = true)
@@ -53,6 +54,7 @@ public class BookQueryServiceImpl implements BookQueryService {
     public PageResponse<BookResponse> search(
             String keyword,
             Long categoryId,
+            BookAvailabilityFilter availability,
             Pageable pageable
     ) {
         /*
@@ -72,10 +74,14 @@ public class BookQueryServiceImpl implements BookQueryService {
                         ? ""
                         : keyword.trim();
 
+        BookAvailabilityFilter normalizedAvailability =
+                availability == null ? BookAvailabilityFilter.ALL : availability;
+
         Page<Book> page =
                 bookRepository.search(
                         normalizedKeyword,
                         categoryId,
+                        normalizedAvailability.name(),
                         pageable
                 );
 

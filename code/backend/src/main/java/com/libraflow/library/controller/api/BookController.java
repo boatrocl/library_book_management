@@ -24,7 +24,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 
 /**
- * Endpoint สำหรับจัดการข้อมูลหนังสือ ใช้โดยบรรณารักษ์เท่านั้น
+ * Endpoint สำหรับจัดการข้อมูลหนังสือ ใช้โดย ADMIN หรือ LIBRARIAN ตาม SecurityConfig
  *
  * SOLID - I: คลาสนี้ถือเฉพาะ BookCommandService ส่วน endpoint ที่ใช้อ่านข้อมูล
  * ถูกแยกไปอยู่ที่ PublicCatalogController แล้ว การแบ่งแบบนี้ทำให้ขอบเขตสิทธิ์
@@ -33,8 +33,7 @@ import java.net.URI;
  * MVC — ไม่มี business logic ในนี้เลย ทุกเมธอดส่งต่อให้ Service ทันที
  * และไม่เรียก Repository ตรง ๆ ตามกฎห้ามข้าม Layer ในใบงานข้อ 3
  *
- * หมายเหตุสำหรับสมาชิกคนที่ 5: ตอนเพิ่ม Spring Security ให้ใส่
- * @PreAuthorize("hasRole('LIBRARIAN')") ที่ระดับคลาสนี้ได้เลย ครอบทุกเมธอดในครั้งเดียว
+ * SecurityConfig จำกัด write endpoints ของ resource นี้ให้ ADMIN หรือ LIBRARIAN
  */
 @RestController
 @RequestMapping("/api/v1/books")

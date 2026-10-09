@@ -1,105 +1,42 @@
 @startuml 04-class-diagram
-title Class Diagram (แสดงตำแหน่ง Design Pattern) — LibraFlow
+title Class Diagram — Core services and implemented design patterns
 
 skinparam defaultFontName "Tahoma"
-skinparam defaultFontSize 12
+skinparam defaultFontSize 14
 skinparam shadowing false
 skinparam linetype ortho
-skinparam class {
-  BackgroundColor #FDFDFD
-  BorderColor #34495E
-  ArrowColor #2E4053
-}
+skinparam classAttributeIconSize 0
 skinparam package {
   BackgroundColor #F7F9F9
   BorderColor #85929E
 }
 
-package "controller.api  <<Presentation Layer / MVC>>" #EAF2F8 {
-  class LoanController {
-    - final LoanService loanService
-    + borrow(BorrowRequest) : ResponseEntity<LoanResponse>
-    + returnBook(Long) : ResponseEntity<LoanResponse>
-    + renew(Long) : ResponseEntity<LoanResponse>
-  }
-  class BookController {
-    - final BookQueryService queryService
-    - final BookCommandService commandService
-    + search(String, Pageable) : PageResponse<BookResponse>
-    + create(CreateBookRequest) : ResponseEntity<BookResponse>
-  }
-}
+left to right direction
 
-package "service  <<Service Layer Pattern>>" #E8F8F5 {
-  interface LoanService <<interface>> {
-    + borrow(BorrowRequest) : LoanResponse
-    + returnBook(Long) : LoanResponse
-    + renew(Long) : LoanResponse
-  }
-  interface BookQueryService <<interface>> {
-    + search(String, Pageable) : Page<Book>
-    + findById(Long) : Book
-  }
-  interface BookCommandService <<interface>> {
-    + create(CreateBookRequest) : Book
-    + update(Long, UpdateBookRequest) : Book
-    + delete(Long) : void
-  }
+package "Loan orchestration" {
   class LoanServiceImpl {
-    - final LoanRepository loanRepository
-    - final BookCopyRepository copyRepository
-    - final List<BorrowRule> borrowRules
-    - final FineStrategyResolver strategyResolver
-    - final LoanStateFactory stateFactory
-    - final ApplicationEventPublisher publisher
-    - final LoanMapper mapper
     + borrow(BorrowRequest) : LoanResponse
     + returnBook(Long) : LoanResponse
+    + renewLoan(Long) : LoanResponse
   }
+  interface LoanRepository
+  class LoanStateFactory
 }
 
-package "repository  <<Repository Pattern>>" #FEF9E7 {
-  interface LoanRepository <<interface>> {
-    + findByUserId(Long, Pageable) : Page<Loan>
-    + countActiveByUserId(Long) : long
-  }
-  interface BookCopyRepository <<interface>> {
-    + findByBarcodeIn(List<String>) : List<BookCopy>
-    + findFirstAvailable(Long) : Optional<BookCopy>
-  }
-}
-
-package "pattern.chain  <<Chain of Responsibility>>" #FDEDEC {
-  interface BorrowRule <<interface>> {
+package "Chain of Responsibility" {
+  interface BorrowRule {
     + order() : int
     + check(BorrowContext) : void
   }
+  class BorrowContext
   class MemberStatusRule
   class UnpaidFineRule
   class LoanQuotaRule
   class CopyAvailabilityRule
-  class BorrowContext {
-    - User member
-    - List<BookCopy> copies
-  }
 }
 
-package "pattern.strategy  <<Strategy>>" #F4ECF7 {
-  interface FineCalculationStrategy <<interface>> {
-    + supports(MemberTier) : boolean
-    + calculate(LoanItem, LocalDate) : BigDecimal
-  }
-  class StudentFineStrategy
-  class StaffFineStrategy
-  class ExternalFineStrategy
-  class FineStrategyResolver {
-    - final List<FineCalculationStrategy> strategies
-    + resolve(MemberTier) : FineCalculationStrategy
-  }
-}
-
-package "pattern.state  <<State>>" #EBF5FB {
-  interface LoanState <<interface>> {
+package "State" {
+  interface LoanState {
     + status() : LoanStatus
     + onReturn(Loan, LoanItem) : void
     + onRenew(Loan) : void
@@ -108,107 +45,103 @@ package "pattern.state  <<State>>" #EBF5FB {
   class OverdueState
   class ReturnedState
   class LostState
-  class LoanStateFactory {
-    + stateOf(Loan) : LoanState
-  }
 }
 
-package "pattern.observer  <<Observer>>" #E9F7EF {
-  class BookReturnedEvent {
-    - Long bookId
-    - Long copyId
-    - Long memberId
+package "Fine calculation — Strategy" {
+  interface FineService {
+    + generateFine(LoanItem, int, MemberTier) : Fine
+    + generateLostBookFine(LoanItem, int) : Fine
   }
+  class FineServiceImpl
+  interface FineCalculationStrategy {
+    + getApplicableMemberTier() : MemberTier
+    + calculateFine(int) : BigDecimal
+  }
+  class StudentFineStrategy
+  class StaffFineStrategy
+  class ExternalFineStrategy
+}
+
+package "Reservation notification — Observer" {
+  class BookCopyAvailableEvent
+  class BookReturnedEvent
   class ReservationNotificationListener {
-    + onBookReturned(BookReturnedEvent) : void
+    + onBookCopyAvailable(BookCopyAvailableEvent) : void
+    --
+    AFTER_COMMIT
+    REQUIRES_NEW
   }
-  class AuditLogListener {
-    + onBookReturned(BookReturnedEvent) : void
-  }
+  interface ReservationRepository
+  interface BookCopyRepository
+  class ReservationServiceImpl
+  class ReservationScheduler
 }
 
-package "pattern.template  <<Template Method>>" #FDF2E9 {
+package "Reports — Template Method" {
+  class ReportController
   abstract class AbstractReportGenerator {
-    + {static} generate(ReportRequest) : byte[]
-    # fetchData(ReportRequest) : List<Loan>
-    # transform(List<Loan>) : List<ReportRow>
-    # {abstract} render(List<ReportRow>) : byte[]
+    + generate(ReportRequest) : byte[]
+    # render(List<ReportRow>) : byte[]
   }
   class CsvReportGenerator
   class PdfReportGenerator
 }
 
-package "mapper  <<DTO + Mapper Pattern>>" #F2F4F4 {
-  class LoanMapper {
-    + toResponse(Loan) : LoanResponse
-  }
-  class BookMapper {
-    + toResponse(Book) : BookResponse
-    + toEntity(CreateBookRequest) : Book
-  }
-}
-
-package "domain.entity" #FBFCFC {
+package "Relevant domain entities" {
   class Loan
   class LoanItem
-  class BookCopy
-  class Book
   class Fine
+  class Book
+  class BookCopy
+  class Reservation
 }
 
-' ---------- Relationships ----------
-LoanController ..> LoanService : <<DI>>
-BookController ..> BookQueryService : <<DI>>
-BookController ..> BookCommandService : <<DI>>
-
-LoanService <|.. LoanServiceImpl
-
-LoanServiceImpl ..> LoanRepository : <<DI>>
-LoanServiceImpl ..> BookCopyRepository : <<DI>>
-LoanServiceImpl ..> LoanMapper
-LoanServiceImpl --> "1..*" BorrowRule : <<Chain>>
-LoanServiceImpl --> FineStrategyResolver : <<Strategy>>
-LoanServiceImpl --> LoanStateFactory : <<State>>
-LoanServiceImpl ..> BookReturnedEvent : publishes
-
+LoanServiceImpl ..> LoanRepository : persists loans
+LoanServiceImpl --> "1..*" BorrowRule : runs in order()
 BorrowRule <|.. MemberStatusRule
 BorrowRule <|.. UnpaidFineRule
 BorrowRule <|.. LoanQuotaRule
 BorrowRule <|.. CopyAvailabilityRule
 BorrowRule ..> BorrowContext
 
-FineCalculationStrategy <|.. StudentFineStrategy
-FineCalculationStrategy <|.. StaffFineStrategy
-FineCalculationStrategy <|.. ExternalFineStrategy
-FineStrategyResolver o--> "1..*" FineCalculationStrategy
-
+LoanServiceImpl ..> LoanStateFactory
+LoanStateFactory ..> LoanState : selects by LoanStatus
 LoanState <|.. ActiveState
 LoanState <|.. OverdueState
 LoanState <|.. ReturnedState
 LoanState <|.. LostState
-LoanStateFactory ..> LoanState : creates
 
-BookReturnedEvent <.. ReservationNotificationListener : listens
-BookReturnedEvent <.. AuditLogListener : listens
+LoanServiceImpl ..> FineService
+FineService <|.. FineServiceImpl
+FineServiceImpl o--> "1..*" FineCalculationStrategy : selects by MemberTier
+FineCalculationStrategy <|.. StudentFineStrategy
+FineCalculationStrategy <|.. StaffFineStrategy
+FineCalculationStrategy <|.. ExternalFineStrategy
 
+LoanServiceImpl ..> BookReturnedEvent : publishes after return
+BookCopyAvailableEvent <|-- BookReturnedEvent
+BookCopyAvailableEvent <.. ReservationNotificationListener : handles after commit
+ReservationNotificationListener ..> ReservationRepository : marks first WAITING as READY
+ReservationNotificationListener ..> BookCopyRepository : changes copy to RESERVED
+ReservationServiceImpl ..> ReservationRepository : cancel and expire queue entries
+ReservationServiceImpl ..> BookCopyRepository : release reserved copies
+ReservationServiceImpl ..> BookCopyAvailableEvent : publish released copy
+ReservationScheduler ..> ReservationServiceImpl : expire after 48 hours
+
+ReportController ..> AbstractReportGenerator : selects CSV or PDF
 AbstractReportGenerator <|-- CsvReportGenerator
 AbstractReportGenerator <|-- PdfReportGenerator
 
-LoanRepository ..> Loan
-BookCopyRepository ..> BookCopy
 Loan "1" *--> "1..*" LoanItem
 LoanItem "1" --> "0..1" Fine
 LoanItem "*" --> "1" BookCopy
-BookCopy "*" --> "1" Book
+Reservation "*" --> "1" Book : reservation is for a title
+Reservation "*" --> "0..1" BookCopy : assigned while READY
+Book "1" --> "1..*" BookCopy
 
-note as N1
-  <b>SOLID ที่แสดงในภาพนี้</b>
-  D : LoanServiceImpl ขึ้นกับ interface ทั้งหมด
-      + Constructor Injection เท่านั้น
-  O : เพิ่ม BorrowRule / FineCalculationStrategy ใหม่
-      ได้โดยไม่แก้คลาสเดิม
-  I : BookQueryService แยกจาก BookCommandService
-  S : LoanServiceImpl ทำ orchestration อย่างเดียว
+note bottom of FineServiceImpl
+  STUDENT: 3 baht/day; STAFF: 5 baht/day, capped at 300;
+  EXTERNAL: 10 baht/day. LOST items are charged the full book price.
 end note
 
 @enduml

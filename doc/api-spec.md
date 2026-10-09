@@ -18,13 +18,18 @@ Authentication: `Authorization: Bearer <JWT>`
 ### Books (Resource หลักที่ 1 — CRUD ครบ)
 | Method | Endpoint | Success | Error | สิทธิ์ | คำอธิบาย |
 |---|---|---|---|---|---|
-| GET | `/api/v1/books?keyword=&categoryId=&page=0&size=10&sort=title,asc` | 200 | 400 | public | **Pagination + Sorting** |
+| GET | `/api/v1/books?keyword=&categoryId=&availability=ALL&page=0&size=10&sort=title,asc` | 200 | 400 | public | **Pagination + Sorting** ค้นด้วยชื่อเรื่อง ISBN ผู้แต่ง และกรองสถานะ `ALL` / `AVAILABLE` / `UNAVAILABLE` ได้ |
 | GET | `/api/v1/books/{id}` | 200 | 404 | public | ดูรายละเอียด |
 | POST | `/api/v1/books` | 201 | 400, 409 | LIBRARIAN | เพิ่มหนังสือ (409 = ISBN ซ้ำ) |
 | PUT | `/api/v1/books/{id}` | 200 | 400, 404 | LIBRARIAN | แก้ไข |
 | DELETE | `/api/v1/books/{id}` | 204 | 404, 409 | LIBRARIAN | ลบ (409 = ยังมีตัวเล่มถูกยืม BR-11) |
 | GET | `/api/v1/books/{id}/copies` | 200 | 404 | public | ตัวเล่มทั้งหมดของหนังสือ |
 | POST | `/api/v1/books/{id}/copies` | 201 | 404, 409 | LIBRARIAN | เพิ่มตัวเล่ม |
+
+### Categories
+| Method | Endpoint | Success | สิทธิ์ | คำอธิบาย |
+|---|---|---|---|---|
+| GET | `/api/v1/categories` | 200 | public | รายการหมวดหมู่เรียงตามชื่อ ใช้กับตัวกรองในแคตตาล็อก |
 
 ### Loans (Resource หลักที่ 2 — CRUD ครบ)
 | Method | Endpoint | Success | Error | สิทธิ์ | คำอธิบาย |
@@ -41,8 +46,13 @@ Authentication: `Authorization: Bearer <JWT>`
 | Method | Endpoint | Success | Error | สิทธิ์ |
 |---|---|---|---|---|
 | GET | `/api/v1/reservations?status=&page=&size=` | 200 | | LIBRARIAN |
-| POST | `/api/v1/reservations` | 201 | 400, 409 | MEMBER |
-| DELETE | `/api/v1/reservations/{id}` | 204 | 404 | MEMBER (เจ้าของ) |
+| POST | `/api/v1/reservations` | 201 | 400, 403, 409 | MEMBER (ตนเอง), LIBRARIAN, ADMIN |
+| DELETE | `/api/v1/reservations/{id}` | 204 | 403, 404, 409 | MEMBER (เจ้าของ), LIBRARIAN, ADMIN |
+
+`GET` returns a paginated `PageResponse<ReservationResponse>` and may filter by `status`.
+When status is `READY`, the response includes `reservedCopyId`, `reservedBarcode`, and `expiresAt`.
+Only the reservation owner may borrow that `RESERVED` copy before `expiresAt`; cancellation or
+automatic expiry releases the copy and advances the queue. Email/SMS delivery is not wired yet.
 
 ### Fines
 | Method | Endpoint | Success | Error | สิทธิ์ |
@@ -179,6 +189,7 @@ Authentication: `Authorization: Bearer <JWT>`
 | `RENEW_LIMIT_REACHED` | 409 | ต่ออายุครบจำนวนครั้งแล้ว | BR-06 |
 | `RENEW_BLOCKED_BY_RESERVATION` | 409 | มีคนจองคิวรออยู่ ต่ออายุไม่ได้ | BR-06 |
 | `DUPLICATE_RESERVATION` | 409 | จองหนังสือเล่มเดิมซ้ำ | BR-09 |
+| `RESERVATION_NOT_CANCELLABLE` | 409 | ยกเลิกได้เฉพาะ WAITING หรือ READY |
 | `BOOK_IN_USE` | 409 | ลบหนังสือไม่ได้เพราะมีตัวเล่มถูกยืม | BR-11 |
 | `ACCESS_DENIED` | 403 | ไม่มีสิทธิ์เข้าถึง | |
 | `INTERNAL_ERROR` | 500 | ข้อผิดพลาดที่ไม่คาดคิด | |

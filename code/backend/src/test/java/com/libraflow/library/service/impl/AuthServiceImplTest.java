@@ -28,6 +28,9 @@ import static org.mockito.Mockito.when;
 class AuthServiceImplTest {
 
     @Mock
+    private jakarta.persistence.EntityManager entityManager;
+
+    @Mock
     private UserRepository userRepository;
 
     @Mock
@@ -43,13 +46,7 @@ class AuthServiceImplTest {
 
     @BeforeEach
     void setUp() {
-
-        authService =
-                new AuthServiceImpl(
-                        userRepository,
-                        passwordEncoder,
-                        jwtService
-                );
+        authService = new AuthServiceImpl(userRepository, passwordEncoder, jwtService, entityManager);
     }
 
     @Test

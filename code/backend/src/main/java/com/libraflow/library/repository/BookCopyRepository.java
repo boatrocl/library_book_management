@@ -3,7 +3,9 @@ package com.libraflow.library.repository;
 import com.libraflow.library.domain.entity.BookCopy;
 import com.libraflow.library.domain.enums.BookCopyStatus;
 import com.libraflow.library.repository.projection.BookCopyCount;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -20,7 +22,9 @@ public interface BookCopyRepository extends JpaRepository<BookCopy, Long> {
      * ใช้โดยสมาชิกคนที่ 2 ตอนบันทึกการยืม — ดึงตัวเล่มหลายเล่มจากบาร์โค้ดที่สแกนมาในครั้งเดียว
      * (ดู doc/diagrams/05-sequence-borrow.puml ขั้นที่ 30)
      */
-    List<BookCopy> findByBarcodeIn(Collection<String> barcodes);
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT c FROM BookCopy c WHERE c.barcode IN :barcodes")
+    List<BookCopy> findByBarcodeIn(@Param("barcodes") Collection<String> barcodes);
 
     Optional<BookCopy> findByBarcode(String barcode);
 

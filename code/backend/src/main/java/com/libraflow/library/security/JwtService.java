@@ -63,6 +63,7 @@ public class JwtService {
         return Jwts.builder()
                 .issuer(ISSUER)
                 .subject(user.getUsername())
+                .claim("id", user.getId()) // เพิ่มบรรทัดนี้เพื่อฝัง ID ผู้ใช้ลงใน Token
                 .claim(
                         "role",
                         user.getRole().name()

@@ -1,5 +1,6 @@
 package com.libraflow.library.controller.api;
 
+import com.libraflow.library.domain.enums.BookAvailabilityFilter;
 import com.libraflow.library.dto.response.BookCopyResponse;
 import com.libraflow.library.dto.response.BookResponse;
 import com.libraflow.library.dto.response.PageResponse;
@@ -47,20 +48,21 @@ public class PublicCatalogController {
 
     /**
      * ค้นหาหนังสือพร้อมแบ่งหน้าและเรียงลำดับ (UC02)
-     * ตัวอย่าง: /api/v1/books?keyword=clean&categoryId=1&page=0&size=10&sort=title,asc
+     * ตัวอย่าง: /api/v1/books?keyword=clean&categoryId=1&availability=AVAILABLE&page=0&size=10&sort=title,asc
      *
      * ค้นไม่เจอจะตอบ 200 พร้อม content ว่าง ไม่ใช่ 404 เพราะ "ไม่มีผลลัพธ์" ไม่ใช่ข้อผิดพลาด
      * resource /books มีอยู่จริงเสมอ (UC02 alternative flow 3a)
      */
-    @Operation(summary = "ค้นหาหนังสือ", description = "รองรับคำค้น หมวดหมู่ การแบ่งหน้า และการเรียงลำดับ")
+    @Operation(summary = "ค้นหาหนังสือ", description = "รองรับคำค้น หมวดหมู่ สถานะพร้อมให้ยืม การแบ่งหน้า และการเรียงลำดับ")
     @ApiResponse(responseCode = "200", description = "สำเร็จ (ไม่พบผลลัพธ์จะได้ content ว่าง ไม่ใช่ 404)")
     @GetMapping
     public ResponseEntity<PageResponse<BookResponse>> search(
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Long categoryId,
+            @RequestParam(defaultValue = "ALL") BookAvailabilityFilter availability,
             @PageableDefault(size = 10, sort = "title", direction = Sort.Direction.ASC) Pageable pageable) {
 
-        return ResponseEntity.ok(bookQueryService.search(keyword, categoryId, pageable));
+        return ResponseEntity.ok(bookQueryService.search(keyword, categoryId, availability, pageable));
     }
 
     @Operation(summary = "ดูรายละเอียดหนังสือ")

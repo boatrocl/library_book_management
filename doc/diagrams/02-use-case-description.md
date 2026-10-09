@@ -32,13 +32,13 @@
 | **Use Case ID** | UC11 |
 | **ชื่อ** | บันทึกการคืนหนังสือ |
 | **Actor หลัก** | LIBRARIAN |
-| **Actor รอง** | SMTP Service |
+| **Actor รอง** | Reservation Queue |
 | **คำอธิบาย** | บันทึกการคืนหนังสือ คำนวณค่าปรับหากคืนช้า และแจ้งเตือนสมาชิกที่จองคิวไว้ |
 | **Trigger** | สมาชิกนำหนังสือมาคืนที่เคาน์เตอร์ |
 | **Precondition** | รายการยืมมีสถานะ ACTIVE, OVERDUE หรือ LOST |
-| **Postcondition** | 1. Loan เปลี่ยนเป็น RETURNED<br>2. ตัวเล่มเปลี่ยนเป็น AVAILABLE หรือ RESERVED<br>3. หากคืนช้า เกิดเรคอร์ด Fine สถานะ UNPAID<br>4. สมาชิกคิวแรกได้รับอีเมลแจ้งเตือน |
-| **Main Flow** | 1. บรรณารักษ์สแกนบาร์โค้ดตัวเล่มที่นำมาคืน<br>2. ระบบค้นหา LoanItem ที่ยังไม่คืน<br>3. ระบบเปลี่ยนสถานะผ่าน State Pattern<br>4. หากเกินกำหนด ระบบเลือก FineCalculationStrategy ตาม MemberTier แล้วคำนวณค่าปรับ (BR-07)<br>5. ระบบบันทึก returnedAt และเปลี่ยนสถานะตัวเล่ม<br>6. ระบบ publish `BookReturnedEvent`<br>7. Listener ค้นหา Reservation คิวแรก เปลี่ยนเป็น READY กันเวลา 48 ชม. และส่งอีเมล (BR-10)<br>8. ระบบแสดงสรุปการคืนและยอดค่าปรับ (ถ้ามี) |
-| **Alternative Flow** | **3a. รายการคืนไปแล้ว** → ระบบตอบ 409 และแจ้งว่าคืนแล้วเมื่อใด<br>**4a. คืนตรงเวลา** → ข้ามการสร้าง Fine<br>**7a. ไม่มีคิวจอง** → ตัวเล่มเปลี่ยนเป็น AVAILABLE ทันที<br>**2a. หนังสือสภาพชำรุด** → บรรณารักษ์ระบุ DAMAGED ตัวเล่มไม่กลับสู่ AVAILABLE |
+| **Postcondition** | 1. Loan เปลี่ยนเป็น RETURNED<br>2. หากไม่มีคิว ตัวเล่มเป็น AVAILABLE; หากมีคิว ตัวเล่มถูกผูกกับรายการ READY และเป็น RESERVED 48 ชั่วโมง<br>3. หากคืนช้า เกิดเรคอร์ด Fine สถานะ UNPAID<br>4. ผู้จองคิวแรกเป็นเจ้าของสิทธิ์ยืมตัวเล่มที่กันไว้ |
+| **Main Flow** | 1. บรรณารักษ์สแกนบาร์โค้ดตัวเล่มที่นำมาคืน<br>2. ระบบค้นหา LoanItem ที่ยังไม่คืน<br>3. ระบบเปลี่ยนสถานะผ่าน State Pattern<br>4. หากเกินกำหนด ระบบเลือก FineCalculationStrategy ตาม MemberTier แล้วคำนวณค่าปรับ (BR-07)<br>5. ระบบบันทึก returnedAt และเปลี่ยนสถานะตัวเล่ม<br>6. ระบบ publish `BookReturnedEvent`<br>7. หลัง commit listener ผูกตัวเล่มกับ Reservation คิวแรก เปลี่ยนเป็น READY และกำหนดเวลารับ 48 ชั่วโมง (BR-10)<br>8. ระบบเขียน log แจ้งเตือนจำลอง และแสดงสรุปการคืน/ค่าปรับ; ยังไม่ได้เชื่อมอีเมลหรือ SMS จริง |
+| **Alternative Flow** | **3a. รายการคืนไปแล้ว** → ระบบตอบ 409 และแจ้งว่าคืนแล้วเมื่อใด<br>**4a. คืนตรงเวลา** → ข้ามการสร้าง Fine<br>**7a. ไม่มีคิวจอง** → ตัวเล่มคงเป็น AVAILABLE<br>**7b. เจ้าของคิวมายืม** → ระบบยอมรับตัวเล่ม RESERVED และเปลี่ยน Reservation เป็น FULFILLED<br>**7c. ยกเลิก/หมดเวลา 48 ชั่วโมง** → คืนตัวเล่มเป็น AVAILABLE แล้วให้คิว WAITING ถัดไปรับสิทธิ์<br>**2a. หนังสือสภาพชำรุด** → บรรณารักษ์ระบุ DAMAGED ตัวเล่มไม่กลับสู่ AVAILABLE |
 | **Business Rules** | BR-07, BR-08, BR-10 |
 | **API ที่เกี่ยวข้อง** | `PATCH /api/v1/loans/{id}/return` |
 | **Design Pattern** | State, Strategy, Observer |
