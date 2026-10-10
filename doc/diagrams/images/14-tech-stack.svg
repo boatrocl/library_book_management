@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 940" role="img" aria-labelledby="title desc">
+  <title id="title">LibraFlow technology stack</title>
+  <desc id="desc">A clean overview of the React frontend, Spring Boot API, PostgreSQL database, testing tools, containers, CI, and hosting providers.</desc>
+  <defs>
+    <linearGradient id="header" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#eef7f4"/><stop offset="1" stop-color="#f8f4e9"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 10 5 0 10Z" fill="#0d7f82"/>
+    </marker>
+    <style>
+      text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#193454}
+      .title{font-size:34px;font-weight:750;letter-spacing:-.5px}
+      .subtitle{font-size:16px;fill:#627687}
+      .card-title{font-size:22px;font-weight:700}
+      .eyebrow{font-size:12px;font-weight:700;letter-spacing:1.8px;fill:#0d7f82}
+      .body{font-size:17px;font-weight:500}
+      .muted{font-size:14px;fill:#627687}
+      .small-title{font-size:18px;font-weight:700}
+      .small-body{font-size:15px;fill:#405a71}
+      .badge{font-size:13px;font-weight:700;fill:#0d6f75}
+    </style>
+  </defs>
+  <rect width="1500" height="940" rx="28" fill="#fbfaf7"/>
+  <rect x="28" y="28" width="1444" height="106" rx="24" fill="url(#header)"/>
+  <text x="76" y="79" class="title">LibraFlow · Technology Stack</text>
+  <text x="78" y="111" class="subtitle">A small, layered library platform built with Java, React, and PostgreSQL</text>
+
+  <!-- Core runtime cards -->
+  <g filter="none">
+    <rect x="60" y="178" width="420" height="390" rx="20" fill="#fff" stroke="#d9e3e3" stroke-width="1.5"/>
+    <path d="M80 178h380a20 20 0 0 1 20 20v5H60v-5a20 20 0 0 1 20-20" fill="#0d7f82"/>
+    <circle cx="108" cy="246" r="25" fill="#e4f2ef"/><text x="108" y="251" text-anchor="middle" class="badge">UI</text>
+    <text x="150" y="240" class="eyebrow">PRESENTATION</text><text x="150" y="270" class="card-title">Web client</text>
+    <line x1="88" y1="298" x2="452" y2="298" stroke="#e6eceb"/>
+    <circle cx="96" cy="334" r="4" fill="#0d7f82"/><text x="116" y="340" class="body">React 19</text>
+    <circle cx="96" cy="379" r="4" fill="#0d7f82"/><text x="116" y="385" class="body">Vite 8</text>
+    <circle cx="96" cy="424" r="4" fill="#0d7f82"/><text x="116" y="430" class="body">React Router 7 · Axios</text>
+    <circle cx="96" cy="469" r="4" fill="#0d7f82"/><text x="116" y="475" class="body">Tailwind CSS 4</text>
+    <rect x="88" y="510" width="182" height="30" rx="15" fill="#eff7f5"/><text x="179" y="530" text-anchor="middle" class="badge">Vercel hosting</text>
+  </g>
+
+  <g>
+    <rect x="540" y="178" width="420" height="390" rx="20" fill="#fff" stroke="#d9e3e3" stroke-width="1.5"/>
+    <path d="M560 178h380a20 20 0 0 1 20 20v5H540v-5a20 20 0 0 1 20-20" fill="#193454"/>
+    <circle cx="588" cy="246" r="25" fill="#e9eef5"/><text x="588" y="251" text-anchor="middle" class="badge">API</text>
+    <text x="630" y="240" class="eyebrow">BUSINESS &amp; API</text><text x="630" y="270" class="card-title">Spring Boot service</text>
+    <line x1="568" y1="298" x2="932" y2="298" stroke="#e6eceb"/>
+    <circle cx="576" cy="334" r="4" fill="#193454"/><text x="596" y="340" class="body">Java 17 · Spring Boot 4.1.1</text>
+    <circle cx="576" cy="379" r="4" fill="#193454"/><text x="596" y="385" class="body">Spring Security · JWT</text>
+    <circle cx="576" cy="424" r="4" fill="#193454"/><text x="596" y="430" class="body">Spring Data JPA · Flyway</text>
+    <circle cx="576" cy="469" r="4" fill="#193454"/><text x="596" y="475" class="body">OpenAPI · Swagger UI</text>
+    <rect x="568" y="510" width="180" height="30" rx="15" fill="#f0f3f8"/><text x="658" y="530" text-anchor="middle" class="badge">Render hosting</text>
+  </g>
+
+  <g>
+    <rect x="1020" y="178" width="420" height="390" rx="20" fill="#fff" stroke="#d9e3e3" stroke-width="1.5"/>
+    <path d="M1040 178h380a20 20 0 0 1 20 20v5h-420v-5a20 20 0 0 1 20-20" fill="#d6a34a"/>
+    <circle cx="1068" cy="246" r="25" fill="#fbf2df"/><text x="1068" y="251" text-anchor="middle" class="badge">DB</text>
+    <text x="1110" y="240" class="eyebrow">PERSISTENCE</text><text x="1110" y="270" class="card-title">Relational data</text>
+    <line x1="1048" y1="298" x2="1412" y2="298" stroke="#e6eceb"/>
+    <circle cx="1056" cy="334" r="4" fill="#d6a34a"/><text x="1076" y="340" class="body">PostgreSQL 16</text>
+    <circle cx="1056" cy="379" r="4" fill="#d6a34a"/><text x="1076" y="385" class="body">Neon managed database</text>
+    <circle cx="1056" cy="424" r="4" fill="#d6a34a"/><text x="1076" y="430" class="body">Flyway versioned migrations</text>
+    <circle cx="1056" cy="469" r="4" fill="#d6a34a"/><text x="1076" y="475" class="body">JDBC over TLS</text>
+    <rect x="1048" y="510" width="203" height="30" rx="15" fill="#fbf5e8"/><text x="1150" y="530" text-anchor="middle" class="badge">Schema: V1–V10</text>
+  </g>
+
+  <path d="M482 373h48" fill="none" stroke="#0d7f82" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="461" y="325" width="93" height="26" rx="13" fill="#fbfaf7"/><text x="507" y="343" text-anchor="middle" class="muted">REST · JSON</text>
+  <path d="M962 373h48" fill="none" stroke="#0d7f82" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="946" y="325" width="82" height="26" rx="13" fill="#fbfaf7"/><text x="987" y="343" text-anchor="middle" class="muted">JDBC · TLS</text>
+
+  <!-- Shared engineering toolchain -->
+  <text x="60" y="626" class="eyebrow">ENGINEERING TOOLCHAIN</text>
+  <text x="60" y="657" class="card-title">Build · quality · delivery</text>
+
+  <g>
+    <rect x="60" y="690" width="420" height="170" rx="18" fill="#fff" stroke="#d9e3e3" stroke-width="1.5"/>
+    <circle cx="98" cy="733" r="20" fill="#e4f2ef"/><text x="98" y="738" text-anchor="middle" class="badge">QA</text>
+    <text x="132" y="738" class="small-title">Automated tests</text>
+    <text x="88" y="782" class="small-body">JUnit 5 · Mockito · Spring Boot Test</text>
+    <text x="88" y="811" class="small-body">Testcontainers · PostgreSQL</text>
+  </g>
+  <g>
+    <rect x="540" y="690" width="420" height="170" rx="18" fill="#fff" stroke="#d9e3e3" stroke-width="1.5"/>
+    <circle cx="578" cy="733" r="20" fill="#e9eef5"/><text x="578" y="738" text-anchor="middle" class="badge">CI</text>
+    <text x="612" y="738" class="small-title">Developer workflow</text>
+    <text x="568" y="782" class="small-body">Maven Wrapper · npm · Docker Compose</text>
+    <text x="568" y="811" class="small-body">GitHub Actions: backend verify + frontend build</text>
+  </g>
+  <g>
+    <rect x="1020" y="690" width="420" height="170" rx="18" fill="#fff" stroke="#d9e3e3" stroke-width="1.5"/>
+    <circle cx="1058" cy="733" r="20" fill="#fbf2df"/><text x="1058" y="738" text-anchor="middle" class="badge">CD</text>
+    <text x="1092" y="738" class="small-title">Hosted services</text>
+    <text x="1048" y="782" class="small-body">Vercel · React frontend</text>
+    <text x="1048" y="811" class="small-body">Render · Spring API  |  Neon · PostgreSQL</text>
+  </g>
+
+  <text x="60" y="906" class="muted">GitHub Actions verifies changes. Production deploys are managed by the configured hosting providers.</text>
+</svg>

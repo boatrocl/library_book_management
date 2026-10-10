@@ -1,0 +1,111 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">LibraFlow system architecture</title>
+  <desc id="desc">Members and staff use a React web app that calls a secured Spring Boot API. The API applies business rules, persists data through JPA to PostgreSQL, and applies database migrations through Flyway.</desc>
+  <defs>
+    <linearGradient id="header" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#eef7f4"/><stop offset="1" stop-color="#f8f4e9"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0 10 5 0 10Z" fill="#0d7f82"/>
+    </marker>
+    <style>
+      text{font-family:Inter,Segoe UI,Arial,sans-serif;fill:#193454}
+      .title{font-size:34px;font-weight:750;letter-spacing:-.5px}
+      .subtitle{font-size:16px;fill:#627687}
+      .card-title{font-size:20px;font-weight:700}
+      .eyebrow{font-size:12px;font-weight:700;letter-spacing:1.7px;fill:#0d7f82}
+      .body{font-size:16px;font-weight:500}
+      .muted{font-size:14px;fill:#627687}
+      .layer{font-size:15px;fill:#405a71}
+      .pill{font-size:13px;font-weight:700;fill:#0d6f75}
+    </style>
+  </defs>
+  <rect width="1600" height="1000" rx="28" fill="#fbfaf7"/>
+  <rect x="28" y="28" width="1544" height="106" rx="24" fill="url(#header)"/>
+  <text x="74" y="79" class="title">LibraFlow · System Architecture</text>
+  <text x="76" y="111" class="subtitle">Browser-based circulation flows through a secured, layered Spring Boot API</text>
+
+  <!-- Browser users -->
+  <g>
+    <rect x="70" y="170" width="380" height="122" rx="18" fill="#fff" stroke="#d9e3e3" stroke-width="1.5"/>
+    <circle cx="110" cy="211" r="20" fill="#e4f2ef"/><text x="110" y="216" text-anchor="middle" class="pill">01</text>
+    <text x="145" y="209" class="eyebrow">CLIENT</text><text x="145" y="239" class="card-title">Browser users</text>
+    <text x="95" y="271" class="muted">Member · Librarian · Admin</text>
+  </g>
+
+  <!-- Web application -->
+  <g>
+    <rect x="70" y="360" width="380" height="188" rx="18" fill="#fff" stroke="#c8dfdc" stroke-width="1.7"/>
+    <path d="M88 360h344a18 18 0 0 1 18 18v3H70v-3a18 18 0 0 1 18-18" fill="#0d7f82"/>
+    <circle cx="110" cy="421" r="20" fill="#e4f2ef"/><text x="110" y="426" text-anchor="middle" class="pill">WEB</text>
+    <text x="145" y="419" class="eyebrow">VERCEL</text><text x="145" y="450" class="card-title">React single-page app</text>
+    <text x="96" y="490" class="body">React Router · Axios</text>
+    <text x="96" y="519" class="muted">Role-aware pages · responsive UI</text>
+  </g>
+  <path d="M260 292v58" fill="none" stroke="#0d7f82" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="271" y="311" width="76" height="25" rx="12" fill="#fbfaf7"/><text x="309" y="328" text-anchor="middle" class="muted">HTTPS</text>
+
+  <!-- Backend boundary and layers -->
+  <rect x="570" y="170" width="680" height="600" rx="22" fill="#f4f7f8" stroke="#b9ccd1" stroke-width="1.8"/>
+  <text x="610" y="207" class="eyebrow">RENDER · JAVA 17 · SPRING BOOT 4.1.1</text>
+
+  <g>
+    <rect x="620" y="244" width="580" height="82" rx="14" fill="#e8f3f1" stroke="#c8dfdc"/>
+    <text x="650" y="276" class="card-title">JWT filter · Spring Security</text>
+    <text x="650" y="305" class="layer">Authentication and role-based authorization</text>
+  </g>
+  <g>
+    <rect x="620" y="356" width="580" height="88" rx="14" fill="#fff" stroke="#d9e3e3"/>
+    <text x="650" y="389" class="card-title">REST controllers</text>
+    <text x="650" y="418" class="layer">Validated requests · response DTOs · mappers</text>
+  </g>
+  <g>
+    <rect x="620" y="474" width="580" height="126" rx="14" fill="#fbf5e8" stroke="#ead9b6"/>
+    <text x="650" y="507" class="card-title">Service layer</text>
+    <text x="650" y="536" class="layer">Transactional workflows · circulation and policy rules</text>
+    <rect x="650" y="552" width="510" height="30" rx="15" fill="#fff"/>
+    <text x="905" y="572" text-anchor="middle" class="pill">Chain · State · Strategy · Observer · Template Method</text>
+  </g>
+  <g>
+    <rect x="620" y="630" width="580" height="94" rx="14" fill="#fff" stroke="#d9e3e3"/>
+    <text x="650" y="665" class="card-title">Persistence boundary</text>
+    <text x="650" y="695" class="layer">Spring Data JPA repositories · domain entities · enums</text>
+  </g>
+  <path d="M450 454h160v-169h8" fill="none" stroke="#0d7f82" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="467" y="425" width="133" height="26" rx="13" fill="#fbfaf7"/><text x="534" y="443" text-anchor="middle" class="muted">REST · JSON · JWT</text>
+  <path d="M910 326v24" fill="none" stroke="#0d7f82" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <path d="M910 444v24" fill="none" stroke="#0d7f82" stroke-width="2.2" marker-end="url(#arrow)"/>
+  <path d="M910 600v24" fill="none" stroke="#0d7f82" stroke-width="2.2" marker-end="url(#arrow)"/>
+
+  <!-- Database -->
+  <g>
+    <rect x="1320" y="590" width="220" height="190" rx="18" fill="#fff" stroke="#c8dfdc" stroke-width="1.7"/>
+    <path d="M1375 620c0-9 25-16 55-16s55 7 55 16v38c0 9-25 16-55 16s-55-7-55-16z" fill="#e4f2ef" stroke="#0d7f82" stroke-width="1.5"/>
+    <ellipse cx="1430" cy="620" rx="55" ry="16" fill="#edf7f4" stroke="#0d7f82" stroke-width="1.5"/>
+    <path d="M1375 639c0 9 25 16 55 16s55-7 55-16" fill="none" stroke="#9bc9c1" stroke-width="1.2"/>
+    <text x="1430" y="730" text-anchor="middle" class="card-title">PostgreSQL 16</text>
+    <text x="1430" y="757" text-anchor="middle" class="muted">Neon · managed database</text>
+  </g>
+  <path d="M1200 677h120" fill="none" stroke="#0d7f82" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="1203" y="642" width="110" height="25" rx="12" fill="#fbfaf7"/><text x="1258" y="659" text-anchor="middle" class="muted">JDBC · TLS</text>
+
+  <g>
+    <rect x="1320" y="390" width="220" height="130" rx="18" fill="#fbf5e8" stroke="#ead9b6" stroke-width="1.5"/>
+    <circle cx="1356" cy="430" r="18" fill="#fff"/><text x="1356" y="435" text-anchor="middle" class="pill">V</text>
+    <text x="1386" y="428" class="card-title">Flyway</text>
+    <text x="1344" y="468" class="muted">API startup · V1–V10</text>
+    <text x="1344" y="492" class="muted">Versioned schema updates</text>
+  </g>
+  <path d="M1430 520v66" fill="none" stroke="#d6a34a" stroke-width="2.3" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+  <text x="1450" y="560" class="muted">SQL</text>
+
+  <!-- Scope note -->
+  <rect x="70" y="625" width="380" height="200" rx="18" fill="#fff" stroke="#e5e4dc" stroke-width="1.4"/>
+  <text x="98" y="668" class="eyebrow">DESIGN NOTES</text>
+  <text x="98" y="704" class="body">Layered request flow</text>
+  <text x="98" y="733" class="muted">Controllers call services; services use</text>
+  <text x="98" y="756" class="muted">repositories for persistence.</text>
+  <text x="98" y="793" class="muted">Reservation events are in-system only.</text>
+
+  <text x="70" y="932" class="muted">Production hosting is provider-managed. GitHub Actions runs CI and post-deployment checks; see the deployment diagram for that flow.</text>
+</svg>
