@@ -1,0 +1,31 @@
+name: Production Deployment Smoke Check
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  production-smoke:
+    name: Verify deployed production services
+    if: >
+      github.event.deployment_status.state == 'success' &&
+      github.event.deployment.environment == 'Production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.12"
+
+      - name: Smoke-test the live frontend and backend
+        env:
+          FRONTEND_BASE_URL: https://library-book-management-alpha.vercel.app
+          API_BASE_URL: https://library-book-management-ybt2.onrender.com
+        run: node scripts/deployment/production-smoke-check.mjs
