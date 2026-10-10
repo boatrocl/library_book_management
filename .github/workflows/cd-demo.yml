@@ -1,4 +1,4 @@
-name: CD Demo
+name: CD Demo — GitHub Pages
 
 on:
   push:
@@ -21,6 +21,7 @@ jobs:
   build:
     name: Build demo artifact
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
       pages: read
@@ -51,6 +52,7 @@ jobs:
     name: Validate the same artifact
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Check out source
         uses: actions/checkout@v7
@@ -79,6 +81,7 @@ jobs:
     if: github.ref == 'refs/heads/develop'
     needs: test
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       pages: write
       id-token: write

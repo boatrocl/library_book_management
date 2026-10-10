@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 1040" role="img" aria-labelledby="title desc">
+  <title id="title">LibraFlow technology stack</title>
+  <desc id="desc">A tree-style overview of the LibraFlow frontend and backend, followed by the database, automated tests, build tools, CI, and hosting providers.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 10 5 0 10Z" fill="#9b7950"/></marker>
+    <style>
+      text{font-family:"Noto Sans Mono",monospace;fill:#30281f}
+      .pixel{font-family:"Press Start 2P",monospace;font-weight:400}
+      .title{font-size:25px}.subtitle{font-size:17px;fill:#665744}
+      .label{font-size:12px;fill:#6c5b46;letter-spacing:.5px}
+      .section{font-size:14px}.body{font-size:19px;font-weight:600}
+      .detail{font-size:16px;fill:#5e513f}.small{font-size:15px;fill:#5e513f}
+      .mono{font-size:13px;fill:#665744}
+    </style>
+  </defs>
+  <rect width="1440" height="1040" fill="#fff"/>
+  <rect x="30" y="30" width="1380" height="118" fill="#f5f0e7"/>
+  <rect x="30" y="30" width="10" height="118" fill="#c9ad85"/>
+  <text x="70" y="82" class="pixel title">LIBRAFLOW - TECH STACK</text>
+  <text x="72" y="119" class="subtitle">A small, layered library platform built with React, Spring Boot, and PostgreSQL</text>
+
+  <rect x="565" y="178" width="310" height="70" fill="#f5f0e7" stroke="#9b7950" stroke-width="2"/>
+  <text x="720" y="209" text-anchor="middle" class="pixel section">LIBRAFLOW</text>
+  <text x="720" y="234" text-anchor="middle" class="mono">library platform</text>
+  <path d="M720 248v34M365 282h710M365 282v24M1075 282v24" fill="none" stroke="#9b7950" stroke-width="3"/>
+
+  <g>
+    <rect x="60" y="306" width="610" height="380" fill="#fff" stroke="#c9ad85" stroke-width="2"/>
+    <rect x="60" y="306" width="610" height="70" fill="#f5f0e7"/><rect x="60" y="306" width="10" height="70" fill="#c9ad85"/>
+    <text x="92" y="339" class="pixel section">FRONTEND</text><text x="92" y="362" class="label">PRESENTATION LAYER</text>
+    <rect x="90" y="400" width="255" height="103" fill="#fff" stroke="#dfcdb3"/>
+    <text x="110" y="426" class="label">WEB FRAMEWORK</text><text x="110" y="460" class="body">React 19</text><text x="110" y="486" class="detail">Vite 8</text>
+    <rect x="365" y="400" width="275" height="103" fill="#fff" stroke="#dfcdb3"/>
+    <text x="385" y="426" class="label">NAVIGATION + REQUESTS</text><text x="385" y="460" class="body">React Router 7</text><text x="385" y="486" class="detail">Axios</text>
+    <rect x="90" y="523" width="255" height="103" fill="#fff" stroke="#dfcdb3"/>
+    <text x="110" y="549" class="label">STYLING</text><text x="110" y="583" class="body">Tailwind CSS 4</text><text x="110" y="609" class="detail">Responsive interface</text>
+    <rect x="365" y="523" width="275" height="103" fill="#fff" stroke="#dfcdb3"/>
+    <text x="385" y="549" class="label">HOSTING</text><text x="385" y="583" class="body">Vercel</text><text x="385" y="609" class="detail">Provider-managed deploy</text>
+  </g>
+
+  <g>
+    <rect x="770" y="306" width="610" height="380" fill="#fff" stroke="#c9ad85" stroke-width="2"/>
+    <rect x="770" y="306" width="610" height="70" fill="#f5f0e7"/><rect x="770" y="306" width="10" height="70" fill="#c9ad85"/>
+    <text x="802" y="339" class="pixel section">BACKEND + API</text><text x="802" y="362" class="label">BUSINESS AND PERSISTENCE LAYERS</text>
+    <rect x="800" y="400" width="550" height="54" fill="#fff" stroke="#dfcdb3"/>
+    <text x="820" y="424" class="label">RUNTIME</text><text x="820" y="446" class="detail">Java 17 · Spring Boot 4.1.1 · Render</text>
+    <rect x="800" y="468" width="550" height="54" fill="#fff" stroke="#dfcdb3"/>
+    <text x="820" y="492" class="label">SECURITY</text><text x="820" y="514" class="detail">Spring Security · JWT auth + roles</text>
+    <rect x="800" y="536" width="550" height="54" fill="#fff" stroke="#dfcdb3"/>
+    <text x="820" y="560" class="label">PERSISTENCE</text><text x="820" y="582" class="detail">Spring Data JPA · Flyway migrations</text>
+    <rect x="800" y="604" width="550" height="54" fill="#fff" stroke="#dfcdb3"/>
+    <text x="820" y="628" class="label">API DOCUMENTATION</text><text x="820" y="650" class="detail">OpenAPI 3 · springdoc · Swagger UI</text>
+  </g>
+  <path d="M670 495h94" fill="none" stroke="#9b7950" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <rect x="675" y="461" width="82" height="24" fill="#fff"/><text x="716" y="478" text-anchor="middle" class="mono">REST + JSON</text>
+
+  <text x="60" y="736" class="pixel section">PROJECT TOOLCHAIN</text>
+  <text x="62" y="764" class="subtitle">Local development, verification, and provider-managed delivery</text>
+  <g>
+    <rect x="60" y="792" width="410" height="174" fill="#fff" stroke="#c9ad85" stroke-width="2"/>
+    <rect x="60" y="792" width="410" height="42" fill="#f5f0e7"/><text x="82" y="820" class="pixel section">DATA</text>
+    <text x="84" y="868" class="body">PostgreSQL 16</text><text x="84" y="898" class="small">Neon · JDBC over TLS</text><text x="84" y="930" class="small">Flyway · V1 to V10</text>
+  </g>
+  <g>
+    <rect x="515" y="792" width="410" height="174" fill="#fff" stroke="#c9ad85" stroke-width="2"/>
+    <rect x="515" y="792" width="410" height="42" fill="#f5f0e7"/><text x="537" y="820" class="pixel section">QUALITY</text>
+    <text x="539" y="868" class="body">JUnit 5 · Mockito</text><text x="539" y="898" class="small">Spring Boot Test</text><text x="539" y="930" class="small">Testcontainers · PostgreSQL</text>
+  </g>
+  <g>
+    <rect x="970" y="792" width="410" height="174" fill="#fff" stroke="#c9ad85" stroke-width="2"/>
+    <rect x="970" y="792" width="410" height="42" fill="#f5f0e7"/><text x="992" y="820" class="pixel section">BUILD + DELIVERY</text>
+    <text x="994" y="868" class="small">Maven Wrapper · npm · Docker Compose</text>
+    <text x="994" y="898" class="small">GitHub Actions: backend verify</text>
+    <text x="994" y="930" class="small">Frontend lint/build · provider deploys</text>
+  </g>
+  <text x="60" y="1008" class="mono">CI verifies changes. Production application deployments are managed by the configured hosting providers.</text>
+</svg>
