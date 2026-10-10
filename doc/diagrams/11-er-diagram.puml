@@ -1,5 +1,5 @@
 @startuml 11-er-diagram
-title ER Diagram — LibraFlow database (V1–V9)
+title ER Diagram — LibraFlow schema (V1–V10)
 
 skinparam defaultFontName "Tahoma"
 skinparam defaultFontSize 12
@@ -101,10 +101,10 @@ entity "loan_items" as loan_items {
 entity "fines" as fines {
   * id : BIGSERIAL <<PK>>
   --
-  * loan_item_id : BIGINT <<UK, FK in V8>>
+  * loan_item_id : BIGINT <<UK, FK>>
   * amount : NUMERIC(10,2)
   * overdue_days : INT
-  * status : VARCHAR(20)
+  * status : VARCHAR(20) <<CHECK: UNPAID, PAID, WAIVED>>
   * created_at : TIMESTAMP = CURRENT_TIMESTAMP
   paid_at : TIMESTAMP
 }
@@ -112,17 +112,17 @@ entity "fines" as fines {
 entity "reservations" as reservations {
   * id : BIGSERIAL <<PK>>
   --
-  * user_id : BIGINT <<FK in V8, IDX>>
-  * book_id : BIGINT <<FK in V8, IDX>>
-  reserved_copy_id : BIGINT <<FK in V9, IDX>>
+  * user_id : BIGINT <<FK, IDX>>
+  * book_id : BIGINT <<FK, IDX>>
+  reserved_copy_id : BIGINT <<FK, IDX>>
   * reserved_at : TIMESTAMP = CURRENT_TIMESTAMP
   expires_at : TIMESTAMP
-  * status : VARCHAR(20) <<READY requires copy and expiry>>
+  * status : VARCHAR(20) <<CHECK>>
 }
 
-users ||--|| user_profiles : "PK is also FK"
-users ||--o{ loans : "borrower"
-users |o--o{ loans : "librarian"
+users ||--|| user_profiles : PK is also FK
+users ||--o{ loans : borrower
+users |o--o{ loans : librarian
 users ||--o{ reservations
 categories ||--o{ books
 publishers ||--o{ books
@@ -135,21 +135,15 @@ loans ||--o{ loan_items
 book_copies ||--o{ loan_items
 loan_items ||--o| fines
 
-note bottom of book_authors
-  Many-to-Many: books and authors
-  Composite PK (book_id, author_id)
-end note
-
 note bottom of fines
-  V5 adds UNIQUE on loan_item_id.
-  V8 adds the foreign key to loan_items.
+  V5 creates the table and unique loan_item_id.
+  V8 adds the foreign key.
+  V10 adds and validates ck_fines_status.
 end note
 
 note bottom of reservations
-  V5 already has indexes and a partial unique index for
-  one WAITING or READY reservation per user and book.
-  V8 adds user_id and book_id foreign keys. V9 links a READY
-  reservation to a physical copy and limits one READY row per copy.
+  V8 adds user_id and book_id foreign keys.
+  V9 assigns a copy and expiry to READY reservations.
 end note
 
 @enduml

@@ -1,5 +1,5 @@
 @startuml 01-use-case
-title Use Case Diagram — LibraFlow (ระบบจัดการหนังสือในห้องสมุด)
+title Use Case Diagram — LibraFlow
 
 skinparam defaultFontName "Tahoma"
 skinparam defaultFontSize 13
@@ -15,50 +15,50 @@ skinparam actor {
 }
 left to right direction
 
+actor "ผู้เข้าชม" as VISITOR
 actor "สมาชิก\n(MEMBER)" as MEMBER
 actor "บรรณารักษ์\n(LIBRARIAN)" as LIBRARIAN
 actor "ผู้ดูแลระบบ\n(ADMIN)" as ADMIN
 
-MEMBER <|-- LIBRARIAN
-LIBRARIAN <|-- ADMIN
-
 rectangle "LibraFlow" {
-
-  package "การใช้งานทั่วไป" {
+  package "แคตตาล็อก" {
     usecase "UC01\nเข้าสู่ระบบ" as UC01
     usecase "UC02\nค้นหาหนังสือ" as UC02
     usecase "UC03\nดูรายละเอียดหนังสือ" as UC03
   }
 
-  package "สมาชิก" {
+  package "บริการสมาชิก" {
     usecase "UC04\nจองหนังสือ" as UC04
     usecase "UC05\nยกเลิกการจอง" as UC05
     usecase "UC06\nดูประวัติการยืม" as UC06
-    usecase "UC07\nดูค่าปรับค้างชำระ" as UC07
+    usecase "UC07\nดูค่าปรับ" as UC07
     usecase "UC20\nยืมหนังสือจากแคตตาล็อก" as UC20
   }
 
-  package "งานเคาน์เตอร์" {
-    usecase "UC08\nจัดการหนังสือ\n(เพิ่ม/แก้ไข/ลบ)" as UC08
+  package "งานห้องสมุด" {
+    usecase "UC08\nจัดการหนังสือ" as UC08
     usecase "UC09\nจัดการตัวเล่ม" as UC09
-    usecase "UC10\nบันทึกการยืม" as UC10
+    usecase "UC10\nบันทึกการยืมที่เคาน์เตอร์" as UC10
     usecase "UC11\nบันทึกการคืน" as UC11
     usecase "UC12\nต่ออายุการยืม" as UC12
-    usecase "UC13\nรับชำระค่าปรับ" as UC13
+    usecase "UC13\nบันทึกชำระค่าปรับ" as UC13
     usecase "UC14\nออกรายงาน" as UC14
   }
 
-  package "ผู้ดูแลระบบ" {
-    usecase "UC15\nจัดการผู้ใช้และสิทธิ์" as UC15
-    usecase "UC16\nตั้งค่านโยบายการยืม" as UC16
+  package "งานผู้ดูแลระบบ" {
+    usecase "UC15\nจัดการบัญชีผู้ใช้" as UC15
   }
 
-  package "กระบวนการภายใน" {
+  package "ขั้นตอนภายใน" {
     usecase "UC17\nตรวจสอบสิทธิ์การยืม" as UC17
     usecase "UC18\nคำนวณค่าปรับ" as UC18
-    usecase "UC19\nจัดคิวและกันตัวเล่ม" as UC19
+    usecase "UC19\nส่งตัวเล่มให้คิวถัดไป" as UC19
   }
 }
+
+VISITOR --> UC01
+VISITOR --> UC02
+VISITOR --> UC03
 
 MEMBER --> UC01
 MEMBER --> UC02
@@ -77,30 +77,34 @@ LIBRARIAN --> UC12
 LIBRARIAN --> UC13
 LIBRARIAN --> UC14
 
+ADMIN --> UC08
+ADMIN --> UC09
+ADMIN --> UC10
+ADMIN --> UC11
+ADMIN --> UC12
+ADMIN --> UC13
+ADMIN --> UC14
 ADMIN --> UC15
-ADMIN --> UC16
 
 UC10 ..> UC17 : <<include>>
 UC20 ..> UC17 : <<include>>
-UC11 ..> UC18 : <<include>>
-UC11 ..> UC19 : <<include>>
-UC12 ..> UC17 : <<include>>
+UC11 ..> UC18 : <<include>>\nเมื่อคืนช้า
+UC11 ..> UC19 : <<include>>\nเมื่อมีคิว
 UC04 ..> UC02 : <<extend>>
 
 note right of UC17
-  ใช้ Chain of Responsibility
+  Chain of Responsibility:
   BR-01 → BR-02 → BR-03 → BR-04 → BR-09
 end note
 
-note right of UC18
-  ใช้ Strategy Pattern
-  คิดอัตราตาม MemberTier (BR-07)
+note right of UC12
+  Renewal checks loan state and waiting reservations.
+  It does not run the borrow-rule chain.
 end note
 
 note right of UC19
-  ใช้ Observer Pattern
-  READY + RESERVED 48 ชั่วโมง (BR-10)
-  แจ้งเตือนจริงยังเป็น log; ไม่มี SMTP/SMS
+  Observer workflow assigns READY and holds a copy
+  for 48 hours. External email/SMS is not connected.
 end note
 
 @enduml
