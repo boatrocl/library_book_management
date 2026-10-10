@@ -1,66 +1,65 @@
-# REST API Specification — LibraFlow
+# LibraFlow REST API
 
-Base URL (local): `http://localhost:8080`
-Base URL (prod): `https://library-book-management-ybt2.onrender.com`
-Swagger UI: `/swagger-ui.html` · OpenAPI JSON: `/v3/api-docs`
-Authentication: `Authorization: Bearer <JWT>`
+Base path: `/api/v1`
+Local API: `http://localhost:8080`
+Swagger UI: `/swagger-ui.html` · OpenAPI: `/v3/api-docs`
+Protected endpoints use `Authorization: Bearer <JWT>`.
 
----
+This list is synchronized with the controller mappings in the repository. The success status describes the controller response; domain errors use the shared error response format below.
 
-## 1. Endpoint ทั้งหมด
+## Endpoint catalog
 
-### Auth
-| Method | Endpoint | Success | สิทธิ์ | คำอธิบาย |
-|---|---|---|---|---|
-| POST | `/api/v1/auth/register` | 201 | public | สมัครสมาชิก |
-| POST | `/api/v1/auth/login` | 200 | public | เข้าสู่ระบบ รับ JWT |
+| Method | Endpoint | Access | Success | Purpose |
+|---|---|---|---:|---|
+| POST | `/auth/login` | Public | 200 | Authenticate and return a JWT |
+| POST | `/auth/register` | Public | 200 | Register an account and profile |
+| GET | `/books` | Public | 200 | Search, filter, sort, and paginate the catalog |
+| GET | `/books/{id}` | Public | 200 | Read book details |
+| GET | `/books/{id}/copies` | Public | 200 | List physical copies for a title |
+| POST | `/books` | ADMIN, LIBRARIAN | 201 | Create a book |
+| PUT | `/books/{id}` | ADMIN, LIBRARIAN | 200 | Replace book metadata |
+| DELETE | `/books/{id}` | ADMIN, LIBRARIAN | 204 | Delete a book when it is not in use |
+| POST | `/books/{id}/copies` | ADMIN, LIBRARIAN | 201 | Add a physical copy |
+| GET | `/categories` | Public | 200 | List categories |
+| GET | `/book-references` | Authenticated | 200 | Load current categories, publishers, and authors for book forms |
+| POST | `/loans/self` | MEMBER | 201 | Borrow one available title; member identity comes from JWT |
+| POST | `/loans` | ADMIN, LIBRARIAN | 201 | Record a counter loan using member ID and copy barcodes |
+| GET | `/loans` | ADMIN, LIBRARIAN | 200 | List loans with optional status and pagination |
+| GET | `/loans/{id}` | Authenticated | 200 | Read a loan by ID |
+| PATCH | `/loans/{id}/return` | ADMIN, LIBRARIAN | 200 | Record return, calculate any fine, and publish the return event |
+| PATCH | `/loans/{id}/renew` | ADMIN, LIBRARIAN | 200 | Renew an eligible loan |
+| DELETE | `/loans/{id}` | ADMIN | 204 | Delete an incorrectly recorded loan |
+| GET | `/members/{id}` | Owner, ADMIN, LIBRARIAN | 200 | Read a member profile |
+| PUT | `/members/{id}` | Owner, ADMIN, LIBRARIAN | 200 | Update a member profile |
+| GET | `/members/{id}/loans` | Owner, ADMIN, LIBRARIAN | 200 | Read member loan history |
+| GET | `/members/{id}/fines` | Owner, ADMIN, LIBRARIAN | 200 | Read member fines; optional `status` filter |
+| GET | `/reservations` | ADMIN, LIBRARIAN | 200 | List reservations with optional status and pagination |
+| GET | `/reservations/self` | MEMBER | 200 | Read the signed-in member's reservation history |
+| POST | `/reservations/self` | MEMBER | 201 | Join a queue for an unavailable title |
+| POST | `/reservations` | MEMBER, ADMIN, LIBRARIAN | 201 | Create a reservation on behalf of a user |
+| DELETE | `/reservations/{id}` | Owner, ADMIN, LIBRARIAN | 204 | Cancel an eligible reservation |
+| POST | `/fines/{id}/pay` | ADMIN, LIBRARIAN | 200 | Record an in-system fine payment |
+| GET | `/reports/loans?from=YYYY-MM-DD&to=YYYY-MM-DD` | ADMIN, LIBRARIAN | 200 | Download loan statistics as CSV |
+| GET | `/reports/overdue` | ADMIN, LIBRARIAN | 200 | Download overdue items as PDF |
+| GET | `/users` | ADMIN | 200 | List user accounts |
+| PATCH | `/users/{id}/status` | ADMIN | 200 | Activate or suspend a user |
+| PATCH | `/users/{id}/role` | ADMIN | 200 | Change a user's role |
 
-### Books (Resource หลักที่ 1 — CRUD ครบ)
-| Method | Endpoint | Success | Error | สิทธิ์ | คำอธิบาย |
-|---|---|---|---|---|---|
-| GET | `/api/v1/books?keyword=&categoryId=&availability=ALL&page=0&size=10&sort=title,asc` | 200 | 400 | public | **Pagination + Sorting** ค้นด้วยชื่อเรื่อง ISBN ผู้แต่ง และกรองสถานะ `ALL` / `AVAILABLE` / `UNAVAILABLE` ได้ |
-| GET | `/api/v1/books/{id}` | 200 | 404 | public | ดูรายละเอียด |
-| POST | `/api/v1/books` | 201 | 400, 409 | LIBRARIAN | เพิ่มหนังสือ (409 = ISBN ซ้ำ) |
-| PUT | `/api/v1/books/{id}` | 200 | 400, 404 | LIBRARIAN | แก้ไข |
-| DELETE | `/api/v1/books/{id}` | 204 | 404, 409 | LIBRARIAN | ลบ (409 = ยังมีตัวเล่มถูกยืม BR-11) |
-| GET | `/api/v1/books/{id}/copies` | 200 | 404 | public | ตัวเล่มทั้งหมดของหนังสือ |
-| POST | `/api/v1/books/{id}/copies` | 201 | 404, 409 | LIBRARIAN | เพิ่มตัวเล่ม |
+The profile and history endpoints accept the member ID in the path. The backend allows access to the owner or staff roles; another member receives `403 ACCESS_DENIED`. User role and account-status changes have one canonical route under `/users`, handled by `UserManagementService`.
 
-### Categories
-| Method | Endpoint | Success | สิทธิ์ | คำอธิบาย |
-|---|---|---|---|---|
-| GET | `/api/v1/categories` | 200 | public | รายการหมวดหมู่เรียงตามชื่อ ใช้กับตัวกรองในแคตตาล็อก |
+## Query parameters
 
-### Loans (Resource หลักที่ 2 — CRUD ครบ)
-| Method | Endpoint | Success | Error | สิทธิ์ | คำอธิบาย |
-|---|---|---|---|---|---|
-| GET | `/api/v1/loans?status=&page=&size=` | 200 | | LIBRARIAN, ADMIN | รายการใบยืมทั้งหมด |
-| GET | `/api/v1/loans/{id}` | 200 | 404 | LIBRARIAN, ADMIN, ผู้ใช้ที่เข้าสู่ระบบ | ดูใบยืม |
-| POST | `/api/v1/loans/self` | 201 | 400, 404, 409 | MEMBER | สมาชิกยืมหนังสือที่ว่างหนึ่งเล่ม; member จาก JWT, ตัวเล่มเลือกอัตโนมัติพร้อม row lock และต้องยอมรับกฎก่อน |
-| POST | `/api/v1/loans` | 201 | 400, 404, 409 | LIBRARIAN, ADMIN | บันทึกการยืม (ผ่าน BorrowRule chain) |
-| PATCH | `/api/v1/loans/{id}/return` | 200 | 404, 409 | LIBRARIAN, ADMIN | บันทึกการคืน |
-| PATCH | `/api/v1/loans/{id}/renew` | 200 | 404, 409 | LIBRARIAN, ADMIN | ต่ออายุ (BR-06) |
-| DELETE | `/api/v1/loans/{id}` | 204 | 404, 409 | ADMIN | ยกเลิกใบยืมที่บันทึกผิด |
-| GET | `/api/v1/members/{id}/loans` | 200 | 404 | LIBRARIAN, เจ้าของ | ประวัติการยืมของสมาชิก |
+- `GET /books`: `keyword`, `categoryId`, `availability=ALL|AVAILABLE|UNAVAILABLE`, `page`, `size`, and `sort`. Defaults are page 0, size 10, sorted by title ascending.
+- `GET /loans`: optional `status`, `page`, `size`, and `sort`.
+- `GET /members/{id}/fines`: optional `status=UNPAID|PAID|WAIVED`.
+- Reservation list endpoints: optional `status`, `page`, `size`, and `sort`.
 
-### Reservations
-| Method | Endpoint | Success | Error | สิทธิ์ |
-|---|---|---|---|---|
-| GET | `/api/v1/reservations?status=&page=&size=` | 200 | | LIBRARIAN, ADMIN |
-| GET | `/api/v1/reservations/self?page=&size=&sort=reservedAt,desc` | 200 | 404 | MEMBER |
-| POST | `/api/v1/reservations/self` | 201 | 400, 404, 409 | MEMBER; ต้องยอมรับกฎก่อน |
-| POST | `/api/v1/reservations` | 201 | 400, 403, 409 | MEMBER (ตนเอง), LIBRARIAN, ADMIN |
-| DELETE | `/api/v1/reservations/{id}` | 204 | 403, 404, 409 | MEMBER (เจ้าของ), LIBRARIAN, ADMIN |
+## Self-service request examples
 
-`GET` returns a paginated `PageResponse<ReservationResponse>` and may filter by `status`.
-The `/self` endpoints derive the member from the JWT. Members may join a queue only when no copy is available; responses include `queuePosition` for `WAITING` entries. Members can review their reservation history in their profile and cancel entries in `WAITING` or `READY` status.
-When status is `READY`, the response includes `reservedCopyId`, `reservedBarcode`, and `expiresAt`.
-Only the reservation owner may borrow that `RESERVED` copy before `expiresAt`; cancellation or
-automatic expiry releases the copy and advances the queue. Email/SMS delivery is not wired yet.
+### Borrow a title
 
-### POST /api/v1/reservations/self — สมาชิกเข้าคิวจองหนังสือที่ไม่ว่าง
+`POST /api/v1/loans/self`
 
-**Request**
 ```json
 {
   "bookId": 18,
@@ -68,32 +67,12 @@ automatic expiry releases the copy and advances the queue. Email/SMS delivery is
 }
 ```
 
-Response เป็น `201 Created` พร้อมรายการจองสถานะ `WAITING`; หากไม่ยอมรับกฎ request จะตอบ `400`, หากมีตัวเล่มว่าง, มีรายการจองที่ยัง active อยู่, หรือสมาชิกกำลังยืมชื่อนี้อยู่โดยยังไม่คืน จะตอบ `409 Conflict`.
+The member is identified from the JWT. The backend selects and locks an available copy. A missing or false `termsAccepted` value fails validation. A member cannot borrow a title that they already have on loan.
 
-### Fines
-| Method | Endpoint | Success | Error | สิทธิ์ |
-|---|---|---|---|---|
-| GET | `/api/v1/members/{id}/fines?status=UNPAID` | 200 | 404 | LIBRARIAN, เจ้าของ |
-| POST | `/api/v1/fines/{id}/pay` | 200 | 404, 409 | LIBRARIAN |
-| POST | `/api/v1/fines/{id}/waive` | 200 | 404, 409 | ADMIN |
+### Join a reservation queue
 
-### Reports
-| Method | Endpoint | Success | สิทธิ์ | คำอธิบาย |
-|---|---|---|---|---|
-| GET | `/api/v1/reports/loans?from=YYYY-MM-DD&to=YYYY-MM-DD` | 200 (`text/csv`) | LIBRARIAN, ADMIN | สถิติการยืมตามช่วงวัน; ดาวน์โหลด `loan_report.csv` |
-| GET | `/api/v1/reports/overdue` | 200 (`application/pdf`) | LIBRARIAN, ADMIN | รายงานหนังสือค้างส่ง; ดาวน์โหลด `overdue_report.pdf` |
+`POST /api/v1/reservations/self`
 
-Report endpoints select CSV/PDF from the route; they do not accept a `format` query parameter.
-
----
-
-## 2. ตัวอย่าง Request / Response
-
-### POST /api/v1/loans/self — สมาชิกยืมหนังสือจากแคตตาล็อก
-
-สมาชิกส่งเฉพาะรหัสหนังสือ ระบบอ่าน username จาก JWT, เลือกตัวเล่ม `AVAILABLE` โดยล็อกแถวไว้ระหว่าง transaction และตรวจ BR-01..BR-04, BR-09 เหมือนการยืมที่เคาน์เตอร์ สมาชิกยืมชื่อหนังสือที่ยังมีรายการยืมของตนซึ่งไม่คืน หรือยืมชื่อซ้ำในคำขอเดียวไม่ได้
-
-**Request**
 ```json
 {
   "bookId": 18,
@@ -101,11 +80,12 @@ Report endpoints select CSV/PDF from the route; they do not accept a `format` qu
 }
 ```
 
-คำขอต้องส่ง `termsAccepted: true`; หากไม่ยอมรับกฎจะตอบ `400 Bad Request`. Response เป็น `201 Created` พร้อม LoanResponse และ `Location: /api/v1/loans/{id}`. หากไม่มีตัวเล่มว่างหรือสมาชิกติดกฎทางธุรกิจ รวมถึงมีรายการยืมชื่อเดียวกันที่ยังไม่คืน จะตอบ `409 Conflict` (`BOOK_ALREADY_ON_LOAN`).
+The title must have no available copy. The backend rejects duplicate active reservations and titles already on loan to the same member.
 
-### POST /api/v1/loans — บรรณารักษ์บันทึกการยืมที่เคาน์เตอร์
+### Counter loan
 
-**Request**
+`POST /api/v1/loans`
+
 ```json
 {
   "memberId": 12,
@@ -113,163 +93,31 @@ Report endpoints select CSV/PDF from the route; they do not accept a `format` qu
 }
 ```
 
-**Response 201 Created**
-```json
-{
-  "id": 507,
-  "loanCode": "LN-20260912-0007",
-  "memberName": "สมชาย ใจดี",
-  "memberTier": "STUDENT",
-  "loanDate": "2026-09-12T10:22:31Z",
-  "status": "ACTIVE",
-  "items": [
-    {
-      "id": 901,
-      "bookId": 18,
-      "barcode": "LIB-00231",
-      "bookTitle": "Clean Code",
-      "dueDate": "2026-09-19",
-      "returnedAt": null
-    },
-    {
-      "id": 902,
-      "bookId": 22,
-      "barcode": "LIB-00842",
-      "bookTitle": "Design Patterns",
-      "dueDate": "2026-09-19",
-      "returnedAt": null
-    }
-  ]
-}
-```
+## Error responses
 
-### GET /api/v1/book-references — รายการรหัสอ้างอิงสำหรับจัดการหนังสือ
+Validation, business-rule, authorization, and not-found errors use the shared `ErrorResponse` shape. Common status codes are:
 
-ต้องเข้าสู่ระบบ และคืนรายการหมวดหมู่ สำนักพิมพ์ และผู้แต่งจากฐานข้อมูลปัจจุบัน โดยแต่ละตัวเลือกมี `id` และ `name`; หน้าแก้ไขหนังสือใช้ข้อมูลนี้แสดงความหมายของ ID โดยไม่ hardcode ค่า
+| HTTP | Meaning |
+|---:|---|
+| 400 | Request validation failed |
+| 401 | Authentication is missing or invalid |
+| 403 | Role or member ownership check denied the request |
+| 404 | Requested resource does not exist |
+| 409 | A business rule prevents the operation |
+| 500 | Unexpected server error |
 
-**Response 200 OK**
-```json
-{
-  "categories": [{ "id": 3, "name": "Software Engineering" }],
-  "publishers": [{ "id": 7, "name": "Example Press" }],
-  "authors": [{ "id": 11, "name": "A. Writer" }]
-}
-```
-
-### GET /api/v1/books — Pagination + Sorting
-
-**Response 200 OK**
-```json
-{
-  "content": [
-    {
-      "id": 1,
-      "isbn": "9780132350884",
-      "title": "Clean Code",
-      "publishYear": 2008,
-      "price": 1650.00,
-      "categoryName": "Software Engineering",
-      "categoryId": 1,
-      "publisherName": "Prentice Hall",
-      "publisherId": 1,
-      "authors": ["Robert C. Martin"],
-      "authorIds": [1],
-      "availableCopies": 3,
-      "totalCopies": 5
-    }
-  ],
-  "page": 0,
-  "size": 10,
-  "totalElements": 128,
-  "totalPages": 13,
-  "first": true,
-  "last": false
-}
-```
-
----
-
-## 3. Error Response Format มาตรฐาน
-
-จัดการโดย `@RestControllerAdvice` ใน `exception/GlobalExceptionHandler.java`
+Example:
 
 ```json
 {
-  "timestamp": "2026-09-12T10:22:31Z",
+  "timestamp": "2026-10-10T08:00:00Z",
   "status": 409,
   "error": "Conflict",
-  "errorCode": "UNPAID_FINE_EXCEEDED",
-  "message": "สมาชิกมีค่าปรับค้างชำระ 150.00 บาท เกินเกณฑ์ 100 บาท",
-  "path": "/api/v1/loans",
+  "errorCode": "COPY_NOT_AVAILABLE",
+  "message": "ตัวเล่มไม่พร้อมให้ยืม",
+  "path": "/api/v1/loans/self",
   "fieldErrors": []
 }
 ```
 
-กรณี Validation ผิดพลาด (400)
-
-```json
-{
-  "timestamp": "2026-09-12T10:25:02Z",
-  "status": 400,
-  "error": "Bad Request",
-  "errorCode": "VALIDATION_FAILED",
-  "message": "ข้อมูลที่ส่งมาไม่ถูกต้อง",
-  "path": "/api/v1/books",
-  "fieldErrors": [
-    { "field": "isbn", "message": "ISBN ต้องไม่เป็นค่าว่าง" },
-    { "field": "publishYear", "message": "ปีที่พิมพ์ต้องไม่เกินปีปัจจุบัน" }
-  ]
-}
-```
-
----
-
-## 4. ตาราง Error Code
-
-| errorCode | HTTP | ความหมาย | กฎอ้างอิง |
-|---|---|---|---|
-| `VALIDATION_FAILED` | 400 | ข้อมูล request ไม่ผ่าน Bean Validation | |
-| `RESOURCE_NOT_FOUND` | 404 | ไม่พบข้อมูลที่ระบุ | |
-| `ISBN_ALREADY_EXISTS` | 409 | ISBN ซ้ำในระบบ | |
-| `BARCODE_ALREADY_EXISTS` | 409 | บาร์โค้ดตัวเล่มซ้ำในระบบ | |
-| `MEMBER_SUSPENDED` | 409 | บัญชีสมาชิกถูกระงับ | BR-01 |
-| `UNPAID_FINE_EXCEEDED` | 409 | ค่าปรับค้างชำระเกินเกณฑ์ | BR-02 |
-| `LOAN_QUOTA_EXCEEDED` | 409 | ยืมครบโควต้าแล้ว | BR-03 |
-| `COPY_NOT_AVAILABLE` | 409 | ตัวเล่มไม่พร้อมให้ยืม | BR-04 |
-| `BOOK_ALREADY_ON_LOAN` | 409 | สมาชิกมีรายการยืมชื่อหนังสือนี้ที่ยังไม่คืน หรือยืมชื่อซ้ำในคำขอเดียว | BR-09 |
-| `RENEW_LIMIT_REACHED` | 409 | ต่ออายุครบจำนวนครั้งแล้ว | BR-06 |
-| `RENEW_BLOCKED_BY_RESERVATION` | 409 | มีคนจองคิวรออยู่ ต่ออายุไม่ได้ | BR-06 |
-| `DUPLICATE_RESERVATION` | 409 | จองหนังสือเล่มเดิมซ้ำ | BR-09 |
-| `RESERVATION_NOT_CANCELLABLE` | 409 | ยกเลิกได้เฉพาะ WAITING หรือ READY |
-| `BOOK_IN_USE` | 409 | ลบหนังสือไม่ได้เพราะมีตัวเล่มถูกยืม | BR-11 |
-| `ACCESS_DENIED` | 403 | ไม่มีสิทธิ์เข้าถึง | |
-| `INTERNAL_ERROR` | 500 | ข้อผิดพลาดที่ไม่คาดคิด | |
-
----
-
-## 5. Validation ที่ใช้ (Bean Validation)
-
-```java
-public record CreateBookRequest(
-    @NotBlank(message = "ISBN ต้องไม่เป็นค่าว่าง")
-    @Pattern(regexp = "[0-9]{10}|[0-9]{13}", message = "ISBN ต้องเป็นตัวเลข 10 หรือ 13 หลัก")
-    String isbn,
-
-    @NotBlank(message = "ชื่อหนังสือต้องไม่เป็นค่าว่าง")
-    @Size(max = 200, message = "ชื่อหนังสือต้องยาวไม่เกิน 200 ตัวอักษร")
-    String title,
-
-    @Min(1000) @Max(2100)
-    Integer publishYear,
-
-    @PositiveOrZero(message = "ราคาต้องไม่ติดลบ")
-    BigDecimal price,
-
-    @NotNull Long categoryId,
-    @NotNull Long publisherId,
-    @NotEmpty List<Long> authorIds
-) {}
-```
-
-> ใช้ `[0-9]` แทน `\d` เพราะอ่านง่ายกว่าและไม่ต้อง escape สองชั้นในสตริง Java
-> — ผลลัพธ์เหมือนกันทุกประการ
+There is no `POST /fines/{id}/waive` controller mapping. `WAIVED` is a persisted fine status, but the current API does not provide a waive operation. Report formats are selected by their routes; they do not use a `format` query parameter.

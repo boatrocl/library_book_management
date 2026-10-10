@@ -1,5 +1,5 @@
 @startuml 13-deployment-diagram
-title Intended deployment topology — LibraFlow
+title Deployment topology and CI/CD boundaries — LibraFlow
 
 skinparam defaultFontName "Tahoma"
 skinparam defaultFontSize 12
@@ -13,57 +13,62 @@ skinparam cloud {
   BorderColor #85929E
 }
 
-node "ผู้ใช้" as CLIENT {
-  artifact "Web Browser" as BROWSER
+node "User" as CLIENT {
+  artifact "Web browser" as BROWSER
 }
 
 cloud "Vercel" as VERCEL {
-  artifact "React SPA\nhttps://library-book-management-alpha.vercel.app" as FRONTEND
+  artifact "React SPA\nlibrary-book-management-alpha.vercel.app" as FRONTEND
 }
 
 cloud "Render" as RENDER {
-  artifact "Spring Boot API\nhttps://library-book-management-ybt2.onrender.com" as BACKEND
+  artifact "Spring Boot API\nlibrary-book-management-ybt2.onrender.com" as BACKEND
 }
 
 cloud "Neon" as NEON {
-  database "PostgreSQL\nDatabase: libraflow" as DB
-  artifact "Branch shown in supplied screenshot: production" as NEON_BRANCH
+  database "PostgreSQL\nlibraflow" as DB
+  artifact "Database branch configured by DB_URL" as NEON_BRANCH
 }
 
 cloud "GitHub" as GITHUB {
-  artifact "Repository branches\nmain = production\ndevelop = integration/test" as REPO
+  artifact "main / develop / task branches" as REPO
   node "GitHub Actions" as CI {
-    artifact "Backend: Maven clean verify\nFrontend: npm ci, lint, build, audit" as CHECKS
+    artifact "Backend CI: Maven clean verify" as BACKEND_CI
+    artifact "Frontend CI: npm ci, lint, build" as FRONTEND_CI
+    artifact "CD Demo: build, validate, publish to Pages" as DEMO_CI_CD
   }
 }
 
-BROWSER --> FRONTEND : HTTPS 443
-BROWSER --> BACKEND : HTTPS 443 / REST + JWT
+cloud "GitHub Pages" as PAGES {
+  artifact "CD teaching demo page\n(not the LibraFlow app)" as DEMO_PAGE
+}
+
+BROWSER --> FRONTEND : HTTPS
+BROWSER --> BACKEND : HTTPS / REST / JWT
 BACKEND --> DB : JDBC over TLS
 NEON_BRANCH -- DB
 REPO --> CI : push / pull request
+DEMO_CI_CD --> PAGES : tested demo artifact
 
 note right of REPO
   Intended release flow:
-  personal branch -> PR -> develop -> review -> main
-  develop is the test/integration branch.
-end note
-
-note bottom of RENDER
-  Configure production Render service to track main.
-  The connected branch and deployed commit are not
-  verifiable from the public service URL.
-end note
-
-note bottom of DB
-  Render DB_URL selects the Neon branch/database.
-  Neon having a branch called production does not
-  prove that Render connects to that branch.
+  task branch -> reviewed PR -> develop -> main
 end note
 
 note bottom of CI
-  CI validates code; this workflow does not deploy.
-  Verify Render and Vercel Git settings in their dashboards.
+  Backend and frontend workflows are CI only.
+  CD Demo publishes a separate static teaching page;
+  it does not deploy the app to Vercel or Render.
+end note
+
+note bottom of RENDER
+  Confirm actual branch and environment settings
+  in the provider dashboard.
+end note
+
+note bottom of DB
+  A database branch name does not prove which
+  connection Render uses. Check DB_URL privately.
 end note
 
 @enduml

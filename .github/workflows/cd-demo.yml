@@ -1,0 +1,91 @@
+name: CD Demo
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - .github/workflows/cd-demo.yml
+      - doc/cd-demo/**
+      - scripts/cd-demo/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-demo
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build demo artifact
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: read
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Check GitHub Pages configuration
+        uses: actions/configure-pages@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.12"
+
+      - name: Build versioned demo page
+        run: node scripts/cd-demo/build.mjs
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cd-demo-site
+          path: build/cd-demo/site/
+          if-no-files-found: error
+          retention-days: 1
+
+  test:
+    name: Validate the same artifact
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22.12"
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: cd-demo-site
+          path: build/cd-demo/site/
+
+      - name: Validate generated site and deployment metadata
+        run: node scripts/cd-demo/verify.mjs build/cd-demo/site
+
+      - name: Prepare Pages deployment artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/cd-demo/site/
+
+  deploy:
+    name: Deploy demo to GitHub Pages
+    if: github.ref == 'refs/heads/develop'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish the tested artifact
+        id: deployment
+        uses: actions/deploy-pages@v4

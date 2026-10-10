@@ -1,8 +1,8 @@
 @startuml 04-class-diagram
-title Class Diagram — Core services and implemented design patterns
+title Class Diagram — Core services and implemented patterns
 
 skinparam defaultFontName "Tahoma"
-skinparam defaultFontSize 14
+skinparam defaultFontSize 13
 skinparam shadowing false
 skinparam linetype ortho
 skinparam classAttributeIconSize 0
@@ -10,21 +10,15 @@ skinparam package {
   BackgroundColor #F7F9F9
   BorderColor #85929E
 }
-
 left to right direction
 
-package "Loan orchestration" {
-  class LoanServiceImpl {
-    + borrow(BorrowRequest) : LoanResponse
-    + borrowForMember(String, MemberBorrowRequest) : LoanResponse
-    + returnBook(Long) : LoanResponse
-    + renewLoan(Long) : LoanResponse
-  }
+package "Loan service" {
+  class LoanServiceImpl
   interface LoanRepository
   class LoanStateFactory
 }
 
-package "Chain of Responsibility" {
+package "Borrow checks — Chain of Responsibility" {
   interface BorrowRule {
     + order() : int
     + check(BorrowContext) : void
@@ -34,9 +28,10 @@ package "Chain of Responsibility" {
   class UnpaidFineRule
   class LoanQuotaRule
   class CopyAvailabilityRule
+  class NoDuplicateTitleLoanRule
 }
 
-package "State" {
+package "Loan states" {
   interface LoanState {
     + status() : LoanStatus
     + onReturn(Loan, LoanItem) : void
@@ -49,10 +44,7 @@ package "State" {
 }
 
 package "Fine calculation — Strategy" {
-  interface FineService {
-    + generateFine(LoanItem, int, MemberTier) : Fine
-    + generateLostBookFine(LoanItem, int) : Fine
-  }
+  interface FineService
   class FineServiceImpl
   interface FineCalculationStrategy {
     + getApplicableMemberTier() : MemberTier
@@ -63,32 +55,26 @@ package "Fine calculation — Strategy" {
   class ExternalFineStrategy
 }
 
-package "Reservation notification — Observer" {
-  class BookCopyAvailableEvent
+package "Reservation queue — Observer" {
   class BookReturnedEvent
-  class ReservationNotificationListener {
-    + onBookCopyAvailable(BookCopyAvailableEvent) : void
-    --
-    AFTER_COMMIT
-    REQUIRES_NEW
-  }
+  class ReservationNotificationListener
   interface ReservationRepository
   interface BookCopyRepository
   class ReservationServiceImpl
   class ReservationScheduler
 }
 
-package "Reports — Template Method" {
+package "Report generation — Template Method" {
   class ReportController
-  abstract class AbstractReportGenerator {
-    + generate(ReportRequest) : byte[]
-    # render(List<ReportRow>) : byte[]
-  }
+  interface ReportService
+  class ReportServiceImpl
+  interface ReportFileGenerator
+  abstract class AbstractReportGenerator
   class CsvReportGenerator
   class PdfReportGenerator
 }
 
-package "Relevant domain entities" {
+package "Domain entities" {
   class Loan
   class LoanItem
   class Fine
@@ -97,16 +83,18 @@ package "Relevant domain entities" {
   class Reservation
 }
 
-LoanServiceImpl ..> LoanRepository : persists loans
-LoanServiceImpl --> "1..*" BorrowRule : runs in order()
+LoanServiceImpl ..> LoanRepository : persist
+LoanServiceImpl --> "1..*" BorrowRule : sort by order()
 BorrowRule <|.. MemberStatusRule
 BorrowRule <|.. UnpaidFineRule
 BorrowRule <|.. LoanQuotaRule
 BorrowRule <|.. CopyAvailabilityRule
+BorrowRule <|.. NoDuplicateTitleLoanRule
 BorrowRule ..> BorrowContext
+NoDuplicateTitleLoanRule ..> LoanRepository
 
 LoanServiceImpl ..> LoanStateFactory
-LoanStateFactory ..> LoanState : selects by LoanStatus
+LoanStateFactory ..> LoanState : selects by status
 LoanState <|.. ActiveState
 LoanState <|.. OverdueState
 LoanState <|.. ReturnedState
@@ -114,35 +102,42 @@ LoanState <|.. LostState
 
 LoanServiceImpl ..> FineService
 FineService <|.. FineServiceImpl
-FineServiceImpl o--> "1..*" FineCalculationStrategy : selects by MemberTier
+FineServiceImpl o--> "1..*" FineCalculationStrategy : select by tier
 FineCalculationStrategy <|.. StudentFineStrategy
 FineCalculationStrategy <|.. StaffFineStrategy
 FineCalculationStrategy <|.. ExternalFineStrategy
 
 LoanServiceImpl ..> BookReturnedEvent : publishes after return
-BookCopyAvailableEvent <|-- BookReturnedEvent
-BookCopyAvailableEvent <.. ReservationNotificationListener : handles after commit
-ReservationNotificationListener ..> ReservationRepository : marks first WAITING as READY
-ReservationNotificationListener ..> BookCopyRepository : changes copy to RESERVED
-ReservationServiceImpl ..> ReservationRepository : cancel and expire queue entries
-ReservationServiceImpl ..> BookCopyRepository : release reserved copies
-ReservationServiceImpl ..> BookCopyAvailableEvent : publish released copy
-ReservationScheduler ..> ReservationServiceImpl : expire after 48 hours
+BookReturnedEvent <.. ReservationNotificationListener : handles after commit
+ReservationNotificationListener ..> ReservationRepository
+ReservationNotificationListener ..> BookCopyRepository
+ReservationServiceImpl ..> ReservationRepository : cancel/expire
+ReservationServiceImpl ..> BookCopyRepository : release copies
+ReservationServiceImpl ..> BookReturnedEvent : publish available copy
+ReservationScheduler ..> ReservationServiceImpl : expire READY after 48 hours
 
-ReportController ..> AbstractReportGenerator : selects CSV or PDF
+ReportController ..> ReportService : HTTP boundary
+ReportService <|.. ReportServiceImpl
+ReportServiceImpl ..> ReportFileGenerator : CSV/PDF collaborators
+ReportFileGenerator <|.. AbstractReportGenerator
 AbstractReportGenerator <|-- CsvReportGenerator
 AbstractReportGenerator <|-- PdfReportGenerator
 
 Loan "1" *--> "1..*" LoanItem
 LoanItem "1" --> "0..1" Fine
 LoanItem "*" --> "1" BookCopy
-Reservation "*" --> "1" Book : reservation is for a title
+Reservation "*" --> "1" Book
 Reservation "*" --> "0..1" BookCopy : assigned while READY
 Book "1" --> "1..*" BookCopy
 
+note bottom of ReportServiceImpl
+  Controller delegates to service.
+  It does not select a generator directly.
+end note
+
 note bottom of FineServiceImpl
-  STUDENT: 3 baht/day; STAFF: 5 baht/day, capped at 300;
-  EXTERNAL: 10 baht/day. LOST items are charged the full book price.
+  Fine is recorded on return for overdue items.
+  LOST copies receive a replacement-price charge.
 end note
 
 @enduml

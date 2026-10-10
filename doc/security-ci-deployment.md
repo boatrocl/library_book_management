@@ -38,9 +38,16 @@ GitHub Actions workflows: `.github/workflows/backend-ci.yml` และ `.github/
 - Backend integration test `AuthSecurityIntegrationTest` ใช้ PostgreSQL 16 ผ่าน Testcontainers; ต้องมี Docker daemon.
 - Frontend checks ใช้ `npm ci`, `npm run lint` และ `npm run build`.
 
-Workflows เหล่านี้เป็น CI: ไม่มี deploy job. Vercel preview/production และ Render deployment
+มี workflow `.github/workflows/cd-demo.yml` เพิ่มเติมสำหรับสาธิต Build → Validate → Deploy
+artifact หน้า status ขนาดเล็กไป GitHub Pages. Workflow นี้ไม่ deploy frontend ไป Vercel,
+backend ไป Render หรือเปลี่ยนฐานข้อมูล Neon และไม่ทดแทน CI ของแอปหรือ CD production ตาม rubric.
+Repository Pages ตั้ง source เป็น GitHub Actions แล้ว; ดู workflow, URL และขั้นตอนสำหรับ fork ที่
+[`cd-demo.md`](cd-demo.md).
+
+Backend และ frontend workflows เป็น CI และไม่มี deploy job. CD Demo มี deploy job เฉพาะ GitHub Pages
+สำหรับหน้า demo; ไม่ได้ deploy แอปจริง. Vercel preview/production และ Render deployment
 เป็นงานของ provider integration/dashboard แยกจาก GitHub Actions; ต้องตรวจ deployment status ที่ provider
-ก่อนยืนยันว่า production อัปเดตแล้ว. การเพิ่ม GitHub Actions deploy job ต้องตั้ง provider credentials
+ก่อนยืนยันว่า production อัปเดตแล้ว. การเพิ่ม GitHub Actions deploy job สำหรับแอปต้องตั้ง provider credentials
 ใน secret store ก่อน; ห้ามใส่ token ลง repository.
 
 คำสั่งตรวจในเครื่อง (Linux/macOS; บน Windows ให้ใช้ `mvnw.cmd`):
@@ -53,8 +60,9 @@ cd ../frontend
 npm ci
 npm run lint
 npm run build
-npm audit --audit-level=high
 ```
+
+`npm audit` เป็นการตรวจ dependency เพิ่มเติมที่รันเองได้; ไม่ใช่ step ใน frontend CI workflow.
 
 ถ้าไม่มี Docker และต้องแยกตรวจ unit/API tests จาก integration test ชั่วคราว:
 
@@ -76,7 +84,12 @@ cd code/backend
 | `develop` | integration และทดสอบรวม |
 | `ชื่อ_รหัสนักศึกษา_Section` | งานรายบุคคล; เปิด PR เข้า `develop` |
 
-หลัง CI ผ่านและมีสมาชิก review ให้ทีมเปิด PR จาก `develop` เข้า `main` สำหรับ release.
+เปิด PR จาก task branch เข้า `develop`; ขอ reviewer ที่ไม่ใช่ผู้เขียน และรอให้มี review record กับ CI checks
+ผ่านก่อน merge. จากนั้นเปิด PR จาก `develop` เข้า `main` สำหรับ release ตามนโยบายทีม. Template ใน
+`.github/pull_request_template.md` เตือนรายการเหล่านี้. ณ 10 ตุลาคม 2026 GitHub branch protection ของทั้ง
+`develop` และ `main` บังคับ PR, approval จาก reviewer คนอื่นอย่างน้อย 1 คน, approval ล่าสุดหลัง push ล่าสุด,
+และ status checks `Backend Test and Verify` กับ `Frontend Lint and Build`; ต้องอัปเดต branch ให้ทัน base ก่อน merge
+และกฎนี้บังคับใช้กับ admin ด้วย.
 Vercel ควร deploy production จาก `main` และสร้าง preview สำหรับ branch ทดสอบ.
 Render production ควรชี้ `main`; ตรวจค่าจริงใน Render Dashboard ก่อนเปลี่ยน service.
 
@@ -99,7 +112,10 @@ Neon branch ที่ชื่อ `production` เป็น branch ฝั่ง�
 | Frontend | https://library-book-management-alpha.vercel.app/ |
 | Backend | https://library-book-management-ybt2.onrender.com/ |
 | Swagger UI | https://library-book-management-ybt2.onrender.com/swagger-ui.html |
+| CD Demo | https://boatrocl.github.io/library_book_management/ |
 
+ตรวจแบบ read-only วันที่ 10 ตุลาคม 2026: frontend `/` และ `/login`, public book catalog,
+Swagger UI และ CD Demo ตอบ HTTP 200. CD Demo deploy สำเร็จจาก workflow run `38036230975`.
 การเปิด URL สาธารณะทดสอบเพียงการตอบสนองของ service ไม่สามารถพิสูจน์ branch ที่ deploy,
 ค่า environment variable หรือฐานข้อมูลที่เชื่อมต่อได้. สำหรับข้อสรุปดังกล่าวต้องมีภาพหน้า Settings
 ของ Render ที่เห็น branch และชื่อตัวแปรโดยปิดบังค่า secret.

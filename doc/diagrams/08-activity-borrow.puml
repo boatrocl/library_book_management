@@ -1,5 +1,5 @@
 @startuml 08-activity-borrow
-title Activity Diagram — กระบวนการยืมหนังสือ
+title Activity Diagram — Counter loan flow
 
 skinparam defaultFontName "Tahoma"
 skinparam defaultFontSize 12
@@ -13,69 +13,54 @@ skinparam activity {
 
 |บรรณารักษ์|
 start
-:สแกนบัตรสมาชิก;
+:ค้นหาสมาชิกและสแกนบาร์โค้ดตัวเล่ม;
 
 |ระบบ|
-:ค้นหาข้อมูลสมาชิก;
-
-if (พบสมาชิก?) then (ไม่พบ)
-  :แสดงข้อความ 404 ไม่พบสมาชิก;
+:โหลดสมาชิกและตัวเล่ม;
+if (พบสมาชิกและตัวเล่ม?) then (ไม่พบ)
+  :ตอบ 404;
   stop
 else (พบ)
 endif
 
-if (สถานะสมาชิก = ACTIVE? \n(BR-01)) then (ไม่)
-  :แจ้งเตือน MEMBER_SUSPENDED;
+if (สมาชิก ACTIVE?\n(BR-01)) then (ไม่)
+  :ตอบ MEMBER_SUSPENDED;
   stop
 else (ใช่)
 endif
 
-if (ค่าปรับค้างชำระ > 100 บาท? \n(BR-02)) then (ใช่)
-  :แจ้งเตือน UNPAID_FINE_EXCEEDED;
-  |บรรณารักษ์|
-  :เสนอให้ชำระค่าปรับก่อน;
+if (ค่าปรับค้างเกิน 100 บาท?\n(BR-02)) then (ใช่)
+  :ตอบ UNPAID_FINE_EXCEEDED;
   stop
 else (ไม่)
 endif
 
-|บรรณารักษ์|
-:สแกนบาร์โค้ดตัวเล่ม;
-
-|ระบบ|
-if (จำนวนที่ยืมอยู่ + ที่จะยืม \nเกินโควต้าของ Tier? (BR-03)) then (เกิน)
-  :แจ้งเตือน LOAN_QUOTA_EXCEEDED;
+if (เกินโควต้าตาม Tier?\n(BR-03)) then (เกิน)
+  :ตอบ LOAN_QUOTA_EXCEEDED;
   stop
 else (ไม่เกิน)
 endif
 
-if (ตัวเล่ม AVAILABLE หรือ RESERVED \nสำหรับเจ้าของคิว READY ที่ยังไม่หมดเวลา? (BR-04)) then (ไม่)
-  :แจ้งเตือน COPY_NOT_AVAILABLE;
-  |บรรณารักษ์|
-  if (สมาชิกต้องการจองคิว?) then (ต้องการ)
-    |ระบบ|
-    :สร้าง Reservation สถานะ WAITING;
-    :แจ้งลำดับคิว;
-    stop
-  else (ไม่ต้องการ)
-    stop
-  endif
-else (ใช่)
+if (ตัวเล่มยืมได้หรือไม่?\n(BR-04)) then (ไม่ได้)
+  :ตอบ COPY_NOT_AVAILABLE;
+  stop
+else (ได้)
 endif
 
-|ระบบ|
-fork
-  :สร้าง Loan (status = ACTIVE);
-fork again
-  :คำนวณ dueDate ตาม MemberTier (BR-05);
-end fork
+if (มีชื่อซ้ำที่ยังไม่คืน\nหรือซ้ำในคำขอ? (BR-09)) then (ซ้ำ)
+  :ตอบ BOOK_ALREADY_ON_LOAN;
+  stop
+else (ไม่ซ้ำ)
+endif
 
-:สร้าง LoanItem ทุกตัวเล่ม;
-:บันทึกลงฐานข้อมูล (Transaction);
-:เปลี่ยนสถานะตัวเล่มเป็น ON_LOAN;
-:ถ้าเป็นคิว READY ของผู้ยืม \nเปลี่ยน Reservation เป็น FULFILLED;
+:คำนวณ dueDate ตาม MemberTier (BR-05);
+:สร้าง Loan และ LoanItem;
+:บันทึกใน transaction;
+:เปลี่ยนตัวเล่มเป็น ON_LOAN;
+:ถ้าเป็นคิว READY ของผู้ยืม\nให้เปลี่ยน Reservation เป็น FULFILLED;
 
 |บรรณารักษ์|
-:แสดง/พิมพ์ใบยืม;
+:แสดงรหัสใบยืมและกำหนดคืน;
 stop
 
 @enduml

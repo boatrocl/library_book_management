@@ -3,6 +3,7 @@ package com.libraflow.library.service.impl;
 import com.libraflow.library.domain.entity.User;
 //import com.libraflow.library.domain.entity.UserProfile;
 import com.libraflow.library.dto.response.MemberProfileResponse;
+import com.libraflow.library.exception.BusinessException;
 import com.libraflow.library.exception.ResourceNotFoundException;
 import com.libraflow.library.mapper.MemberMapper;
 import com.libraflow.library.repository.UserRepository;
@@ -66,5 +67,29 @@ class MemberServiceImplTest {
         });
         
         verify(memberMapper, never()).toProfileResponse(any());
+    }
+
+    @Test
+    void assertCanAccessMember_AllowsOwner() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
+        when(mockUser.getUsername()).thenReturn("pakornkiat");
+
+        assertDoesNotThrow(() -> memberService.assertCanAccessMember(1L, "pakornkiat", false));
+    }
+
+    @Test
+    void assertCanAccessMember_AllowsStaff() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
+
+        assertDoesNotThrow(() -> memberService.assertCanAccessMember(1L, "admin", true));
+    }
+
+    @Test
+    void assertCanAccessMember_RejectsAnotherMember() {
+        when(userRepository.findById(1L)).thenReturn(Optional.of(mockUser));
+        when(mockUser.getUsername()).thenReturn("pakornkiat");
+
+        assertThrows(BusinessException.class,
+                () -> memberService.assertCanAccessMember(1L, "another-member", false));
     }
 }

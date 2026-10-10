@@ -1,5 +1,5 @@
 @startuml 03-domain-model
-title Domain Model / Conceptual Class Diagram — LibraFlow
+title Domain Model — LibraFlow
 
 skinparam defaultFontName "Tahoma"
 skinparam defaultFontSize 13
@@ -14,16 +14,16 @@ hide methods
 class User {
   username
   email
-  role
-  status
+  role : UserRole
+  active : boolean
+  memberTier
 }
 
 class UserProfile {
-  fullName
-  phone
+  firstName
+  lastName
+  phoneNumber
   address
-  birthDate
-  memberTier
 }
 
 class Category {
@@ -50,14 +50,14 @@ class Book {
 
 class BookCopy {
   barcode
-  status
+  status : BookCopyStatus
   shelfLocation
 }
 
 class Loan {
   loanCode
   loanDate
-  status
+  status : LoanStatus
 }
 
 class LoanItem {
@@ -69,31 +69,41 @@ class LoanItem {
 class Fine {
   amount
   overdueDays
-  status
+  status : FineStatus
   paidAt
 }
 
 class Reservation {
   reservedAt
   expiresAt
-  status
+  status : ReservationStatus
 }
 
-User "1" -- "1" UserProfile : has >
-User "1" -- "0..*" Loan : borrows >
-User "1" -- "0..*" Reservation : places >
-Category "1" -- "0..*" Book : classifies >
-Publisher "1" -- "0..*" Book : publishes >
-Book "0..*" -- "1..*" Author : written by >
-Book "1" -- "0..*" BookCopy : has physical >
-Book "1" -- "0..*" Reservation : is reserved in >
-Loan "1" -- "1..*" LoanItem : contains >
-BookCopy "1" -- "0..*" LoanItem : is lent as >
-LoanItem "1" -- "0..1" Fine : incurs >
+User "1" -- "1" UserProfile : profile
+User "1" -- "0..*" Loan : borrows
+User "1" -- "0..*" Reservation : places
+Category "1" -- "0..*" Book : classifies
+Publisher "1" -- "0..*" Book : publishes
+Book "0..*" -- "1..*" Author : written by
+Book "1" -- "0..*" BookCopy : physical copies
+Book "1" -- "0..*" Reservation : reserved title
+Loan "1" -- "1..*" LoanItem : contains
+BookCopy "1" -- "0..*" LoanItem : borrowed copy
+LoanItem "1" -- "0..1" Fine : may incur
+
+note right of User
+  Account activity is the isActive boolean.
+  memberTier belongs to User, not UserProfile.
+end note
+
+note right of UserProfile
+  user_id is both primary key
+  and foreign key to User.
+end note
 
 note bottom of Book
-  Book = ระดับ Title (หนึ่ง ISBN)
-  BookCopy = ตัวเล่มจริงบนชั้น (หนึ่ง barcode)
+  Book is the catalog title (ISBN).
+  BookCopy is a physical item (barcode).
 end note
 
 @enduml

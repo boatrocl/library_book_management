@@ -17,14 +17,15 @@ package "Client Tier" {
   [React SPA\n(Vite + Axios + Tailwind)] as UI
 }
 
-package "Application Tier — Spring Boot 4" {
-  [Security Filter Chain\n(JWT Authentication)] as SEC
-  [Presentation Layer\nRestController + Swagger] as CTRL
-  [DTO + Mapper] as DTO
-  [Service Layer\nBusiness Logic + @Transactional] as SVC
-  [Design Pattern Module\nStrategy / State / Chain / Observer / Template] as PAT
-  [Repository Layer\nSpring Data JPA] as REPO
-  [Global Exception Handler\n@RestControllerAdvice] as EXC
+package "Application Tier — Spring Boot" {
+  [Security Filter Chain\n(JWT)] as SEC
+  [REST Controllers\n(Presentation)] as CTRL
+  [Request / Response DTOs] as DTO
+  [Service Interfaces + Implementations\n(Business Logic / Transactions)] as SVC
+  [Mappers] as MAP
+  [Design Pattern Components\n(Chain / State / Strategy / Observer / Template)] as PAT
+  [Spring Data Repositories] as REPO
+  [Global Exception Handler] as EXC
 }
 
 package "Data Tier" {
@@ -37,24 +38,25 @@ interface "JDBC" as JDBC
 UI -( API
 API - SEC
 SEC --> CTRL : authenticated request
-CTRL --> DTO : map request/response
+CTRL --> DTO : bind request / return response
 CTRL --> SVC : delegate
-CTRL ..> EXC : throws
-SVC --> PAT : ใช้กฎธุรกิจ
+SVC --> MAP : map domain responses
+MAP --> DTO
+SVC --> PAT : apply domain rules
 SVC --> REPO : query / persist
+CTRL ..> EXC : exceptions
 REPO -( JDBC
 JDBC - DB
+
 note right of CTRL
-  ห้ามเรียก Repository ตรง
-  ทุก request ต้องผ่าน Service Layer
+  Controllers do not inject repositories.
+  User management changes go through
+  UserManagementService.
 end note
 
 note bottom of PAT
-  Strategy : คำนวณค่าปรับ
-  State : สถานะใบยืม
-  Chain : ตรวจสิทธิ์การยืม
-  Observer : กันตัวเล่ม/ส่งต่อคิว; email/SMS ยังไม่เชื่อม
-  Template Method : ออกรายงาน
+  Observer reservation updates run after commit.
+  Email/SMS providers are not connected.
 end note
 
 @enduml
