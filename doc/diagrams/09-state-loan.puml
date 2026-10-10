@@ -1,5 +1,5 @@
 @startuml 09-state-loan
-title State Diagram — Loan (ใบยืม)
+title State Diagram — Loan
 
 skinparam defaultFontName "Tahoma"
 skinparam defaultFontSize 12
@@ -10,49 +10,44 @@ skinparam state {
   ArrowColor #2E4053
 }
 
-[*] --> ACTIVE : สร้างรายการยืมสำเร็จ
+[*] --> ACTIVE : checkout committed
 
 state ACTIVE {
-  ACTIVE : entry / กำหนด dueDate ตาม MemberTier (BR-05)
-  ACTIVE : do / ตรวจสอบวันครบกำหนดทุกเที่ยงคืน
+  ACTIVE : entry / dueDate from MemberTier (BR-05)
 }
 
 state OVERDUE {
-  OVERDUE : entry / บันทึก overdueDays
-  OVERDUE : do / เพิ่มยอดค่าปรับสะสมรายวัน (BR-07)
+  OVERDUE : entry / scheduler detects today > dueDate
 }
 
 state RETURNED {
-  RETURNED : entry / คืนตัวเล่มเข้าคลัง
-  RETURNED : entry / publish BookReturnedEvent (BR-10)
+  RETURNED : when every item in the loan is returned
+  RETURNED : publish BookReturnedEvent for each returned copy
 }
 
 state LOST {
-  LOST : entry / เรียกเก็บค่าหนังสือเต็มราคา (BR-08)
+  LOST : scheduler detects overdueDays > 60 (BR-08)
+  LOST : create replacement-price charge
 }
 
-ACTIVE --> ACTIVE : renew()\n[renewCount < 2\nและไม่มีคิวจอง] (BR-06)
-ACTIVE --> OVERDUE : scheduled job\n[today > dueDate]
-ACTIVE --> RETURNED : returnBook()\n[คืนตรงเวลา]
+ACTIVE --> ACTIVE : renew()\n[renewCount < 2 and no WAITING reservation] (BR-06)
+ACTIVE --> OVERDUE : scheduled status check\n[today > dueDate]
+ACTIVE --> RETURNED : returnBook()\n[all items now returned]
 
-OVERDUE --> RETURNED : returnBook()\n/ สร้าง Fine ด้วย Strategy
-OVERDUE --> LOST : scheduled job\n[overdueDays > 60] (BR-08)
-
-LOST --> RETURNED : returnBook()\n/ ชดใช้ค่าหนังสือแล้ว
+OVERDUE --> RETURNED : returnBook()\n[all items now returned; calculate fine on return]
+OVERDUE --> LOST : scheduled status check\n[overdueDays > 60] (BR-08)
+LOST --> RETURNED : returnBook()\n[all lost items recovered/recorded returned]
 
 RETURNED --> [*]
 
-note right of ACTIVE
-  แต่ละสถานะ implement
-  interface LoanState
-  (State Pattern)
+note right of OVERDUE
+  The scheduler updates loan state.
+  It does not add a daily fine balance.
 end note
 
-note left of OVERDUE
-  การพยายามทำ action ที่ไม่อนุญาต
-  จะ throw BusinessException
-  ไม่ใช่ UnsupportedOperationException
-  (รักษา LSP)
+note left of LOST
+  Renewal is rejected for LOST loans.
+  Fine charges are recorded by the return/scheduler flow.
 end note
 
 @enduml

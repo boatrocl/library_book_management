@@ -1,5 +1,5 @@
 @startuml 10-state-bookcopy
-title State Diagram — BookCopy (ตัวเล่มหนังสือ)
+title State Diagram — BookCopy
 
 skinparam defaultFontName "Tahoma"
 skinparam defaultFontSize 12
@@ -10,27 +10,29 @@ skinparam state {
   ArrowColor #2E4053
 }
 
-[*] --> AVAILABLE : ลงทะเบียนตัวเล่มเข้าคลัง
+[*] --> AVAILABLE : copy registered
+AVAILABLE --> ON_LOAN : borrow accepted (BR-04)
+AVAILABLE --> RESERVED : assigned to first waiting reservation (BR-10)
 
-AVAILABLE --> ON_LOAN : borrow() (BR-04)
-AVAILABLE --> RESERVED : กันตัวเล่มให้คิวจองลำดับแรก (BR-10)
+RESERVED --> ON_LOAN : READY owner borrows before expiry
+RESERVED --> AVAILABLE : reservation cancelled or expires\n(copy may be assigned to next queue entry)
+ON_LOAN --> AVAILABLE : returnBook()\n(no waiting reservation)
+ON_LOAN --> RESERVED : returnBook()\n(waiting reservation assigned after commit)
+ON_LOAN --> LOST : scheduler\n[overdueDays > 60] (BR-08)
+LOST --> AVAILABLE : returnBook()\n[physical copy recovered]
 
-RESERVED --> ON_LOAN : เจ้าของคิว READY ยืมภายใน 48 ชม.
-RESERVED --> AVAILABLE : ยกเลิกคิว\n/ Reservation -> CANCELLED
-RESERVED --> AVAILABLE : หมดเวลารับ\n/ Reservation -> EXPIRED; advance queue
+state DAMAGED
 
-ON_LOAN --> AVAILABLE : returnBook()\n[สภาพปกติ]
-ON_LOAN --> DAMAGED : returnBook()\n[ชำรุด]
-ON_LOAN --> LOST : แจ้งหาย / เกิน 60 วัน (BR-08)
+note right of DAMAGED
+  DAMAGED is a valid stored enum value,
+  but no current API or UI transition sets it.
+  Return-condition, repair, and disposal flows
+  are not implemented.
+end note
 
-DAMAGED --> AVAILABLE : ซ่อมเสร็จ
-DAMAGED --> [*] : จำหน่ายออกจากคลัง
-LOST --> [*] : ตัดจำหน่าย
-
-note as N1
-  สถานะนี้ถูกใช้ใน CopyAvailabilityRule
-  ของ Chain of Responsibility: ยืมได้เฉพาะเจ้าของคิว READY
-  ที่ยังไม่หมดเวลา; คิวอื่นไม่ได้รับอนุญาต
+note bottom of RESERVED
+  Only the owner of an unexpired READY reservation
+  may borrow this reserved copy.
 end note
 
 @enduml
