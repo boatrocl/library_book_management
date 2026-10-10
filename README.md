@@ -10,22 +10,68 @@ LibraFlow is a library management web application built for the CP353002 softwar
 - Review member loan and fine history; record fine payments.
 - Manage user roles and account status, and export loan and overdue reports.
 
-## Technology
+## Team and responsibilities
 
-- Backend: Java 17, Spring Boot, Spring Security, Spring Data JPA, Flyway
-- Database: PostgreSQL 16
-- Frontend: React, Vite, Axios, Tailwind CSS
-- Tests: JUnit 5, Mockito, Spring Boot Test, Testcontainers
-- CI: GitHub Actions
-- Hosting: Vercel (frontend), Render (backend), Neon (PostgreSQL)
+The table describes each member's primary area of ownership. Features are integrated and reviewed across the team.
 
-## Architecture
+| # | Member | Student ID | Team role | Main responsibilities | Branch |
+|---:|---|---|---|---|---|
+| 1 | นายอชิรวัช บึงไสย์ | `673380298-3` | Backend Engineer · Catalog and Data | Book, copy, category, publisher, and author APIs; repository layer; OpenAPI/Swagger configuration | [`achirawat_673380298-3_01`](https://github.com/boatrocl/library_book_management/tree/achirawat_673380298-3_01) |
+| 2 | นายวัชรวิศว์ น้อยเมล์ | `673380059-1` | Backend Engineer · Circulation | Loan, return, and renewal flows; State pattern and Chain of Responsibility rules | [`watcharawit_673380059-1_01`](https://github.com/boatrocl/library_book_management/tree/watcharawit_673380059-1_01) |
+| 3 | นายกรกฏ พรมทอง | `673380025-8` | Backend Engineer · Fines, Reservations, and Reports | Fine Strategy, reservation events (Observer), and report formats (Template Method) | [`korakot_673380025-8_01`](https://github.com/boatrocl/library_book_management/tree/korakot_673380025-8_01) |
+| 4 | นายปกรณ์เกียรติ ศรีจันทร์ | `673380045-2` | Frontend Engineer · UX/UI and API Integration | React pages and shared interface; Thai/English UI; integration with the REST API | [`pakornkiat_673380045-2_01`](https://github.com/boatrocl/library_book_management/tree/pakornkiat_673380045-2_01) |
+| 5 | นายสรวิชญ์ ทะมานันท์ | `673380295-9` | Platform Engineer · Security, DevOps, and QA | JWT/security configuration; Docker; CI and deployment verification; unit and integration test infrastructure | [`sorawit_673380295-9_01`](https://github.com/boatrocl/library_book_management/tree/sorawit_673380295-9_01) |
 
-The application uses a layered backend: REST controllers delegate to services, services use repositories for persistence, and DTOs define the API contract. Business rules use Chain of Responsibility, loan state transitions use State, fine calculation uses Strategy, reservation queue updates use Spring application events, and report formats share a Template Method.
+## Technology stack
+
+![LibraFlow technology stack](doc/diagrams/images/14-tech-stack.svg)
+
+| Area | Technologies |
+|---|---|
+| Frontend | React 19, Vite 8, React Router 7, Axios, Tailwind CSS 4 |
+| Backend | Java 17, Spring Boot 4.1.1, Spring Security, JWT, Spring Data JPA |
+| Database and migrations | PostgreSQL 16, Neon, Flyway |
+| API documentation | OpenAPI 3, springdoc, Swagger UI |
+| Build and tests | Maven Wrapper, npm, JUnit 5, Mockito, Spring Boot Test, Testcontainers |
+| Containers and delivery | Docker Compose, GitHub Actions CI, Vercel (frontend), Render (backend) |
+
+Vercel and Render perform the application deployments through their provider integrations. GitHub Actions runs CI and a read-only smoke check after a successful production deployment; it does not deploy the application.
+
+## System architecture
+
+![LibraFlow system architecture](doc/diagrams/images/15-system-architecture.svg)
+
+The React single-page application calls the Spring Boot REST API over HTTPS. Requests pass through JWT authentication and role authorization, then controllers delegate validated DTOs to services. Services apply circulation rules and patterns, repositories persist domain data through Spring Data JPA, and Flyway applies versioned database migrations at application startup.
+
+The backend uses Chain of Responsibility for copy availability checks, State for loan transitions, Strategy for tier-based fine calculation, Spring application events for reservation hand-off, and Template Method for CSV/PDF reports. See [design patterns and code locations](doc/design-patterns.md) for implementation references.
 
 - [Component diagram](doc/diagrams/12-component-diagram.puml)
+- [Deployment and CI/CD diagram](doc/diagrams/13-deployment-diagram.puml)
 - [Design patterns and code locations](doc/design-patterns.md)
 - [Project scope and business rules](doc/project-overview.md)
+
+## Database design and Flyway migrations
+
+The ER diagram and data dictionary describe the catalog, accounts, circulation, reservations, and fines schema.
+
+- [ER diagram (SVG)](doc/diagrams/images/11-er-diagram.svg)
+- [ER diagram source](doc/diagrams/11-er-diagram.puml)
+- [Data dictionary](doc/data-dictionary.md)
+
+| Migration | Purpose | Primary owner |
+|---|---|---|
+| `V1__init_catalog.sql` | Create categories, publishers, authors, books, book-author links, and physical copies | Member 1 |
+| `V2__seed_catalog.sql` | Seed catalog data for local use and demonstrations | Member 1 |
+| `V3__init_users.sql` | Create users and one-to-one user profiles | Member 5 |
+| `V3_1__add_role_and_auth_seed.sql` | Add account roles and seed authentication accounts | Member 5 |
+| `V4__init_loan.sql` | Create loans and loan items with status and renewal constraints | Member 2 |
+| `V5__init_fine_reservation.sql` | Create fines and reservation tables and indexes | Member 3 |
+| `V7__add_tier_to_users.sql` | Add the member tier used by borrowing and fine policies | Team |
+| `V8__add_fine_reservation_foreign_keys.sql` | Add and validate foreign keys for fines and reservations | Team |
+| `V9__reserve_book_copy_for_ready_reservations.sql` | Associate READY reservations with held copies and enforce expiry data | Team |
+| `V10__tighten_user_indexes_and_fine_status.sql` | Remove redundant user indexes and constrain fine status values | Team |
+
+There is no `V6` migration in the repository. Do not backfill an older version number or edit a migration that has already been applied; add the next unused version instead.
 
 ## Run locally
 
