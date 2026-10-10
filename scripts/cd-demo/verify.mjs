@@ -18,5 +18,8 @@ if (!metadata.commit || !metadata.runNumber || !metadata.sourceState || !Number.
 if (!html.includes(metadata.commit) || !html.includes(metadata.runNumber) || !html.includes(metadata.builtAt) || !html.includes(metadata.sourceState)) {
   throw new Error("Rendered HTML does not show the metadata stored in deployment.json");
 }
+for (const requiredText of ["Production deployment verification", "OpenAPI", "ไม่ได้เป็นตัว deploy แอป"]) {
+  if (!html.includes(requiredText)) throw new Error(`CD demo is missing the production boundary note: ${requiredText}`);
+}
 
 console.log(`Validated CD demo artifact for ${metadata.commit} (run ${metadata.runNumber})`);

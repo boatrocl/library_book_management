@@ -31,12 +31,13 @@
 
 ## Tests and CI
 
-GitHub Actions workflows: `.github/workflows/backend-ci.yml` และ `.github/workflows/frontend-ci.yml`.
+GitHub Actions workflows: `.github/workflows/backend-ci.yml`, `.github/workflows/frontend-ci.yml` และ `.github/workflows/production-deployment-smoke.yml`.
 
-- Push ไป `main`, `develop` หรือ branch สมาชิกที่ระบุจะรัน backend `clean verify` และ frontend lint/build แยก workflow.
-- Pull request เข้า `develop` หรือ `main` จะรันทั้ง backend และ frontend workflows.
+- Push ไปทุก branch จะรัน backend `clean verify` และ frontend lint/build แยก workflow; pull request เข้า `develop` หรือ `main` รันทั้งสอง workflow.
 - Backend integration test `AuthSecurityIntegrationTest` ใช้ PostgreSQL 16 ผ่าน Testcontainers; ต้องมี Docker daemon.
 - Frontend checks ใช้ `npm ci`, `npm run lint` และ `npm run build`.
+
+เมื่อ Vercel ส่ง `deployment_status` สำเร็จสำหรับ environment `Production`, `production-deployment-smoke.yml` จะตรวจ frontend routes สาธารณะและเส้นทาง `/profile` กับ `/admin/**` ที่ใช้ auth guard, ตรวจ OpenAPI และอ่าน public catalog แบบ GET. Workflow นี้ไม่มี secret และไม่แก้ข้อมูล; เป็นการตรวจหลัง deploy ไม่ได้สั่ง deploy หรือป้องกัน provider deploy โดยตรง.
 
 มี workflow `.github/workflows/cd-demo.yml` เพิ่มเติมสำหรับสาธิต Build → Validate → Deploy
 artifact หน้า status ขนาดเล็กไป GitHub Pages. Workflow นี้ไม่ deploy frontend ไป Vercel,
@@ -44,7 +45,7 @@ backend ไป Render หรือเปลี่ยนฐานข้อมู�
 Repository Pages ตั้ง source เป็น GitHub Actions แล้ว; ดู workflow, URL และขั้นตอนสำหรับ fork ที่
 [`cd-demo.md`](cd-demo.md).
 
-Backend และ frontend workflows เป็น CI และไม่มี deploy job. CD Demo มี deploy job เฉพาะ GitHub Pages
+Backend และ frontend workflows เป็น CI และไม่มี deploy job. Production smoke workflow ตรวจสถานะหลัง Vercel deploy แล้วเท่านั้น. CD Demo มี deploy job เฉพาะ GitHub Pages
 สำหรับหน้า demo; ไม่ได้ deploy แอปจริง. Vercel preview/production และ Render deployment
 เป็นงานของ provider integration/dashboard แยกจาก GitHub Actions; ต้องตรวจ deployment status ที่ provider
 ก่อนยืนยันว่า production อัปเดตแล้ว. การเพิ่ม GitHub Actions deploy job สำหรับแอปต้องตั้ง provider credentials

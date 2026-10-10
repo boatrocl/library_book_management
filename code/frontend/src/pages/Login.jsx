@@ -42,6 +42,7 @@ export default function Login() {
       title={t('ยินดีต้อนรับกลับ', 'Welcome back')}
       eyebrow={t('เข้าสู่ระบบ', 'Sign in')}
       description={t('เข้าสู่บัญชีเพื่อเลือกอ่านและจัดการรายการของคุณ', 'Sign in to browse books and manage your library activity.')}
+      showHomeLink
       footer={<>{t('ยังไม่มีบัญชีใช่หรือไม่?', "Don't have an account?")} <Link to="/register">{t('สมัครสมาชิก', 'Create an account')}</Link></>}
     >
       {(errorMsg.th || errorMsg.en) && <div className="lf-form-message lf-form-message--error" role="alert">{t(errorMsg.th, errorMsg.en)}</div>}

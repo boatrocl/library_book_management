@@ -182,6 +182,33 @@
   margin: -8px 0 18px;
 }
 
+.lf-auth-home-link {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 22px;
+  padding: 8px 14px;
+  border: 1px solid var(--lf-line);
+  border-radius: 999px;
+  background: var(--lf-paper-deep);
+  color: var(--lf-green-dark);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: background-color .18s ease, border-color .18s ease;
+}
+
+.lf-auth-home-link:hover {
+  border-color: var(--lf-green);
+  background: var(--lf-sage);
+}
+
+.lf-auth-home-link:focus-visible {
+  outline: 3px solid var(--lf-amber);
+  outline-offset: 2px;
+}
+
 .lf-auth-card__heading {
   margin-bottom: 26px;
 }

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '../context/LanguageContext';
 import LanguageToggle from './LanguageToggle';
 
-export default function AuthLayout({ title, eyebrow, description, children, footer, variant = 'login' }) {
+export default function AuthLayout({ title, eyebrow, description, children, footer, variant = 'login', showHomeLink = false }) {
   const { t } = useLanguage();
 
   return (
@@ -30,6 +30,12 @@ export default function AuthLayout({ title, eyebrow, description, children, foot
 
         <section className={`lf-auth-card lf-auth-card--${variant}`} aria-labelledby="auth-heading">
           <div className="lf-auth-card__locale"><LanguageToggle /></div>
+          {showHomeLink && (
+            <Link className="lf-auth-home-link" to="/">
+              <span aria-hidden="true">←</span>
+              {t('กลับหน้าหลัก', 'Back to home')}
+            </Link>
+          )}
           <div className="lf-auth-card__heading">
             <span className="lf-eyebrow">{eyebrow}</span>
             <h2 id="auth-heading">{title}</h2>
