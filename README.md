@@ -24,7 +24,7 @@ The table describes each member's primary area of ownership. Features are integr
 
 ## Technology stack
 
-![LibraFlow technology stack](doc/diagrams/images/14-tech-stack.svg)
+![LibraFlow technology stack](doc/diagrams/png/14-tech-stack.png)
 
 | Area | Technologies |
 |---|---|
@@ -39,7 +39,7 @@ Vercel and Render perform the application deployments through their provider int
 
 ## System architecture
 
-![LibraFlow system architecture](doc/diagrams/images/15-system-architecture.svg)
+![LibraFlow system architecture](doc/diagrams/png/15-system-architecture.png)
 
 The React single-page application calls the Spring Boot REST API over HTTPS. Requests pass through JWT authentication and role authorization, then controllers delegate validated DTOs to services. Services apply circulation rules and patterns, repositories persist domain data through Spring Data JPA, and Flyway applies versioned database migrations at application startup.
 
