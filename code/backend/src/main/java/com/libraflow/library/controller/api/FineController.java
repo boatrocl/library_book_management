@@ -6,6 +6,7 @@ import com.libraflow.library.service.FineService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -20,6 +21,7 @@ public class FineController {
     }
 
     @PostMapping("/{id}/pay")
+    @PreAuthorize("hasAnyRole('LIBRARIAN', 'ADMIN')")
     @Operation(summary = "Pay a fine by ID")
     public ResponseEntity<FineResponse> payFine(@PathVariable Long id) {
         Fine updatedFine = fineService.payFine(id);

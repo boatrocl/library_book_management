@@ -3,6 +3,8 @@ package com.libraflow.library.service.impl;
 import com.libraflow.library.domain.entity.User;
 import com.libraflow.library.dto.request.UpdateMemberProfileRequest;
 import com.libraflow.library.dto.response.MemberProfileResponse;
+import com.libraflow.library.exception.BusinessException;
+import com.libraflow.library.exception.ErrorCode;
 import com.libraflow.library.exception.ResourceNotFoundException;
 import com.libraflow.library.mapper.MemberMapper;
 import com.libraflow.library.repository.UserRepository;
@@ -19,6 +21,17 @@ public class MemberServiceImpl implements MemberService {
     public MemberServiceImpl(UserRepository userRepository, MemberMapper memberMapper) {
         this.userRepository = userRepository;
         this.memberMapper = memberMapper;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void assertCanAccessMember(Long userId, String requesterUsername, boolean staff) {
+        User target = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("ไม่พบข้อมูลผู้ใช้รหัส: " + userId));
+
+        if (!staff && !target.getUsername().equals(requesterUsername)) {
+            throw new BusinessException(ErrorCode.ACCESS_DENIED);
+        }
     }
 
     @Override
