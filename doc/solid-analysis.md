@@ -1,6 +1,6 @@
 # SOLID Analysis — LibraFlow
 
-เอกสารนี้ยกตัวอย่างจาก implementation ที่ตรวจใน repository ณ 9 ตุลาคม 2569.
+เอกสารนี้ยกตัวอย่างจาก implementation ที่ตรวจใน repository ณ 10 ตุลาคม 2569.
 หลักฐานท้ายเอกสารระบุไฟล์และช่วงบรรทัดใน revision นี้; ให้อัปเดตช่วงบรรทัดเมื่อโค้ดเปลี่ยน.
 การใช้ design pattern ไม่ได้แปลว่าทุกคลาสทำตาม SOLID โดยอัตโนมัติ
 
@@ -33,7 +33,7 @@
 
 ## L — Liskov Substitution Principle
 
-- `MemberStatusRule`, `UnpaidFineRule`, `LoanQuotaRule` และ `CopyAvailabilityRule` ใช้ผ่าน `BorrowRule` ใน chain เดียวกัน.
+- `MemberStatusRule`, `UnpaidFineRule`, `LoanQuotaRule`, `CopyAvailabilityRule` และ `NoDuplicateTitleLoanRule` ใช้ผ่าน `BorrowRule` ใน chain เดียวกัน.
 - `ActiveState`, `OverdueState`, `ReturnedState` และ `LostState` ใช้ผ่าน `LoanState`; transition ที่ผิดกฎถูกปฏิเสธด้วย business exception ตาม contract.
 - `CsvReportGenerator` และ `PdfReportGenerator` เติมขั้น render ของ `AbstractReportGenerator`; service เรียกผ่าน `ReportFileGenerator`.
 - ชุด unit tests `LoanStateTest` และ test ของ borrow rules ตรวจ behavior ของ implementations.
@@ -66,6 +66,7 @@
 | Claim | Source evidence |
 |---|---|
 | สมัครสมาชิก persist profile ผ่าน repository | [`AuthServiceImpl.java`](../code/backend/src/main/java/com/libraflow/library/service/impl/AuthServiceImpl.java#L25-L39) injects repository and [saves profile in `register`](../code/backend/src/main/java/com/libraflow/library/service/impl/AuthServiceImpl.java#L63-L96); [`UserProfileRepository.java`](../code/backend/src/main/java/com/libraflow/library/repository/UserProfileRepository.java#L1-L7) |
+| MemberController ไม่เข้าถึง repository โดยตรง; ตรวจสิทธิ์สมาชิกผ่าน service | [`MemberController.java`](../code/backend/src/main/java/com/libraflow/library/controller/api/MemberController.java) calls [`MemberService`](../code/backend/src/main/java/com/libraflow/library/service/MemberService.java); user role/status changes have a single `/api/v1/users` route through [`UserManagementService`](../code/backend/src/main/java/com/libraflow/library/service/UserManagementService.java) |
 | ป้องกัน Admin แก้ role/ระงับบัญชีของตัวเองที่ backend | [`UserManagementController.java`](../code/backend/src/main/java/com/libraflow/library/controller/api/UserManagementController.java#L47-L68) passes the authenticated username; [`UserManagementServiceImpl.java`](../code/backend/src/main/java/com/libraflow/library/service/impl/UserManagementServiceImpl.java#L40-L94) checks the actor before saving |
 | Controller แยกจาก report generator/repository | [`ReportController.java`](../code/backend/src/main/java/com/libraflow/library/controller/api/ReportController.java#L19-L45) → [`ReportServiceImpl.java`](../code/backend/src/main/java/com/libraflow/library/service/impl/ReportServiceImpl.java#L11-L34) → [`AbstractReportGenerator.java`](../code/backend/src/main/java/com/libraflow/library/pattern/template/AbstractReportGenerator.java#L13-L54), through [`ReportFileGenerator.java`](../code/backend/src/main/java/com/libraflow/library/pattern/template/ReportFileGenerator.java#L5-L8) |
 | V10 removes duplicate user indexes and constrains fine status | [`V10__tighten_user_indexes_and_fine_status.sql`](../code/backend/src/main/resources/db/migration/V10__tighten_user_indexes_and_fine_status.sql#L1-L25); schema notes in [`data-dictionary.md`](data-dictionary.md#L20-L24) |

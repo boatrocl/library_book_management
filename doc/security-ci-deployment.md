@@ -38,6 +38,11 @@ GitHub Actions workflows: `.github/workflows/backend-ci.yml` และ `.github/
 - Backend integration test `AuthSecurityIntegrationTest` ใช้ PostgreSQL 16 ผ่าน Testcontainers; ต้องมี Docker daemon.
 - Frontend checks ใช้ `npm ci`, `npm run lint` และ `npm run build`.
 
+มี workflow `.github/workflows/cd-demo.yml` เพิ่มเติมสำหรับสาธิต Build → Validate → Deploy
+ไป GitHub Pages โดยเผยแพร่หน้า status ขนาดเล็ก ไม่ใช่แอป LibraFlow. Workflow นี้ไม่ deploy
+frontend ไป Vercel, backend ไป Render หรือเปลี่ยนฐานข้อมูล Neon และไม่ทดแทน CI ของแอป
+หรือ CD production ตาม rubric. ดูขั้นตอนและข้อจำกัดที่ [`cd-demo.md`](cd-demo.md).
+
 Workflows เหล่านี้เป็น CI: ไม่มี deploy job. Vercel preview/production และ Render deployment
 เป็นงานของ provider integration/dashboard แยกจาก GitHub Actions; ต้องตรวจ deployment status ที่ provider
 ก่อนยืนยันว่า production อัปเดตแล้ว. การเพิ่ม GitHub Actions deploy job ต้องตั้ง provider credentials
@@ -53,8 +58,9 @@ cd ../frontend
 npm ci
 npm run lint
 npm run build
-npm audit --audit-level=high
 ```
+
+`npm audit` เป็นการตรวจ dependency เพิ่มเติมที่รันเองได้; ไม่ใช่ step ใน frontend CI workflow.
 
 ถ้าไม่มี Docker และต้องแยกตรวจ unit/API tests จาก integration test ชั่วคราว:
 

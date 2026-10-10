@@ -1,142 +1,98 @@
-# LibraFlow — ภาพรวมระบบ (Project Overview)
+# LibraFlow — Project Overview
 
-## 1. ที่มาและขอบเขต
+## Purpose and scope
 
-ห้องสมุดขนาดกลางประสบปัญหาการจัดการการยืม-คืนด้วยสมุดบันทึกกระดาษ
-ทำให้ตรวจสอบไม่ได้ว่าหนังสือเล่มใดอยู่ที่ใคร คำนวณค่าปรับผิดพลาดบ่อย
-และไม่มีระบบจองคิวสำหรับหนังสือยอดนิยม
+LibraFlow is a web application for managing a library catalog and circulation. It models a book title separately from each physical copy and supports member self-service, staff circulation, reservations, fines, and reports.
 
-**LibraFlow** เป็นระบบสารสนเทศบนเว็บที่แก้ปัญหาข้างต้น โดยครอบคลุม
-การจัดการข้อมูลหนังสือระดับ Title และระดับตัวเล่ม (Copy) การยืม-คืน
-การจองคิว การคิดค่าปรับอัตโนมัติตามประเภทสมาชิก และรายงานสำหรับผู้บริหาร
+### In scope
 
-### อยู่ในขอบเขต (In Scope)
-- จัดการหนังสือ ผู้แต่ง สำนักพิมพ์ หมวดหมู่ และตัวเล่ม (barcode ระดับเล่ม)
-- สมัคร/จัดการสมาชิก พร้อมโปรไฟล์และประเภทสมาชิก (Tier)
-- ยืม-คืน-ต่ออายุ พร้อมตรวจสอบสิทธิ์การยืมหลายเงื่อนไข
-- จองคิวหนังสือ และตั้งสถานะ READY เมื่อหนังสือพร้อมให้รับ
-- คิดค่าปรับอัตโนมัติและบันทึกการชำระ
-- รายงานสถิติการยืม / หนังสือค้างส่ง (CSV, PDF)
-- Authentication & Authorization แบ่งตาม Role
+- Book, copy, author, publisher, category, and member profile management
+- Member borrowing and reservation queues
+- Staff checkout, returns, renewal, and fine-payment recording
+- Tier-based borrowing limits, loan periods, and fine rates
+- Loan and overdue reports in CSV and PDF
+- JWT authentication and role-based access
 
-### นอกขอบเขต (Out of Scope)
-- ระบบชำระเงินออนไลน์จริง (ใช้การบันทึกรับชำระที่เคาน์เตอร์)
-- E-book / การอ่านออนไลน์
-- ระบบจัดซื้อจัดจ้างหนังสือ
+### Out of scope or not implemented
 
----
+- Online payment processing
+- External email or SMS delivery; reservation notifications currently go to application logs
+- Staff workflow to mark a returned copy damaged, repair it, or dispose of it
+- Runtime configuration UI for loan and fine policy; the current policy is defined in code
 
-## 2. Actor และสิทธิ์การใช้งาน
+## Actors
 
-| Actor | สิทธิ์ |
+| Role | Implemented responsibilities |
 |---|---|
-| **MEMBER** | ค้นหาหนังสือ, ดูรายละเอียด, ยืมตัวเล่มที่ว่างด้วยตนเอง, จองคิว, ยกเลิกการจอง, ดูประวัติการยืมและค่าปรับของตนเอง |
-| **LIBRARIAN** | สิทธิ์ทั้งหมดของ MEMBER + จัดการหนังสือ/ตัวเล่ม, บันทึกการยืม, บันทึกการคืน, ต่ออายุ, รับชำระค่าปรับ, ออกรายงาน |
-| **ADMIN** | สิทธิ์ทั้งหมดของ LIBRARIAN + จัดการผู้ใช้และสิทธิ์, ระงับ/คืนสถานะบัญชี, ตั้งค่านโยบายการยืม, ดู Dashboard |
+| MEMBER | Browse books, self-borrow available titles, reserve unavailable titles, cancel eligible reservations, and read their own profile, loan history, and fines |
+| LIBRARIAN | Manage books and copies, record checkout/return/renewal, record fine payments, view member history, and export reports |
+| ADMIN | Use staff catalog and circulation operations, manage user roles/status, and export reports |
 
----
+The roles do not inherit self-service permissions: the self-borrow and self-reservation endpoints require the MEMBER role. Administrative user changes use `/api/v1/users` and `UserManagementService`.
 
-## 3. Business Rules (กฎทางธุรกิจ)
+## Business rules
 
-รหัสกฎเหล่านี้จะถูกอ้างอิงในโค้ดและในเอกสาร Design Patterns
-
-| รหัส | กฎ |
+| ID | Rule |
 |---|---|
-| BR-01 | สมาชิกที่มีสถานะ `SUSPENDED` ยืมหนังสือไม่ได้ |
-| BR-02 | สมาชิกที่มีค่าปรับค้างชำระรวมเกิน 100 บาท ยืมหนังสือไม่ได้ |
-| BR-03 | โควต้าการยืมพร้อมกันขึ้นกับ Tier — STUDENT 5 เล่ม, STAFF 10 เล่ม, EXTERNAL 2 เล่ม |
-| BR-04 | ยืมได้เฉพาะตัวเล่ม `AVAILABLE` หรือ `RESERVED` ที่ผูกกับคิว `READY` ของสมาชิกผู้ยืมและยังไม่หมดเวลา |
-| BR-05 | ระยะเวลายืมขึ้นกับ Tier — STUDENT 7 วัน, STAFF 14 วัน, EXTERNAL 3 วัน |
-| BR-06 | ต่ออายุได้ไม่เกิน 2 ครั้งต่อรายการ และต่ออายุไม่ได้หากมีคนจองคิวรออยู่ |
-| BR-07 | ค่าปรับคิดต่อวันตาม Tier — STUDENT 3 บาท/วัน, STAFF 5 บาท/วัน (เพดาน 300 บาท), EXTERNAL 10 บาท/วัน |
-| BR-08 | รายการยืมที่เกินกำหนดคืนเกิน 60 วัน จะเปลี่ยนสถานะเป็น `LOST` และเรียกเก็บค่าหนังสือเต็มราคา |
-| BR-09 | สมาชิกหนึ่งคนมีรายการจอง active ซ้ำไม่ได้ และห้ามยืมหรือจองชื่อหนังสือที่ตนยังยืมอยู่ รวมถึงห้ามยืมตัวเล่มชื่อเดียวกันซ้ำในคำขอเดียว (ตอบ 409 Conflict) |
-| BR-10 | เมื่อมีการคืนหนังสือ ระบบต้องแจ้งสมาชิกที่จองคิวลำดับแรกโดยอัตโนมัติ และกันตัวเล่มไว้ 48 ชั่วโมง |
-| BR-11 | ลบหนังสือไม่ได้หากยังมีตัวเล่มที่อยู่ในสถานะ `ON_LOAN` หรือ `RESERVED` |
-| BR-12 | สมาชิกต้องยอมรับกฎการใช้บริการก่อนยืมหรือจองด้วยตนเอง ระบบปฏิเสธคำขอที่ไม่มีการยอมรับ |
+| BR-01 | Suspended members cannot borrow. Account status is stored as the `users.is_active` boolean. |
+| BR-02 | Borrowing is blocked when unpaid fines exceed 100 baht. |
+| BR-03 | Concurrent-loan limits: STUDENT 5, STAFF 10, EXTERNAL 2. |
+| BR-04 | A copy must be AVAILABLE, or RESERVED for the member with an unexpired READY reservation. |
+| BR-05 | Loan periods: STUDENT 7 days, STAFF 14 days, EXTERNAL 3 days. |
+| BR-06 | Each loan item can be renewed at most twice; renewal is blocked while a title has a WAITING reservation. |
+| BR-07 | Fine rates: STUDENT 3 baht/day, STAFF 5 baht/day (capped at 300), EXTERNAL 10 baht/day. The fine is recorded when an overdue item is returned; the scheduler does not increment a daily balance. |
+| BR-08 | More than 60 overdue days moves the loan/copy to LOST and records the book-price replacement charge. |
+| BR-09 | A member cannot have duplicate active reservations or borrow/reserve a title that they still have on loan; duplicate titles in one checkout are rejected. |
+| BR-10 | On return, the first waiting reservation is offered the copy as READY for 48 hours. This is an in-system workflow; no external message is sent. |
+| BR-11 | A book cannot be deleted while any copy is ON_LOAN or RESERVED. |
+| BR-12 | Self-service borrowing and reservation requests must include `termsAccepted: true`. |
 
-### สถานะการทำงานของกฎที่พึ่งพาระบบภายนอก
+## Domain vocabulary
 
-- **BR-10:** หลัง transaction คืนหนังสือสำเร็จ listener จะผูกตัวเล่มกับคิวแรก เปลี่ยน reservation เป็น `READY` และ copy เป็น `RESERVED` นาน 48 ชั่วโมง เจ้าของคิวจึงยืมตัวเล่มนั้นได้; การยกเลิก/หมดเวลาจะคืน copy และส่งต่อคิว ระบบยังเขียน log แทนการเชื่อมผู้ให้บริการอีเมลหรือ SMS
-- **BR-08:** งานตามกำหนดเวลาจะเปลี่ยนรายการที่เกินกำหนดมากกว่า 60 วันเป็น `LOST` และสร้างค่าปรับตามราคาหนังสือ หากข้อมูลราคาไม่ถูกต้อง transaction จะยกเลิกแทนการบันทึกค่าปรับที่ผิด
+- **Book**: a catalog title identified by ISBN.
+- **BookCopy**: one physical copy with its own barcode and circulation status.
+- **Loan**: one checkout transaction for a member.
+- **LoanItem**: one copy and its due/return dates within a loan.
+- **Reservation**: a member's queue entry for a title.
+- **Fine**: a charge associated with a loan item.
 
----
+## Implemented enums
 
-## 4. Domain Glossary (คำศัพท์เฉพาะ)
-
-| คำ | ความหมาย |
+| Enum | Values / meaning |
 |---|---|
-| **Book** | หนังสือระดับ Title (มี ISBN เดียว) เช่น "Clean Code" |
-| **BookCopy** | ตัวเล่มจริงบนชั้น มีบาร์โค้ดของตัวเอง — หนึ่ง Book มีได้หลาย Copy |
-| **Loan** | ใบยืมหนึ่งใบ (หนึ่งครั้งที่มายืม) ของสมาชิกหนึ่งคน |
-| **LoanItem** | รายการย่อยในใบยืม = ตัวเล่มหนึ่งเล่ม พร้อมกำหนดคืนของตัวเอง |
-| **Fine** | ค่าปรับของ LoanItem ที่คืนช้า หรือค่าทดแทนหนังสือที่ถูกจัดเป็น `LOST` (One-to-One กับ LoanItem) |
-| **Reservation** | การจองคิวหนังสือระดับ Title (ไม่เจาะจงตัวเล่ม) |
-| **Member Tier** | ประเภทสมาชิก STUDENT / STAFF / EXTERNAL มีผลต่อโควต้า ระยะเวลายืม และอัตราค่าปรับ |
-
----
-
-## 5. Enum ทั้งหมดในระบบ
-
-| Enum | ค่า |
-|---|---|
-| `Role` | ADMIN, LIBRARIAN, MEMBER |
-| `UserStatus` | ACTIVE, SUSPENDED |
+| `UserRole` | ADMIN, LIBRARIAN, MEMBER |
 | `MemberTier` | STUDENT, STAFF, EXTERNAL |
+| `BookAvailabilityFilter` | ALL, AVAILABLE, UNAVAILABLE |
 | `BookCopyStatus` | AVAILABLE, ON_LOAN, RESERVED, DAMAGED, LOST |
 | `LoanStatus` | ACTIVE, OVERDUE, RETURNED, LOST |
 | `ReservationStatus` | WAITING, READY, FULFILLED, CANCELLED, EXPIRED |
 | `FineStatus` | UNPAID, PAID, WAIVED |
 
----
+Account activity is represented by `User.isActive`, not a `UserStatus` enum. Although DAMAGED is a valid stored copy status, there is no current return-condition endpoint or repair/disposal workflow. WAIVED is a valid fine status in the schema, but there is no API endpoint to waive a fine.
 
-## 6. Package Structure
+## Backend package map
 
-```
+```text
 com.libraflow.library
-├── common/              API response, date/barcode helpers, loan policy
-├── config/              OpenAPI, JPA auditing, CORS
-├── controller/api/      REST controllers: Auth, Book, Loan, Fine, Member,
-│                        PublicCatalog, Report, Reservation, UserManagement
-├── domain/
-│   ├── entity/          User, UserProfile, Book, BookCopy, Author, Category,
-│   │                    Publisher, Loan, LoanItem, Fine, Reservation
-│   └── enums/           Role, UserStatus, MemberTier, BookCopyStatus,
-│                        LoanStatus, ReservationStatus, FineStatus
-├── dto/
-│   ├── request/         CreateBookRequest, UpdateBookRequest, BorrowRequest,
-│   │                    MemberBorrowRequest, MemberReservationRequest,
-│   │                    ReturnRequest, CreateReservationRequest, PayFineRequest
-│   └── response/        BookResponse, BookCopyResponse, LoanResponse,
-│                        FineResponse, PageResponse<T>, ErrorResponse
-├── mapper/              BookMapper, LoanMapper, MemberMapper, FineMapper
-├── pattern/
-│   ├── state/           LoanState, ActiveState, OverdueState, ReturnedState,
-│   │                    LostState, LoanStateFactory
-│   ├── chain/           BorrowRule, MemberStatusRule, UnpaidFineRule,
-│   │                    LoanQuotaRule, CopyAvailabilityRule, BorrowContext
-│   ├── observer/        BookCopyAvailableEvent, BookReturnedEvent
-│   └── template/        AbstractReportGenerator, CsvReportGenerator,
-│                        PdfReportGenerator
-├── repository/          Spring Data repositories and projections
-├── security/            SecurityConfig, JWT authentication and authorization
-└── service/              Service interfaces, ReportService, LoanScheduler, ReservationScheduler
-    ├── impl/             Service implementations
-    ├── strategy/         FineCalculationStrategy and 3 MemberTier strategies
-    ├── report/           ReportGenerator and fine/reservation reports
-    └── event/listener/   ReservationNotificationListener
+├── controller/api/    REST endpoints
+├── service/           service interfaces, schedulers, event listeners
+├── service/impl/      business logic
+├── repository/        Spring Data JPA persistence
+├── domain/entity/     JPA entities
+├── domain/enums/      persisted and query enums
+├── dto/request/       validated API requests
+├── dto/response/      API responses
+├── mapper/            entity-to-response mapping
+├── security/          JWT and endpoint authorization
+├── pattern/           chain, state, observer, report template
+└── common/            shared policy and helpers
 ```
 
----
+## Supporting documents
 
-## 7. รายการเอกสารประกอบ
-
-| ไฟล์ | เนื้อหา |
-|---|---|
-| `README.md` | ภาพรวม การติดตั้ง การรัน การ deploy |
-| `doc/project-overview.md` | เอกสารนี้ — ขอบเขต, Actor, Business Rules |
-| `doc/solid-analysis.md` | การวิเคราะห์ SOLID อ้างอิงคลาสและแพ็กเกจในโค้ดปัจจุบัน |
-| `doc/design-patterns.md` | ตาราง Design Pattern พร้อมเหตุผลการเลือกใช้ |
-| `doc/data-dictionary.md` | พจนานุกรมข้อมูลครบทุกตาราง |
-| `doc/api-spec.md` | รายละเอียด REST API ทุก Endpoint |
-| `doc/diagrams/*.puml` | Diagram ทั้งหมดในรูปแบบ PlantUML |
+- [REST API](api-spec.md)
+- [Design patterns](design-patterns.md)
+- [Data dictionary](data-dictionary.md)
+- [SOLID analysis](solid-analysis.md)
+- [Diagrams and render instructions](diagrams/README.md)
+- [Security, CI, and deployment notes](security-ci-deployment.md)
