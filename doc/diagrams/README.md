@@ -1,6 +1,6 @@
 # LibraFlow diagrams
 
-PlantUML sources are stored in this directory. The Tech Stack and System Architecture illustrations are authored as scalable SVGs in `images/`; PNG exports are in `png/`. The code diagrams and exports were synchronized on 10 October 2026 with the current controller, service, migration, and workflow configuration. The deployment diagram shows the post-deploy production smoke check separately from CI and the GitHub Pages teaching demo.
+PlantUML sources are stored in this directory. The Tech Stack and System Architecture illustrations are authored as scalable SVGs in `images/`; PNG exports are in `png/`. The README embeds the PNG exports so the bundled Press Start 2P pixel headings render consistently on GitHub. The diagrams were synchronized on 10 October 2026 with the current controller, service, migration, and workflow configuration. The deployment diagram shows the post-deploy production smoke check separately from CI and the GitHub Pages teaching demo.
 
 | # | Diagram | Source | PNG | SVG |
 |---|---|---|---|---|
@@ -29,9 +29,19 @@ java -jar /path/to/plantuml-1.2025.2.jar -tpng -o png *.puml
 java -jar /path/to/plantuml-1.2025.2.jar -tsvg -o images *.puml
 ```
 
-The Tech Stack and System Architecture SVG files are their own editable source. Refresh their PNG previews with `rsvg-convert -o png/14-tech-stack.png images/14-tech-stack.svg` and `rsvg-convert -o png/15-system-architecture.png images/15-system-architecture.svg`.
+The Tech Stack and System Architecture SVG files are the editable sources. They use the bundled Press Start 2P typeface for pixel headings and Noto Sans Mono for supporting text. The font is licensed under the SIL Open Font License 1.1; the license file is included in the fonts directory.
 
-PlantUML uses Tahoma in the source for Thai labels. On Linux, install a Thai-capable font if PNG output shows missing glyphs; the SVG output retains the font-family declaration and can be opened at any zoom level.
+From this directory, install the font and refresh the PNG previews with:
+
+```bash
+mkdir -p ~/.local/share/fonts
+cp fonts/PressStart2P-Regular.ttf ~/.local/share/fonts/
+fc-cache -f ~/.local/share/fonts
+rsvg-convert -o png/14-tech-stack.png images/14-tech-stack.svg
+rsvg-convert -o png/15-system-architecture.png images/15-system-architecture.svg
+```
+
+PlantUML uses Tahoma in the source for Thai labels. Install a Thai-capable font if its PNG output shows missing glyphs.
 
 ## Review when implementation changes
 
