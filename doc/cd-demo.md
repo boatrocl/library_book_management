@@ -24,11 +24,17 @@ The workflow runs on `workflow_dispatch` and when the demo files change on `deve
 
 ## One-time GitHub Pages setup
 
-After the workflow is merged into the repository's default branch (`develop`), open:
+GitHub Pages is configured for this repository with **GitHub Actions** as its publishing source. After a successful deployment, the demo is available at:
+
+<https://boatrocl.github.io/library_book_management/>
+
+Verified on 10 October 2026: workflow run `38036230975` completed Build → Validate → Deploy from `develop`, and the published URL returned HTTP 200.
+
+For a new fork, or if the workflow reports that no Pages site exists, a repository administrator must open:
 
 **Repository Settings → Pages → Build and deployment → Source → GitHub Actions**
 
-Then run **Actions → CD Demo → Run workflow** on `develop`, or push a change to `doc/cd-demo/` or `scripts/cd-demo/`. The successful deploy job shows the Pages URL. The repository did not have a Pages site configured when this demo was prepared, so the first deployment needs that one-time setting.
+Then run **Actions → CD Demo → Run workflow** on `develop`, or push a change to `doc/cd-demo/`, `scripts/cd-demo/`, or this workflow. The build and validation jobs run first; only a run on `develop` deploys the validated artifact. The build job reads Pages configuration, and the deploy job has only the `pages: write` and `id-token: write` permissions needed to publish it.
 
 ## How this relates to the course CD bonus
 
@@ -43,4 +49,4 @@ node scripts/cd-demo/build.mjs
 node scripts/cd-demo/verify.mjs build/cd-demo/site
 ```
 
-The generated page is `build/cd-demo/site/index.html`. It records the local Git commit and build time. These commands demonstrate the build and validation stages; the deploy stage runs in GitHub Actions after Pages is configured.
+The generated page is `build/cd-demo/site/index.html`. It records the local Git commit and build time. These commands demonstrate the build and validation stages; publishing is performed by GitHub Actions.
