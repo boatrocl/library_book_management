@@ -80,16 +80,16 @@ npm run lint
 npm run build
 ```
 
-Backend integration tests use PostgreSQL through Testcontainers and require Docker. GitHub Actions runs backend verification and frontend lint/build as separate CI workflows:
+Backend integration tests use PostgreSQL through Testcontainers and require Docker. GitHub Actions runs backend verification and frontend lint/build on pushes to all branches and on pull requests into `develop` or `main`:
 
 - `.github/workflows/backend-ci.yml`
 - `.github/workflows/frontend-ci.yml`
 
-CI does not deploy the LibraFlow application.
+The CI workflows do not deploy the LibraFlow application. After Vercel reports a successful Production deployment, `production-deployment-smoke.yml` checks the deployed SPA routes, OpenAPI document, and public catalog. This is a post-deploy verification; Vercel's GitHub integration performs the frontend deployment.
 
 ## CD teaching demo
 
-The separate [CD Demo](doc/cd-demo.md) builds and validates a small status page, then publishes that artifact to GitHub Pages. It does not deploy the LibraFlow app or change its Vercel, Render, or Neon services. It is a demonstration pipeline, not production CD for the application.
+The separate [CD Demo](doc/cd-demo.md) builds and validates a small status page, then publishes that artifact to GitHub Pages. It does not deploy the LibraFlow app or change its Vercel, Render, or Neon services. The production smoke check observes the provider deployment after it completes; it does not deploy the app or replace provider configuration.
 
 ## API and deployment
 

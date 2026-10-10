@@ -22,6 +22,10 @@ flowchart LR
 
 The workflow runs on `workflow_dispatch` and when the demo files change on `develop`. The deployment job only runs for `develop`. It does not deploy the React application, change Vercel or Render, or connect to the production database. The validation job checks this small demo artifact; it does not replace the project's backend or frontend CI.
 
+## Production application deployment check
+
+Vercel's GitHub integration performs the production frontend deployment after changes reach `main`. The separate `production-deployment-smoke.yml` workflow listens for a successful GitHub deployment status in the `Production` environment, then checks the live SPA routes, OpenAPI document, and public catalog. It verifies the result after deployment; it does not deploy the application or access member data.
+
 ## One-time GitHub Pages setup
 
 GitHub Pages is configured for this repository with **GitHub Actions** as its publishing source. After a successful deployment, the demo is available at:

@@ -1,6 +1,6 @@
 # LibraFlow diagrams
 
-PlantUML source is stored in this directory. Rendered SVGs are in `images/`; PNGs are in `png/`. The source diagrams and exports were synchronized on 10 October 2026 with the current controller, service, migration, and workflow configuration.
+PlantUML source is stored in this directory. Rendered SVGs are in `images/`; PNGs are in `png/`. The source diagrams and exports were synchronized on 10 October 2026 with the current controller, service, migration, and workflow configuration. The deployment diagram shows the post-deploy production smoke check separately from CI and the GitHub Pages teaching demo.
 
 | # | Diagram | Source | PNG | SVG |
 |---|---|---|---|---|
